@@ -10,6 +10,11 @@ use Illuminate\Validation\Rules\Password;
 
 class AppServiceProvider extends ServiceProvider
 {
+    protected $policies = [
+        \App\Models\Absence::class => \App\Policies\AbsencePolicy::class,
+        \App\Models\User::class => \App\Policies\UserPolicy::class,
+        \App\Models\VacationYear::class => \App\Policies\VacationYearPolicy::class,
+    ];
     /**
      * Register any application services.
      */

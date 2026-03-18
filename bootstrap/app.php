@@ -14,12 +14,22 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
-        $middleware->web(append: [
+        $middleware->encryptCookies(except: [
+            'appearance',
+            'sidebar_state'
+        ]);
+
+        $middleware->web([
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,
+        ]);
+
+        // 🔥 AQUÍ VA EL AUTH (FORMA CORRECTA)
+        $middleware->alias([
+            'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
+            
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
