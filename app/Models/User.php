@@ -79,7 +79,7 @@ class User extends Authenticatable
     {
         return $this->role === 'admin';
     }
-
+    
     public function isColaborador(): bool
     {
         return $this->role === 'colaborador';
@@ -99,5 +99,12 @@ class User extends Authenticatable
             ->sum(function ($year) {
                 return $year->allocated_days - $year->used_days;
             });
+    }
+
+    public function getPhotoUrlAttribute()
+    {
+        return $this->photo_path
+            ? asset('storage/' . $this->photo_path)
+            : null;
     }
 }

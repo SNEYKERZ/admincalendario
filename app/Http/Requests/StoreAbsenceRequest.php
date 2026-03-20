@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Http\Requests;
 
@@ -21,11 +21,9 @@ class StoreAbsenceRequest extends FormRequest
         return [
             'user_id' => ['required', 'exists:users,id'],
             'absence_type_id' => ['required', 'exists:absence_types,id'],
-
             'start_datetime' => ['required', 'date'],
-            'end_datetime' => ['required', 'date', 'after_or_equal:start_datetime'],
-
-            'notes' => ['nullable', 'string'],
+            'end_datetime' => ['required', 'date', 'after:start_datetime'],
+            'reason' => ['nullable', 'string'],
         ];
     }
 
@@ -157,11 +155,11 @@ class StoreAbsenceRequest extends FormRequest
             $overlap = Absence::where('user_id', $user->id)
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_datetime', [$start, $end])
-                      ->orWhereBetween('end_datetime', [$start, $end])
-                      ->orWhere(function ($q2) use ($start, $end) {
-                          $q2->where('start_datetime', '<=', $start)
-                             ->where('end_datetime', '>=', $end);
-                      });
+                        ->orWhereBetween('end_datetime', [$start, $end])
+                        ->orWhere(function ($q2) use ($start, $end) {
+                            $q2->where('start_datetime', '<=', $start)
+                                ->where('end_datetime', '>=', $end);
+                        });
                 })
                 ->whereIn('status', ['pendiente', 'aprobado'])
                 ->exists();
@@ -186,7 +184,6 @@ class StoreAbsenceRequest extends FormRequest
                     $validator->errors()->add('start_datetime', 'No tienes suficientes días disponibles');
                 }
             }
-
         });
     }
 

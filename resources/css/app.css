@@ -170,3 +170,44 @@
         @apply bg-background text-foreground;
     }
 }
+
+.fc {
+    color: #111827; /* texto oscuro */
+}
+
+.dark .fc {
+    color: #f9fafb; /* texto claro */
+}
+
+.fc-daygrid-day-number {
+    font-weight: 600;
+}
+
+.fc-col-header-cell-cushion {
+    font-weight: 600;
+}
+
+.fc-toolbar-title {
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+
+.input {
+    @apply w-full border p-2 rounded bg-white text-gray-900;
+}
+
+.dark .input {
+    @apply bg-gray-800 text-gray-100 border-gray-700;
+}
+
+.fc-event {
+    border-radius: 6px;
+    padding: 2px;
+    font-size: 0.75rem;
+    color: white !important;
+}
+
+.fc-col-header-cell-cushion {
+     color: #111827; /* texto oscuro */
+}

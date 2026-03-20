@@ -44,11 +44,11 @@ class AbsenceController extends Controller
 
             $query->where(function ($q) use ($start, $end) {
                 $q->whereBetween('start_datetime', [$start, $end])
-                  ->orWhereBetween('end_datetime', [$start, $end])
-                  ->orWhere(function ($q2) use ($start, $end) {
-                      $q2->where('start_datetime', '<=', $start)
-                         ->where('end_datetime', '>=', $end);
-                  });
+                    ->orWhereBetween('end_datetime', [$start, $end])
+                    ->orWhere(function ($q2) use ($start, $end) {
+                        $q2->where('start_datetime', '<=', $start)
+                            ->where('end_datetime', '>=', $end);
+                    });
             });
         }
 
@@ -140,14 +140,24 @@ class AbsenceController extends Controller
         ]);
     }
 
-    public function update(StoreAbsenceRequest $request, Absence $absence)
+    public function update(Request $request, Absence $absence)
     {
         $this->authorize('update', $absence);
 
-        $absence = $this->absenceService->update(
-            $absence,
-            $request->validatedData()
-        );
+        $start = \Carbon\Carbon::parse($request->start_datetime);
+        $end = \Carbon\Carbon::parse($request->end_datetime);
+
+        if ($end <= $start) {
+            return response()->json([
+                'message' => 'Fechas inválidas'
+            ], 422);
+        }
+
+        $absence->update([
+            'start_datetime' => $start,
+            'end_datetime' => $end,
+            'total_days' => $start->diffInDays($end),
+        ]);
 
         return response()->json($absence);
     }

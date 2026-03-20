@@ -7,6 +7,7 @@ use App\Models\User;
 use App\Models\AbsenceType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Carbon\Carbon;
 
 class AbsenceService
 {
@@ -16,84 +17,167 @@ class AbsenceService
 
     /*
     |--------------------------------------------------------------------------
-    | CREAR AUSENCIA / SOLICITUD
+    | CREAR
     |--------------------------------------------------------------------------
     */
     public function create(array $data): Absence
     {
         return DB::transaction(function () use ($data) {
 
-            $user = auth()->user();
+            // 👇 ADMIN puede elegir usuario
+            $user = auth()->user()->isAdmin()
+                ? User::findOrFail($data['user_id'])
+                : auth()->user();
+
             $type = AbsenceType::findOrFail($data['absence_type_id']);
 
-            /*
-            |--------------------------------------------------------------------------
-            | DEFINIR ESTADO
-            |--------------------------------------------------------------------------
-            */
+            $start = Carbon::parse($data['start_datetime']);
+            $end = Carbon::parse($data['end_datetime']);
 
-            // Admin → crea aprobado directamente
-            // Colaborador → crea pendiente
-            $status = $user->isAdmin()
+            // 🧠 calcular días automáticamente
+            $totalDays = $start->diffInDays($end);
+
+            if ($totalDays <= 0) {
+                throw ValidationException::withMessages([
+                    'dates' => 'Rango de fechas inválido'
+                ]);
+            }
+
+            /*
+        |----------------------------------------------------------
+        | SOLAPAMIENTO
+        |----------------------------------------------------------
+        */
+            $overlap = Absence::where('user_id', $user->id)
+                ->where(function ($q) use ($start, $end) {
+                    $q->where('start_datetime', '<', $end)
+                        ->where('end_datetime', '>', $start);
+                })
+                ->exists();
+
+            if ($overlap) {
+                throw ValidationException::withMessages([
+                    'date' => 'Ya existe una ausencia en ese rango'
+                ]);
+            }
+
+            /*
+        |----------------------------------------------------------
+        | VALIDAR VACACIONES
+        |----------------------------------------------------------
+        */
+            if ($type->deducts_vacation) {
+
+                $available = $user->vacationYears()
+                    ->where('expires_at', '>=', now())
+                    ->get()
+                    ->sum(fn($y) => $y->allocated_days - $y->used_days);
+
+                if ($available < $totalDays) {
+                    throw ValidationException::withMessages([
+                        'days' => 'No tiene saldo disponible'
+                    ]);
+                }
+            }
+
+            /*
+        |----------------------------------------------------------
+        | STATUS
+        |----------------------------------------------------------
+        */
+            $status = auth()->user()->isAdmin()
                 ? 'aprobado'
                 : 'pendiente';
 
             /*
-            |--------------------------------------------------------------------------
-            | VALIDACIONES ESPECIALES (NEGOCIO)
-            |--------------------------------------------------------------------------
-            */
-
-            $start = \Carbon\Carbon::parse($data['start_datetime']);
-
-            // 🎂 Cumpleaños
-            if ($type->name === 'Cumpleaños') {
-
-                if ($start->month !== $user->birth_date->month) {
-                    throw ValidationException::withMessages([
-                        'start_datetime' => 'Solo puede tomarse en el mes de cumpleaños'
-                    ]);
-                }
-
-                $alreadyTaken = Absence::where('user_id', $user->id)
-                    ->whereYear('start_datetime', $start->year)
-                    ->where('absence_type_id', $type->id)
-                    ->exists();
-
-                if ($alreadyTaken) {
-                    throw ValidationException::withMessages([
-                        'start_datetime' => 'Ya tomó su día de cumpleaños este año'
-                    ]);
-                }
-            }
-
-            /*
-            |--------------------------------------------------------------------------
-            | CREAR REGISTRO
-            |--------------------------------------------------------------------------
-            */
-
+        |----------------------------------------------------------
+        | CREAR
+        |----------------------------------------------------------
+        */
             $absence = Absence::create([
                 ...$data,
                 'user_id' => $user->id,
+                'total_days' => $totalDays,
                 'status' => $status,
             ]);
 
             /*
-            |--------------------------------------------------------------------------
-            | SI ES ADMIN Y ES VACACIONES → DESCONTAR DE UNA VEZ
-            |--------------------------------------------------------------------------
-            */
-
-            if (
-                $status === 'aprobado' &&
-                $type->deducts_vacation
-            ) {
+        |----------------------------------------------------------
+        | DESCONTAR
+        |----------------------------------------------------------
+        */
+            if ($status === 'aprobado' && $type->deducts_vacation) {
                 $this->vacationService->deductDays(
-                    $absence->user,
-                    $absence->total_days
+                    $user,
+                    $totalDays
                 );
             }
+
+            return $absence;
+        });
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | UPDATE ( DRAG & DROP / EDICIÓN)
+    |--------------------------------------------------------------------------
+    */
+    public function update(Absence $absence, array $data): Absence
+    {
+        return DB::transaction(function () use ($absence, $data) {
+
+            $user = $absence->user;
+            $type = $absence->type;
+
+            $start = Carbon::parse($data['start_datetime'])->startOfDay();
+            $end   = Carbon::parse($data['end_datetime'])->endOfDay();
+
+            $totalDays = $start->diffInDays($end) + 1;
+
+            /*
+            |--------------------------------------------------------------------------
+            | VALIDAR SOLAPAMIENTO (excluyendo actual)
+            |--------------------------------------------------------------------------
+            */
+            $overlap = Absence::where('user_id', $user->id)
+                ->where('id', '!=', $absence->id)
+                ->where(function ($q) use ($start, $end) {
+                    $q->where('start_datetime', '<', $end)
+                        ->where('end_datetime', '>', $start);
+                })
+                ->exists();
+
+            if ($overlap) {
+                throw ValidationException::withMessages([
+                    'date' => 'Conflicto con otra ausencia'
+                ]);
+            }
+
+            /*
+            |--------------------------------------------------------------------------
+            | VALIDAR SALDO SI YA ESTABA APROBADO
+            |--------------------------------------------------------------------------
+            */
+            if ($absence->status === 'aprobado' && $type->deducts_vacation) {
+
+                $available = $user->vacationYears()
+                    ->where('expires_at', '>=', now())
+                    ->get()
+                    ->sum(fn($y) => $y->allocated_days - $y->used_days);
+
+                if ($available < $totalDays) {
+                    throw ValidationException::withMessages([
+                        'days' => 'No tiene saldo disponible'
+                    ]);
+                }
+            }
+
+            $absence->update([
+                ...$data,
+                'start_datetime' => $start,
+                'end_datetime' => $end,
+                'total_days' => $totalDays,
+            ]);
 
             return $absence;
         });
@@ -108,29 +192,28 @@ class AbsenceService
     {
         return DB::transaction(function () use ($absence, $admin) {
 
-            // evitar doble aprobación
             if ($absence->status === 'aprobado') {
                 return $absence;
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | DESCONTAR VACACIONES SI APLICA
-            |--------------------------------------------------------------------------
-            */
-
             if ($absence->type->deducts_vacation) {
+
+                $available = $absence->user->vacationYears()
+                    ->where('expires_at', '>=', now())
+                    ->get()
+                    ->sum(fn($y) => $y->allocated_days - $y->used_days);
+
+                if ($available < $absence->total_days) {
+                    throw ValidationException::withMessages([
+                        'days' => 'No tiene saldo disponible'
+                    ]);
+                }
+
                 $this->vacationService->deductDays(
                     $absence->user,
                     $absence->total_days
                 );
             }
-
-            /*
-            |--------------------------------------------------------------------------
-            | ACTUALIZAR
-            |--------------------------------------------------------------------------
-            */
 
             $absence->update([
                 'status' => 'aprobado',
@@ -149,10 +232,9 @@ class AbsenceService
     */
     public function reject(Absence $absence, User $admin): Absence
     {
-        // opcional: evitar rechazar algo ya aprobado
         if ($absence->status === 'aprobado') {
             throw ValidationException::withMessages([
-                'status' => 'No se puede rechazar una ausencia ya aprobada'
+                'status' => 'No se puede rechazar una aprobada'
             ]);
         }
 
