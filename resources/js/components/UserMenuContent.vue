@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { LogOut, Settings } from 'lucide-vue-next';
+import { IdCard, LogOut, Settings } from 'lucide-vue-next';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -9,7 +9,8 @@ import {
 } from '@/components/ui/dropdown-menu';
 import UserInfo from '@/components/UserInfo.vue';
 import { logout } from '@/routes';
-import { edit } from '@/routes/profile';
+import { edit as editProfile } from '@/routes/profile';
+import { edit as editPassword } from '@/routes/user-password';
 import type { User } from '@/types';
 
 type Props = {
@@ -32,9 +33,15 @@ defineProps<Props>();
     <DropdownMenuSeparator />
     <DropdownMenuGroup>
         <DropdownMenuItem :as-child="true">
-            <Link class="block w-full cursor-pointer" :href="edit()" prefetch>
+            <Link class="block w-full cursor-pointer" :href="editProfile()" prefetch>
+                <IdCard class="mr-2 h-4 w-4" />
+                Mi perfil
+            </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem :as-child="true">
+            <Link class="block w-full cursor-pointer" :href="editPassword()" prefetch>
                 <Settings class="mr-2 h-4 w-4" />
-                Settings
+                Configuracion
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>
@@ -48,7 +55,8 @@ defineProps<Props>();
             data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />
-            Log out
+            Cerrar sesion
         </Link>
     </DropdownMenuItem>
 </template>
+

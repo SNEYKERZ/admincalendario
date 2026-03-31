@@ -38,4 +38,31 @@ class VacationService
             }
         });
     }
+
+    public function restoreDays(User $user, float $daysToRestore): void
+    {
+        DB::transaction(function () use ($user, $daysToRestore) {
+            $vacationYears = $user->vacationYears()
+                ->where('expires_at', '>=', now())
+                ->orderByDesc('year')
+                ->get();
+
+            foreach ($vacationYears as $year) {
+                if ($daysToRestore <= 0) {
+                    return;
+                }
+
+                if ($year->used_days <= 0) {
+                    continue;
+                }
+
+                $restored = min($year->used_days, $daysToRestore);
+
+                $year->used_days -= $restored;
+                $year->save();
+
+                $daysToRestore -= $restored;
+            }
+        });
+    }
 }

@@ -2,30 +2,27 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Absence;
-use Illuminate\Http\Request;
-use App\Services\AbsenceService;
 use App\Http\Requests\StoreAbsenceRequest;
+use App\Models\Absence;
+use App\Services\AbsenceService;
+use App\Services\VacationService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AbsenceController extends Controller
 {
     public function __construct(
-        protected AbsenceService $absenceService
+        protected AbsenceService $absenceService,
+        protected VacationService $vacationService
     ) {}
 
-    /*
-    |--------------------------------------------------------------------------
-    | LISTADO
-    |--------------------------------------------------------------------------
-    */
-
-    public function index(Request $request)
+    public function index(Request $request): JsonResponse
     {
         $this->authorize('viewAny', Absence::class);
 
-        $query = Absence::with(['user', 'type']);
+        $query = Absence::with(['user', 'type', 'approver']);
 
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
             $query->where('user_id', auth()->id());
         }
 
@@ -38,7 +35,6 @@ class AbsenceController extends Controller
         }
 
         if ($request->filled('start') && $request->filled('end')) {
-
             $start = $request->start;
             $end = $request->end;
 
@@ -55,110 +51,81 @@ class AbsenceController extends Controller
         return response()->json($query->get());
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | CREAR
-    |--------------------------------------------------------------------------
-    */
-
-    public function store(StoreAbsenceRequest $request)
+    public function store(StoreAbsenceRequest $request): JsonResponse
     {
         $this->authorize('create', Absence::class);
 
-        $absence = $this->absenceService->create(
-            $request->validatedData()
-        );
+        $absence = $this->absenceService->create($request->validatedData());
 
         return response()->json($absence, 201);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | VER DETALLE
-    |--------------------------------------------------------------------------
-    */
-
-    public function show(Absence $absence)
+    public function show(Absence $absence): JsonResponse
     {
         $this->authorize('view', $absence);
 
-        return response()->json(
-            $absence->load(['user', 'type', 'approver'])
-        );
+        return response()->json($absence->load(['user', 'type', 'approver']));
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | APROBAR
-    |--------------------------------------------------------------------------
-    */
-
-    public function approve(Absence $absence)
+    public function approve(Absence $absence): JsonResponse
     {
         $this->authorize('approve', $absence);
 
-        $this->absenceService->approve($absence, auth()->user());
-
-        return response()->json([
-            'message' => 'Solicitud aprobada correctamente'
-        ]);
+        return response()->json(
+            $this->absenceService->approve($absence, auth()->user())
+        );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | RECHAZAR
-    |--------------------------------------------------------------------------
-    */
-
-    public function reject(Absence $absence)
+    public function reject(Absence $absence): JsonResponse
     {
         $this->authorize('reject', $absence);
 
-        $absence->update([
-            'status' => 'rechazado'
-        ]);
-
-        return response()->json([
-            'message' => 'Solicitud rechazada'
-        ]);
+        return response()->json(
+            $this->absenceService->reject($absence, auth()->user())
+        );
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ELIMINAR
-    |--------------------------------------------------------------------------
-    */
+    public function pending(Absence $absence): JsonResponse
+    {
+        $this->authorize('pending', $absence);
 
-    public function destroy(Absence $absence)
+        return response()->json(
+            $this->absenceService->pending($absence, auth()->user())
+        );
+    }
+
+    public function destroy(Absence $absence): JsonResponse
     {
         $this->authorize('delete', $absence);
+
+        // Restaurar días de vacaciones ANTES de eliminar si estaba aprobado
+        if ($absence->status === 'aprobado' && $absence->type->deducts_vacation) {
+            $this->vacationService->restoreDays($absence->user, $absence->total_days);
+        }
 
         $absence->delete();
 
         return response()->json([
-            'message' => 'Registro eliminado'
+            'message' => 'Registro eliminado',
         ]);
     }
 
-    public function update(Request $request, Absence $absence)
+    public function update(Request $request, Absence $absence): JsonResponse
     {
         $this->authorize('update', $absence);
 
-        $start = \Carbon\Carbon::parse($request->start_datetime);
-        $end = \Carbon\Carbon::parse($request->end_datetime);
-
-        if ($end <= $start) {
-            return response()->json([
-                'message' => 'Fechas inválidas'
-            ], 422);
-        }
-
-        $absence->update([
-            'start_datetime' => $start,
-            'end_datetime' => $end,
-            'total_days' => $start->diffInDays($end),
+        $data = $request->validate([
+            'start_datetime' => ['required', 'date'],
+            'end_datetime' => ['required', 'date', 'after:start_datetime'],
+            'include_saturday' => ['sometimes', 'boolean'],
+            'include_sunday' => ['sometimes', 'boolean'],
+            'include_holidays' => ['sometimes', 'boolean'],
+            'holiday_country' => ['sometimes', 'string', 'size:2'],
+            'reason' => ['nullable', 'string'],
         ]);
 
-        return response()->json($absence);
+        return response()->json(
+            $this->absenceService->update($absence, $data)
+        );
     }
 }

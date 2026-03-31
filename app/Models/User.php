@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
 
 class User extends Authenticatable
 {
@@ -13,12 +14,22 @@ class User extends Authenticatable
 
     protected $fillable = [
         'name',
+        'first_name',
+        'last_name',
+        'identification',
+        'phone',
         'email',
         'password',
         'role',
         'birth_date',
         'hire_date',
         'photo_path',
+    ];
+
+    protected $appends = [
+        'photo_url',
+        'avatar',
+        'role_name',
     ];
 
     protected $hidden = [
@@ -30,6 +41,7 @@ class User extends Authenticatable
         'birth_date' => 'date',
         'hire_date' => 'date',
         'email_verified_at' => 'datetime',
+        'role' => UserRole::class,
     ];
 
     /*
@@ -61,12 +73,12 @@ class User extends Authenticatable
 
     public function scopeAdmins($query)
     {
-        return $query->where('role', 'admin');
+        return $query->where('role', UserRole::ADMIN->value);
     }
 
     public function scopeColaboradores($query)
     {
-        return $query->where('role', 'colaborador');
+        return $query->where('role', UserRole::COLLABORATOR->value);
     }
 
     /*
@@ -77,12 +89,16 @@ class User extends Authenticatable
 
     public function isAdmin(): bool
     {
-        return $this->role === 'admin';
+        return $this->role instanceof UserRole
+            ? $this->role->isAdmin()
+            : $this->role === UserRole::ADMIN->value;
     }
-    
+
     public function isColaborador(): bool
     {
-        return $this->role === 'colaborador';
+        return $this->role instanceof UserRole
+            ? $this->role === UserRole::COLLABORATOR
+            : $this->role === UserRole::COLLABORATOR->value;
     }
 
     /*
@@ -104,7 +120,19 @@ class User extends Authenticatable
     public function getPhotoUrlAttribute()
     {
         return $this->photo_path
-            ? asset('storage/' . $this->photo_path)
+            ? asset('storage/'.$this->photo_path)
             : null;
+    }
+
+    public function getAvatarAttribute(): ?string
+    {
+        return $this->photo_url;
+    }
+
+    public function getRoleNameAttribute(): string
+    {
+        return $this->role instanceof UserRole
+            ? $this->role->label()
+            : ($this->role === 'admin' ? 'Administrador' : 'Colaborador');
     }
 }

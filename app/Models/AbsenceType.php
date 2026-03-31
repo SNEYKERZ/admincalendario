@@ -15,6 +15,9 @@ class AbsenceType extends Model
         'deducts_vacation',
         'requires_approval',
         'counts_as_hours',
+        'default_include_saturday',
+        'default_include_sunday',
+        'default_include_holidays',
         'color',
     ];
 
@@ -22,6 +25,9 @@ class AbsenceType extends Model
         'deducts_vacation' => 'boolean',
         'requires_approval' => 'boolean',
         'counts_as_hours' => 'boolean',
+        'default_include_saturday' => 'boolean',
+        'default_include_sunday' => 'boolean',
+        'default_include_holidays' => 'boolean',
     ];
 
     /*

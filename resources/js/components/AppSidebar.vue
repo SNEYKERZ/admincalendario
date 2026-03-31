@@ -1,6 +1,14 @@
 <script setup lang="ts">
-import { Link } from '@inertiajs/vue3';
-import { BookOpen, FolderGit2, LayoutGrid } from 'lucide-vue-next';
+import { Link, usePage } from '@inertiajs/vue3';
+import {
+    BookOpen,
+    FolderGit2,
+    LayoutDashboard,
+    LayoutGrid,
+    Users,
+    FileBarChart,
+    Settings,
+} from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
@@ -17,22 +25,52 @@ import {
 
 import type { NavItem } from '@/types';
 
+const page = usePage();
+const user = page.props.auth?.user;
+const isAdmin = user?.role === 'admin';
+
 const mainNavItems: NavItem[] = [
     {
-        title: 'Calendario',
+        title: 'Dashboard',
         href: '/dashboard',
-        icon: LayoutGrid,
+        icon: LayoutDashboard,
     },
     {
-        title: 'Gestión usuarios',
-        href: '/gestion-usuarios',
+        title: 'Calendario',
+        href: '/calendario',
         icon: LayoutGrid,
-    }
-
+    },
+    ...(isAdmin
+        ? [
+              {
+                  title: 'Gestión usuarios',
+                  href: '/gestion-usuarios',
+                  icon: Users,
+              },
+          ]
+        : []),
+    ...(isAdmin
+        ? [
+              {
+                  title: 'Reportes',
+                  href: '/reportes',
+                  icon: FileBarChart,
+              },
+          ]
+        : []),
+    ...(isAdmin
+        ? [
+              {
+                  title: 'Configuración',
+                  href: '/settings/company',
+                  icon: Settings,
+              },
+          ]
+        : []),
 ];
 
 const footerNavItems: NavItem[] = [
-   /* {
+    /* {
         title: 'Repository',
         href: 'https://github.com/laravel/vue-starter-kit',
         icon: FolderGit2,

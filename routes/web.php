@@ -1,15 +1,19 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use Laravel\Fortify\Features;
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Admin\UserController;
-use App\Http\Controllers\VacationYearController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\VacationController;
+use App\Http\Controllers\VacationYearController;
 use App\Models\AbsenceType;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Route;
+use Laravel\Fortify\Features;
 
-require __DIR__ . '/settings.php';
+require __DIR__.'/settings.php';
 /*
 Route::inertia('/', 'Welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -26,21 +30,58 @@ Route::inertia('/', 'Welcome', [
 |--------------------------------------------------------------------------
 */
 
-
 Route::middleware(['auth'])->group(function () {
 
-    Route::get('/', function () {return auth()->check() ? redirect('/dashboard') : redirect('/login'); });
-    // routes/api.php
-    Route::get('/me', function () { return auth()->user();});
+    Route::get('/', function () {
+        return Auth::check() ? redirect('/dashboard') : redirect('/login');
+    });
+
+    // Current user info (for Vue apps)
+    Route::get('/me', function () {
+        $user = Auth::user();
+        $role = $user->role instanceof \App\Enums\UserRole
+            ? $user->role->value
+            : $user->role;
+
+        return response()->json([
+            'id' => $user->id,
+            'name' => $user->name,
+            'email' => $user->email,
+            'role' => $role,
+            'is_admin' => $role === 'admin',
+        ]);
+    })->name('me');
+
+    // Dashboard API
+    Route::get('/dashboard/data', [DashboardController::class, 'index'])->name('dashboard.data');
     Route::inertia('/dashboard', 'Dashboard')->name('dashboard');
+
+    // Calendario
+    Route::inertia('/calendario', 'Calendar')->name('calendario');
+
     Route::inertia('/gestion-usuarios', 'GestionUsuarios')->name('gestion-usuarios');
     Route::get('/gestion-usuarios/data', [VacationController::class, 'index'])->name('gestion-usuarios.data');
     Route::post('/gestion-usuarios/{user}/adjust', [VacationController::class, 'adjust'])->name('gestion-usuarios.adjust');
 
+    // Reportes
+    Route::inertia('/reportes', 'Reportes')->name('reportes');
+
+    // Settings
+    Route::inertia('/settings/company', 'SettingsCompany')->name('settings.company');
+    Route::inertia('/legal/terms', 'LegalTerms')->name('legal.terms');
+    Route::inertia('/legal/privacy', 'LegalPrivacy')->name('legal.privacy');
+
+    // Users Admin CRUD
+    Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
+    Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
+    Route::get('/admin/users/{user}', [UserController::class, 'show'])->name('admin.users.show');
+    Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
+    Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+
     Route::get('/users-list', function () {
         return User::with(['vacationYears' => function ($q) {
-            $q->where('expires_at', '>=', now());}])->get()->map(function ($user) 
-            {
+            $q->where('expires_at', '>=', now());
+        }])->get()->map(function ($user) {
 
             $available = $user->vacationYears->sum(function ($year) {
                 return $year->allocated_days - $year->used_days;
@@ -49,6 +90,8 @@ Route::middleware(['auth'])->group(function () {
             return [
                 'id' => $user->id,
                 'name' => $user->name,
+                'identification' => $user->identification,
+                'email' => $user->email,
                 'photo' => $user->photo_url,
                 'available_days' => $available,
             ];
@@ -67,6 +110,7 @@ Route::middleware(['auth'])->group(function () {
         Route::put('/{absence}', [AbsenceController::class, 'update'])->name('absences.update');
         Route::post('/{absence}/approve', [AbsenceController::class, 'approve'])->name('absences.approve');
         Route::post('/{absence}/reject', [AbsenceController::class, 'reject'])->name('absences.reject');
+        Route::post('/{absence}/pending', [AbsenceController::class, 'pending'])->name('absences.pending');
         Route::delete('/{absence}', [AbsenceController::class, 'destroy'])->name('absences.destroy');
     });
 
@@ -76,7 +120,7 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::get('/absence-types', function () {
-        return AbsenceType::select('id', 'name')->get();
+        return AbsenceType::select('id', 'name', 'counts_as_hours', 'deducts_vacation', 'default_include_saturday', 'default_include_sunday', 'default_include_holidays')->get();
     })->name('absence-types.index');
 
     /*
@@ -95,4 +139,22 @@ Route::middleware(['auth'])->group(function () {
             Route::post('/', [VacationYearController::class, 'store'])->name('vacation-years.store');
         });
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reports
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('reports')->group(function () {
+        Route::get('/', [ReportController::class, 'index'])->name('reports.index');
+        Route::get('/export', [ReportController::class, 'export'])->name('reports.export');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Settings
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/settings/company', [SettingsController::class, 'index'])->name('settings.company');
+    Route::put('/settings/company', [SettingsController::class, 'update'])->name('settings.company.update');
 });

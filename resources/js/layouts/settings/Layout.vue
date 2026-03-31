@@ -13,19 +13,19 @@ import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
     {
-        title: 'Profile',
+        title: 'Mi perfil',
         href: editProfile(),
     },
     {
-        title: 'Password',
+        title: 'Configuracion',
         href: editPassword(),
     },
     {
-        title: 'Two-factor auth',
+        title: 'Doble factor',
         href: show(),
     },
     {
-        title: 'Appearance',
+        title: 'Apariencia',
         href: editAppearance(),
     },
 ];
@@ -36,8 +36,8 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
 <template>
     <div class="px-4 py-6">
         <Heading
-            title="Settings"
-            description="Manage your profile and account settings"
+            title="Configuracion"
+            description="Administra tu perfil y ajustes de cuenta"
         />
 
         <div class="flex flex-col lg:flex-row lg:space-x-12">
@@ -67,10 +67,11 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
             <Separator class="my-6 lg:hidden" />
 
             <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-xl space-y-12">
+                <section class="max-w-3xl space-y-12">
                     <slot />
                 </section>
             </div>
         </div>
     </div>
 </template>
+

@@ -2,27 +2,42 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\ValidationException;
-use Carbon\Carbon;
 use App\Models\Absence;
 use App\Models\AbsenceType;
 use App\Models\User;
+use App\Services\AbsenceCalculationService;
+use Carbon\Carbon;
+use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAbsenceRequest extends FormRequest
 {
+    /**
+     * Almacena el cálculo para no duplicar lógica
+     */
+    protected ?array $cachedCalculation = null;
+
     public function authorize(): bool
     {
-        return true; // luego meter policies
+        // La autorización se maneja via AbsencePolicy en el controlador
+        // Este método retorna true porque Laravel primero verifica policies
+        return \Illuminate\Support\Facades\Auth::check();
     }
 
     public function rules(): array
     {
+        $userRules = $this->user()?->isAdmin()
+            ? ['required', 'exists:users,id']
+            : ['nullable'];
+
         return [
-            'user_id' => ['required', 'exists:users,id'],
+            'user_id' => $userRules,
             'absence_type_id' => ['required', 'exists:absence_types,id'],
             'start_datetime' => ['required', 'date'],
             'end_datetime' => ['required', 'date', 'after:start_datetime'],
+            'include_saturday' => ['nullable', 'boolean'],
+            'include_sunday' => ['nullable', 'boolean'],
+            'include_holidays' => ['nullable', 'boolean'],
+            'holiday_country' => ['nullable', 'string', 'size:2'],
             'reason' => ['nullable', 'string'],
         ];
     }
@@ -30,18 +45,18 @@ class StoreAbsenceRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'end_datetime.after_or_equal' => 'La fecha/hora final debe ser mayor o igual a la inicial',
+            'end_datetime.after' => 'La fecha/hora final debe ser mayor a la inicial',
         ];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | NORMALIZACIÓN DE DATOS (antes de validar fuerte)
-    |--------------------------------------------------------------------------
-    */
-
-    protected function prepareForValidation()
+    protected function prepareForValidation(): void
     {
+        if (! $this->user()?->isAdmin() && $this->user()) {
+            $this->merge([
+                'user_id' => $this->user()->id,
+            ]);
+        }
+
         if ($this->start_datetime) {
             $this->merge([
                 'start_datetime' => Carbon::parse($this->start_datetime),
@@ -53,106 +68,68 @@ class StoreAbsenceRequest extends FormRequest
                 'end_datetime' => Carbon::parse($this->end_datetime),
             ]);
         }
+
+        if ($this->holiday_country) {
+            $this->merge([
+                'holiday_country' => strtoupper((string) $this->holiday_country),
+            ]);
+        }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | VALIDACIONES AVANZADAS
-    |--------------------------------------------------------------------------
-    */
-
-    public function withValidator($validator)
+    public function withValidator($validator): void
     {
         $validator->after(function ($validator) {
+            $userId = $this->user()?->isAdmin()
+                ? $this->user_id
+                : $this->user()?->id;
 
-            $user = User::find($this->user_id);
+            $user = User::find($userId);
             $type = AbsenceType::find($this->absence_type_id);
 
-            if (!$user || !$type) {
+            if (! $user || ! $type) {
                 return;
             }
 
             $start = Carbon::parse($this->start_datetime);
             $end = Carbon::parse($this->end_datetime);
 
-            /*
-            |--------------------------------------------------------------------------
-            | 1. Validar rango coherente
-            |--------------------------------------------------------------------------
-            */
-
             if ($start->gt($end)) {
                 $validator->errors()->add('start_datetime', 'La fecha inicial no puede ser mayor a la final');
+
                 return;
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 2. Validar horas vs días
-            |--------------------------------------------------------------------------
-            */
-
             $sameDay = $start->toDateString() === $end->toDateString();
 
-            if (!$sameDay && $type->counts_as_hours) {
-                $validator->errors()->add('end_datetime', 'No puedes usar horas en múltiples días');
+            if (! $sameDay && $type->counts_as_hours) {
+                $validator->errors()->add('end_datetime', 'No puedes usar horas en multiples dias');
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 3. Validar rango de horas lógico
-            |--------------------------------------------------------------------------
-            */
-
-            if ($sameDay && $type->counts_as_hours) {
-
-                if ($start->hour === $end->hour && $start->minute === $end->minute) {
-                    $validator->errors()->add('end_datetime', 'El rango de horas no puede ser igual');
-                }
-
-                if ($start->gt($end)) {
-                    $validator->errors()->add('end_datetime', 'La hora final debe ser mayor');
-                }
+            if ($sameDay && $type->counts_as_hours && $start->equalTo($end)) {
+                $validator->errors()->add('end_datetime', 'El rango de horas no puede ser igual');
             }
-
-            /*
-            |--------------------------------------------------------------------------
-            | 4. Validar cumpleaños
-            |--------------------------------------------------------------------------
-            */
 
             if ($type->name === 'Cumpleaños') {
-
-                // Solo un día
-                if (!$sameDay) {
-                    $validator->errors()->add('start_datetime', 'El día de cumpleaños solo puede ser un día');
+                if (! $sameDay) {
+                    $validator->errors()->add('start_datetime', 'El dia de cumpleaños solo puede ser un dia');
                 }
 
-                // Mes correcto
-                if ($user->birth_date) {
-                    if ($start->month !== $user->birth_date->month) {
-                        $validator->errors()->add('start_datetime', 'Solo puedes tomar el día en el mes de tu cumpleaños');
-                    }
+                if ($user->birth_date && $start->month !== $user->birth_date->month) {
+                    $validator->errors()->add('start_datetime', 'Solo puedes tomar el dia en el mes de tu cumpleaños');
                 }
 
-                // Solo una vez por año
                 $exists = Absence::where('user_id', $user->id)
                     ->whereYear('start_datetime', $start->year)
                     ->where('absence_type_id', $type->id)
                     ->exists();
 
                 if ($exists) {
-                    $validator->errors()->add('start_datetime', 'Ya usaste el día de cumpleaños este año');
+                    $validator->errors()->add('start_datetime', 'Ya usaste el dia de cumpleaños este año');
                 }
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 5. Validar solapamientos (MUY IMPORTANTE)
-            |--------------------------------------------------------------------------
-            */
-
             $overlap = Absence::where('user_id', $user->id)
+                ->whereIn('status', ['pendiente', 'aprobado'])
                 ->where(function ($q) use ($start, $end) {
                     $q->whereBetween('start_datetime', [$start, $end])
                         ->orWhereBetween('end_datetime', [$start, $end])
@@ -161,76 +138,66 @@ class StoreAbsenceRequest extends FormRequest
                                 ->where('end_datetime', '>=', $end);
                         });
                 })
-                ->whereIn('status', ['pendiente', 'aprobado'])
                 ->exists();
 
             if ($overlap) {
                 $validator->errors()->add('start_datetime', 'Ya tienes una solicitud en ese rango de fechas');
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | 6. Validar vacaciones (saldo previo)
-            |--------------------------------------------------------------------------
-            */
+            $calculationService = app(AbsenceCalculationService::class);
+            $calculation = $calculationService->calculate(
+                $type,
+                $start,
+                $end,
+                $calculationService->resolveOptions($type, $this->all())
+            );
 
-            if ($type->deducts_vacation) {
+            // Guardar cálculo para reutilizarlo en validatedData()
+            $this->cachedCalculation = $calculation;
 
-                $days = $this->calculateDays($start, $end, $type);
+            if ($calculation['total_days'] <= 0) {
+                $validator->errors()->add('start_datetime', 'El rango no contiene dias contabilizables con las reglas seleccionadas');
+            }
 
-                $available = $user->availableVacationDays();
-
-                if ($days > $available) {
-                    $validator->errors()->add('start_datetime', 'No tienes suficientes días disponibles');
-                }
+            if ($type->deducts_vacation && $calculation['total_days'] > $user->availableVacationDays()) {
+                $validator->errors()->add('start_datetime', 'No tienes suficientes dias disponibles');
             }
         });
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | CÁLCULO DE DÍAS Y HORAS (NO confiar en frontend)
-    |--------------------------------------------------------------------------
-    */
-
-    private function calculateDays($start, $end, $type): float
-    {
-        if ($type->counts_as_hours) {
-
-            $hours = $start->diffInMinutes($end) / 60;
-
-            return round($hours / 8, 2); // 8h = 1 día
-        }
-
-        return $start->diffInDays($end) + 1;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | DATA FINAL LIMPIA PARA EL SERVICE
-    |--------------------------------------------------------------------------
-    */
 
     public function validatedData(): array
     {
         $data = $this->validated();
 
-        $type = AbsenceType::find($data['absence_type_id']);
-
-        $start = Carbon::parse($data['start_datetime']);
-        $end = Carbon::parse($data['end_datetime']);
-
-        if ($type->counts_as_hours) {
-            $hours = $start->diffInMinutes($end) / 60;
-            $days = $hours / 8;
-        } else {
-            $days = $start->diffInDays($end) + 1;
-            $hours = $days * 8;
+        if (! $this->user()?->isAdmin() && $this->user()) {
+            $data['user_id'] = $this->user()->id;
         }
 
-        $data['total_days'] = round($days, 2);
-        $data['total_hours'] = round($hours, 2);
+        // Usar cálculo cacheado desde withValidator para evitar duplicación
+        $calculation = $this->cachedCalculation;
 
-        return $data;
+        if (! $calculation) {
+            // Fallback: calcular si no se hizo en el validator (edge case)
+            $type = AbsenceType::findOrFail($data['absence_type_id']);
+            $start = Carbon::parse($data['start_datetime']);
+            $end = Carbon::parse($data['end_datetime']);
+            $calculationService = app(AbsenceCalculationService::class);
+            $calculation = $calculationService->calculate(
+                $type,
+                $start,
+                $end,
+                $calculationService->resolveOptions($type, $data)
+            );
+        }
+
+        return [
+            ...$data,
+            'include_saturday' => $calculation['include_saturday'],
+            'include_sunday' => $calculation['include_sunday'],
+            'include_holidays' => $calculation['include_holidays'],
+            'holiday_country' => $calculation['holiday_country'],
+            'total_days' => $calculation['total_days'],
+            'total_hours' => $calculation['total_hours'],
+        ];
     }
 }

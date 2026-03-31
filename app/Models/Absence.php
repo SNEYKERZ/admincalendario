@@ -2,8 +2,9 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Model;
+use App\Enums\AbsenceStatus;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Absence extends Model
@@ -15,6 +16,10 @@ class Absence extends Model
         'absence_type_id',
         'start_datetime',
         'end_datetime',
+        'include_saturday',
+        'include_sunday',
+        'include_holidays',
+        'holiday_country',
         'total_days',
         'total_hours',
         'status',
@@ -27,8 +32,12 @@ class Absence extends Model
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
         'approved_at' => 'datetime',
+        'include_saturday' => 'boolean',
+        'include_sunday' => 'boolean',
+        'include_holidays' => 'boolean',
         'total_days' => 'float',
         'total_hours' => 'float',
+        'status' => AbsenceStatus::class,
     ];
 
     /*
@@ -60,17 +69,17 @@ class Absence extends Model
 
     public function scopeApproved($query)
     {
-        return $query->where('status', 'aprobado');
+        return $query->where('status', AbsenceStatus::APPROVED->value);
     }
 
     public function scopePending($query)
     {
-        return $query->where('status', 'pendiente');
+        return $query->where('status', AbsenceStatus::PENDING->value);
     }
 
     public function scopeForCalendar($query)
     {
-        return $query->where('status', 'aprobado');
+        return $query->where('status', AbsenceStatus::APPROVED->value);
     }
 
     /*
@@ -81,16 +90,22 @@ class Absence extends Model
 
     public function isApproved(): bool
     {
-        return $this->status === 'aprobado';
+        return $this->status instanceof AbsenceStatus
+            ? $this->status === AbsenceStatus::APPROVED
+            : $this->status === AbsenceStatus::APPROVED->value;
     }
 
     public function isPending(): bool
     {
-        return $this->status === 'pendiente';
+        return $this->status instanceof AbsenceStatus
+            ? $this->status === AbsenceStatus::PENDING
+            : $this->status === AbsenceStatus::PENDING->value;
     }
 
     public function isRejected(): bool
     {
-        return $this->status === 'rechazado';
+        return $this->status instanceof AbsenceStatus
+            ? $this->status === AbsenceStatus::REJECTED
+            : $this->status === AbsenceStatus::REJECTED->value;
     }
 }

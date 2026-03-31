@@ -1,50 +1,87 @@
 <script setup lang="ts">
-import { ref, watch, computed } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { usePage } from '@inertiajs/vue3'
 import axios from 'axios'
 import { useToast } from 'vue-toastification'
 
+type ModalUser = {
+    id: number
+    name: string
+}
+
+type TypeOption = {
+    id: number
+    name: string
+    counts_as_hours: boolean
+    default_include_saturday: boolean
+    default_include_sunday: boolean
+    default_include_holidays: boolean
+}
+
+type AbsenceRecord = {
+    id: number
+    status: string
+    include_saturday: boolean
+    include_sunday: boolean
+    include_holidays: boolean
+    holiday_country?: string
+    reason?: string
+    start_datetime: string
+    end_datetime: string
+    user?: { id: number }
+    type?: { id: number }
+}
+
 const toast = useToast()
-const formatToDatetimeLocal = (dateStr: string) => {
+const page = usePage()
+
+const formatToDatetimeLocal = (dateStr: string | Date) => {
     if (!dateStr) return ''
 
     const date = new Date(dateStr)
-
     const pad = (n: number) => n.toString().padStart(2, '0')
 
     return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`
 }
-// props
-const props = defineProps({
-    show: Boolean,
-    mode: String,
-    absence: Object,
-    selectedRange: Object,
-    users: Array,
-    isAdmin: Boolean,
-})
+
+const props = defineProps<{
+    show: boolean
+    mode: string
+    absence?: AbsenceRecord | null
+    selectedRange?: { start: Date; end: Date } | null
+    users?: ModalUser[]
+    isAdmin: boolean
+}>()
 
 const emit = defineEmits(['close', 'saved'])
 
-// helpers
 const getInitialForm = () => ({
     user_id: '',
     absence_type_id: '',
     start_datetime: '',
     end_datetime: '',
-    reason: ''
+    include_saturday: true,
+    include_sunday: true,
+    include_holidays: true,
+    holiday_country: 'CO',
+    reason: '',
 })
 
 const form = ref(getInitialForm())
-const types = ref([])
+const types = ref<TypeOption[]>([])
 const loading = ref(false)
+const currentUserId = computed(() => String(page.props.auth?.user?.id ?? ''))
+const currentStatus = computed(() => props.absence?.status ?? 'pendiente')
+const selectedType = computed(() =>
+    types.value.find((type) => String(type.id) === String(form.value.absence_type_id)),
+)
+const showBusinessRules = computed(() => props.isAdmin && !selectedType.value?.counts_as_hours)
 
-// permisos
 const canEdit = computed(() => {
     if (!props.absence) return true
     return props.isAdmin || props.absence.status === 'pendiente'
 })
 
-// cargar tipos
 const loadTypes = async () => {
     try {
         const res = await axios.get('/absence-types')
@@ -54,46 +91,63 @@ const loadTypes = async () => {
     }
 }
 
-// abrir modal
-watch(() => props.show, async (val) => {
-    if (!val) return
+const applyTypeDefaults = () => {
+    if (!selectedType.value) return
 
-    form.value = getInitialForm()
+    form.value.include_saturday = selectedType.value.default_include_saturday
+    form.value.include_sunday = selectedType.value.default_include_sunday
+    form.value.include_holidays = selectedType.value.default_include_holidays
+}
 
-    await loadTypes()
+watch(
+    () => form.value.absence_type_id,
+    () => {
+        if (props.mode === 'create') {
+            applyTypeDefaults()
+        }
+    },
+)
 
-    // usuario normal
-    if (!props.isAdmin) {
-        form.value.user_id = window.Laravel?.user?.id
-    }
+watch(
+    () => props.show,
+    async (val) => {
+        if (!val) return
 
-    // crear
-    if (props.mode === 'create' && props.selectedRange) {
-        const start = props.selectedRange.start
-        const end = new Date(props.selectedRange.end)
+        form.value = getInitialForm()
+        await loadTypes()
 
-        end.setMinutes(end.getMinutes() - 1) // evita día extra
+        if (!props.isAdmin) {
+            form.value.user_id = currentUserId.value
+        }
 
-        form.value.start_datetime = formatToDatetimeLocal(start)
-        form.value.end_datetime = formatToDatetimeLocal(end)
-    }
+        if (props.mode === 'create' && props.selectedRange) {
+            const start = props.selectedRange.start
+            const end = new Date(props.selectedRange.end)
 
-    // ver / editar
-    if (props.mode === 'view' && props.absence) {
-        Object.assign(form.value, {
-            user_id: props.absence.user?.id,
-            absence_type_id: props.absence.type?.id,
-            start_datetime: formatToDatetimeLocal(props.absence.start_datetime),
-            end_datetime: formatToDatetimeLocal(props.absence.end_datetime),
-            reason: props.absence.reason || ''
-        })
-    }
+            end.setMinutes(end.getMinutes() - 1)
 
-})
+            form.value.start_datetime = formatToDatetimeLocal(start)
+            form.value.end_datetime = formatToDatetimeLocal(end)
+        }
 
-// validación
+        if (props.mode === 'view' && props.absence) {
+            Object.assign(form.value, {
+                user_id: props.absence.user?.id,
+                absence_type_id: props.absence.type?.id,
+                start_datetime: formatToDatetimeLocal(props.absence.start_datetime),
+                end_datetime: formatToDatetimeLocal(props.absence.end_datetime),
+                include_saturday: props.absence.include_saturday,
+                include_sunday: props.absence.include_sunday,
+                include_holidays: props.absence.include_holidays,
+                holiday_country: props.absence.holiday_country || 'CO',
+                reason: props.absence.reason || '',
+            })
+        }
+    },
+)
+
 const validateForm = () => {
-    if (!form.value.user_id) {
+    if (props.isAdmin && !form.value.user_id) {
         toast.error('Selecciona un usuario')
         return false
     }
@@ -107,14 +161,13 @@ const validateForm = () => {
     const end = new Date(form.value.end_datetime)
 
     if (end <= start) {
-        toast.error('Fechas inválidas')
+        toast.error('Fechas invalidas')
         return false
     }
 
     return true
 }
 
-// crear
 const save = async () => {
     if (!validateForm()) return
 
@@ -122,19 +175,14 @@ const save = async () => {
 
     try {
         await axios.post('/absences', form.value)
-
         toast.success('Ausencia creada')
         emit('saved')
         emit('close')
-
     } catch (e: any) {
-        console.error(e)
-
         if (e.response?.data?.errors) {
-            const errors = e.response.data.errors
-            Object.values(errors).flat().forEach((msg: any) => {
-                toast.error(msg)
-            })
+            Object.values(e.response.data.errors)
+                .flat()
+                .forEach((msg: any) => toast.error(msg))
         } else {
             toast.error('Error al guardar')
         }
@@ -143,75 +191,97 @@ const save = async () => {
     }
 }
 
-// actualizar
 const update = async () => {
     if (!validateForm()) return
 
     loading.value = true
 
     try {
-        await axios.put(`/absences/${props.absence.id}`, form.value)
-
+        await axios.put(`/absences/${props.absence!.id}`, form.value)
         toast.success('Actualizado correctamente')
         emit('saved')
         emit('close')
-
-    } catch {
-        toast.error('Error al actualizar')
+    } catch (e: any) {
+        if (e.response?.data?.errors) {
+            Object.values(e.response.data.errors)
+                .flat()
+                .forEach((msg: any) => toast.error(msg))
+        } else {
+            toast.error('Error al actualizar')
+        }
     } finally {
         loading.value = false
     }
 }
 
-// aprobar
-const approve = async () => {
+const changeStatus = async (status: 'aprobado' | 'rechazado' | 'pendiente') => {
+    if (!props.absence) return
+    const endpoint = status === 'pendiente' ? 'pending' : status
+
+    loading.value = true
+
     try {
-        await axios.post(`/absences/${props.absence.id}/approve`)
-        toast.success('Aprobado')
+        await axios.post(`/absences/${props.absence.id}/${endpoint}`)
+        toast.success(`Estado cambiado a ${status}`)
         emit('saved')
         emit('close')
-    } catch {
-        toast.error('Error al aprobar')
+    } catch (e: any) {
+        if (e.response?.data?.errors) {
+            Object.values(e.response.data.errors)
+                .flat()
+                .forEach((msg: any) => toast.error(msg))
+        } else {
+            toast.error('Error al cambiar estado')
+        }
+    } finally {
+        loading.value = false
     }
 }
 
-// rechazar
-const reject = async () => {
+const remove = async () => {
+    if (!props.absence) return
+    if (!confirm('ÂEliminar esta ausencia?')) return
+
+    loading.value = true
+
     try {
-        await axios.post(`/absences/${props.absence.id}/reject`)
-        toast.success('Rechazado')
+        await axios.delete(`/absences/${props.absence.id}`)
+        toast.success('Ausencia eliminada')
         emit('saved')
         emit('close')
     } catch {
-        toast.error('Error al rechazar')
+        toast.error('Error al eliminar')
+    } finally {
+        loading.value = false
     }
 }
 </script>
 
 <template>
-    <div v-if="show" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+    <div v-if="show" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div class="w-full max-w-2xl space-y-4 rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
+            <div class="flex items-start justify-between gap-4">
+                <div>
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
+                        {{ mode === 'create' ? 'Nueva ausencia' : 'Detalle de ausencia' }}
+                    </h2>
+                    <p v-if="mode === 'view'" class="text-sm text-gray-500 dark:text-gray-400">
+                        Estado actual: <span class="font-medium capitalize">{{ currentStatus }}</span>
+                    </p>
+                </div>
+            </div>
 
-        <div class="bg-white dark:bg-gray-900 p-6 rounded-xl w-full max-w-lg shadow-xl space-y-4">
-
-            <!-- TITLE -->
-            <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
-                {{ mode === 'create' ? 'Nueva ausencia' : 'Detalle de ausencia' }}
-            </h2>
-
-            <!-- USER (ADMIN) -->
-            <div v-if="isAdmin">
+            <div v-if="isAdmin" class="space-y-1">
                 <label class="text-sm text-gray-600 dark:text-gray-300">Usuario</label>
                 <select v-model="form.user_id" class="input" :disabled="!canEdit">
                     <option value="">Seleccionar usuario</option>
-                    <option v-for="u in users" :key="u.id" :value="u.id">
+                    <option v-for="u in users ?? []" :key="u.id" :value="u.id">
                         {{ u.name }}
                     </option>
                 </select>
             </div>
 
-            <!-- FORM -->
             <div class="space-y-3">
-
                 <div>
                     <label class="text-sm text-gray-600 dark:text-gray-300">Tipo</label>
                     <select v-model="form.absence_type_id" class="input" :disabled="!canEdit">
@@ -222,58 +292,108 @@ const reject = async () => {
                     </select>
                 </div>
 
-                <div>
-                    <label class="text-sm text-gray-600 dark:text-gray-300">Inicio</label>
-                    <input type="datetime-local" v-model="form.start_datetime" class="input" :disabled="!canEdit" />
+                <div class="grid gap-3 md:grid-cols-2">
+                    <div>
+                        <label class="text-sm text-gray-600 dark:text-gray-300">Inicio</label>
+                        <input type="datetime-local" v-model="form.start_datetime" class="input" :disabled="!canEdit" />
+                    </div>
+
+                    <div>
+                        <label class="text-sm text-gray-600 dark:text-gray-300">Fin</label>
+                        <input type="datetime-local" v-model="form.end_datetime" class="input" :disabled="!canEdit" />
+                    </div>
                 </div>
 
-                <div>
-                    <label class="text-sm text-gray-600 dark:text-gray-300">Fin</label>
-                    <input type="datetime-local" v-model="form.end_datetime" class="input" :disabled="!canEdit" />
+                <div v-if="showBusinessRules" class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20">
+                    <p class="mb-3 text-sm font-medium text-amber-900 dark:text-amber-200">
+                        Reglas de conteo para esta ausencia
+                    </p>
+                    <div class="grid gap-3 md:grid-cols-3">
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                            <input v-model="form.include_saturday" type="checkbox" :disabled="!canEdit" />
+                            Contar sabados
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                            <input v-model="form.include_sunday" type="checkbox" :disabled="!canEdit" />
+                            Contar domingos
+                        </label>
+                        <label class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200">
+                            <input v-model="form.include_holidays" type="checkbox" :disabled="!canEdit" />
+                            Contar festivos
+                        </label>
+                    </div>
+                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
+                        País de festivos: {{ form.holiday_country }}
+                    </p>
                 </div>
 
                 <div>
                     <label class="text-sm text-gray-600 dark:text-gray-300">Motivo</label>
-                    <textarea v-model="form.reason" class="input" :disabled="!canEdit" />
+                    <textarea v-model="form.reason" class="input min-h-24" :disabled="!canEdit" />
                 </div>
-
             </div>
 
-            <!-- ACTIONS -->
-            <div class="flex justify-end gap-2 pt-2">
-
-                <button @click="$emit('close')"
-                    class="px-4 py-2 rounded bg-gray-300 dark:bg-gray-700 text-gray-900 dark:text-gray-100">
+            <div class="flex flex-wrap justify-end gap-2 pt-2">
+                <button
+                    @click="$emit('close')"
+                    class="rounded bg-gray-300 px-4 py-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
+                >
                     Cerrar
                 </button>
 
-                <!-- CREAR -->
-                <button v-if="mode === 'create'" @click="save" :disabled="loading"
-                    class="px-4 py-2 rounded bg-blue-600 text-white">
+                <button
+                    v-if="mode === 'create'"
+                    @click="save"
+                    :disabled="loading"
+                    class="rounded bg-blue-600 px-4 py-2 text-white"
+                >
                     Guardar
                 </button>
 
-                <!-- EDITAR -->
-                <button v-if="mode === 'view' && canEdit" @click="update" :disabled="loading"
-                    class="px-4 py-2 rounded bg-yellow-500 text-white">
+                <button
+                    v-if="mode === 'view' && canEdit"
+                    @click="update"
+                    :disabled="loading"
+                    class="rounded bg-yellow-500 px-4 py-2 text-white"
+                >
                     Actualizar
                 </button>
 
-                <!-- ADMIN -->
-                <template v-if="mode === 'view' && isAdmin && absence?.status === 'pendiente'">
+                <template v-if="mode === 'view' && isAdmin && absence">
+                    <button
+                        @click="changeStatus('pendiente')"
+                        :disabled="loading"
+                        class="rounded bg-slate-600 px-4 py-2 text-white"
+                    >
+                        Poner pendiente
+                    </button>
 
-                    <button @click="reject" class="px-4 py-2 rounded bg-red-600 text-white">
+                    <button
+                        @click="changeStatus('rechazado')"
+                        :disabled="loading"
+                        class="rounded bg-red-600 px-4 py-2 text-white"
+                    >
                         Rechazar
                     </button>
 
-                    <button @click="approve" class="px-4 py-2 rounded bg-green-600 text-white">
+                    <button
+                        @click="changeStatus('aprobado')"
+                        :disabled="loading"
+                        class="rounded bg-green-600 px-4 py-2 text-white"
+                    >
                         Aprobar
                     </button>
 
+                    <button
+                        @click="remove"
+                        :disabled="loading"
+                        class="rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black"
+                    >
+                        Eliminar
+                    </button>
                 </template>
-
             </div>
-
         </div>
     </div>
 </template>
+

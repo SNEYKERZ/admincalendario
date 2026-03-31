@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Services\Holidays\ColombiaHolidayProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
@@ -15,12 +16,14 @@ class AppServiceProvider extends ServiceProvider
         \App\Models\User::class => \App\Policies\UserPolicy::class,
         \App\Models\VacationYear::class => \App\Policies\VacationYearPolicy::class,
     ];
+
     /**
      * Register any application services.
      */
     public function register(): void
     {
-        //
+        // Registrar proveedores de feriados por defecto
+        $this->app->singleton(ColombiaHolidayProvider::class);
     }
 
     /**

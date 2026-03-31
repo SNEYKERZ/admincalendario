@@ -10,9 +10,19 @@ class ProfileUpdateRequest extends FormRequest
 {
     use ProfileValidationRules;
 
+    protected function prepareForValidation(): void
+    {
+        $firstName = trim((string) $this->input('first_name', $this->user()?->first_name));
+        $lastName = trim((string) $this->input('last_name', $this->user()?->last_name));
+
+        $this->merge([
+            'first_name' => $firstName,
+            'last_name' => $lastName,
+            'name' => trim($firstName . ' ' . $lastName),
+        ]);
+    }
+
     /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
@@ -20,3 +30,4 @@ class ProfileUpdateRequest extends FormRequest
         return $this->profileRules($this->user()->id);
     }
 }
+

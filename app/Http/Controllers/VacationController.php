@@ -21,7 +21,16 @@ class VacationController extends Controller
             return [
                 'id' => $u->id,
                 'name' => $u->name,
+                'first_name' => $u->first_name,
+                'last_name' => $u->last_name,
                 'email' => $u->email,
+                'identification' => $u->identification,
+                'phone' => $u->phone,
+                'role' => $u->role instanceof \App\Enums\UserRole ? $u->role->value : $u->role,
+                'birth_date' => $u->birth_date?->toDateString(),
+                'hire_date' => $u->hire_date?->toDateString(),
+                'photo_path' => $u->photo_path,
+                'photo_url' => $u->photo_url,
                 'allocated' => $allocated,
                 'used' => $used,
                 'available' => $allocated - $used,
@@ -34,7 +43,7 @@ class VacationController extends Controller
         $this->authorize('update', $user);
 
         $data = $request->validate([
-            'days' => 'required|numeric'
+            'days' => 'required|numeric',
         ]);
 
         $year = now()->year;
@@ -44,14 +53,14 @@ class VacationController extends Controller
             [
                 'allocated_days' => 0,
                 'used_days' => 0,
-                'expires_at' => now()->endOfYear()
+                'expires_at' => now()->endOfYear(),
             ]
         );
 
         $vacation->increment('allocated_days', $data['days']);
 
         return response()->json([
-            'message' => 'Días actualizados'
+            'message' => 'Días actualizados',
         ]);
     }
 }
