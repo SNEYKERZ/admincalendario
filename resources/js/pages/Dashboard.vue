@@ -3,6 +3,7 @@ import { ref, onMounted, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
 import AbsenceModal from '@/components/AbsenceModal.vue';
+import SubscriptionAnnouncementModal from '@/components/SubscriptionAnnouncementModal.vue';
 
 interface Metric {
     total_employees: number;
@@ -58,6 +59,16 @@ const showAbsenceModal = ref(false);
 const absenceModalMode = ref<'create' | 'view'>('create');
 const selectedAbsence = ref<any>(null);
 const isAdmin = ref(false);
+const subscription = ref<any>(null);
+
+// Subscription announcement modal
+const showSubscriptionAnnouncement = ref(false);
+const subscriptionAnnouncementType = ref<'expiring' | 'payment_required'>(
+    'expiring',
+);
+const subscriptionDaysRemaining = ref(0);
+const subscriptionPlanName = ref('');
+const subscriptionExpiresAt = ref('');
 
 const loadDashboard = async () => {
     try {
@@ -82,6 +93,30 @@ const loadDashboard = async () => {
         // Get admin status from API response
         if (res.data.is_admin !== undefined) {
             isAdmin.value = res.data.is_admin;
+            subscription.value = res.data.subscription;
+
+            // Show subscription announcement if needed
+            if (isAdmin.value && subscription.value) {
+                if (
+                    subscription.value.show_ad &&
+                    subscription.value.days_remaining > 0
+                ) {
+                    subscriptionAnnouncementType.value = 'expiring';
+                    subscriptionDaysRemaining.value =
+                        subscription.value.days_remaining;
+                    subscriptionPlanName.value =
+                        subscription.value.plan_name || '';
+                    subscriptionExpiresAt.value =
+                        subscription.value.expires_at || '';
+                    showSubscriptionAnnouncement.value = true;
+                } else if (!subscription.value.has_subscription) {
+                    subscriptionAnnouncementType.value = 'payment_required';
+                    subscriptionDaysRemaining.value = 0;
+                    subscriptionPlanName.value = '';
+                    subscriptionExpiresAt.value = '';
+                    showSubscriptionAnnouncement.value = true;
+                }
+            }
         } else {
             // Fallback: check from user data
             const userRes = await axios.get('/me');
@@ -152,6 +187,45 @@ const getStatusLabel = (status: string) => {
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         Resumen de gestión de ausencias y vacaciones
                     </p>
+                </div>
+                <!-- Subscription Alert -->
+                <div
+                    v-if="
+                        isAdmin &&
+                        subscription &&
+                        subscription.has_subscription &&
+                        subscription.show_ad
+                    "
+                    class="rounded-lg bg-amber-50 px-4 py-3 dark:bg-amber-900/30"
+                >
+                    <div class="flex items-center gap-3">
+                        <svg
+                            class="h-5 w-5 text-amber-600 dark:text-amber-400"
+                            fill="none"
+                            stroke="currentColor"
+                            viewBox="0 0 24 24"
+                        >
+                            <path
+                                stroke-linecap="round"
+                                stroke-linejoin="round"
+                                stroke-width="2"
+                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                            />
+                        </svg>
+                        <div>
+                            <p
+                                class="text-sm font-medium text-amber-800 dark:text-amber-200"
+                            >
+                                Tu suscripción está por vencer
+                            </p>
+                            <p
+                                class="text-xs text-amber-700 dark:text-amber-300"
+                            >
+                                {{ subscription.plan_name }} -
+                                {{ subscription.days_remaining }} días restantes
+                            </p>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex gap-2">
                     <button @click="loadDashboard" class="btn-secondary">
@@ -643,6 +717,21 @@ const getStatusLabel = (status: string) => {
             :isAdmin="isAdmin"
             @close="showAbsenceModal = false"
             @saved="loadDashboard"
+        />
+
+        <!-- Subscription Announcement Modal -->
+        <SubscriptionAnnouncementModal
+            :show="showSubscriptionAnnouncement"
+            :type="subscriptionAnnouncementType"
+            :days-remaining="subscriptionDaysRemaining"
+            :plan-name="subscriptionPlanName"
+            :expires-at="subscriptionExpiresAt"
+            @close="showSubscriptionAnnouncement = false"
+            @renew="
+                () => {
+                    showSubscriptionAnnouncement.value = false;
+                }
+            "
         />
     </AppLayout>
 </template>

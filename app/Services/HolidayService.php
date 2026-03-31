@@ -11,7 +11,7 @@ use InvalidArgumentException;
 class HolidayService
 {
     /**
-     * @var array<string, array<string>>
+     * @var array<string, array<string, string>>
      */
     private array $cache = [];
 
@@ -19,6 +19,9 @@ class HolidayService
         protected Container $container
     ) {}
 
+    /**
+     * Check if a specific date is a holiday
+     */
     public function isHoliday(CarbonInterface $date, ?string $country = null): bool
     {
         $country = strtoupper($country ?: config('business_calendar.default_country', 'CO'));
@@ -28,7 +31,72 @@ class HolidayService
             $this->cache[$cacheKey] = $this->providerFor($country)->forYear($date->year);
         }
 
-        return in_array($date->toDateString(), $this->cache[$cacheKey], true);
+        return isset($this->cache[$cacheKey][$date->toDateString()]);
+    }
+
+    /**
+     * Get the name of a holiday for a specific date
+     */
+    public function getHolidayName(CarbonInterface $date, ?string $country = null): ?string
+    {
+        $country = strtoupper($country ?: config('business_calendar.default_country', 'CO'));
+        $cacheKey = $country.':'.$date->year;
+
+        if (! isset($this->cache[$cacheKey])) {
+            $this->cache[$cacheKey] = $this->providerFor($country)->forYear($date->year);
+        }
+
+        return $this->cache[$cacheKey][$date->toDateString()] ?? null;
+    }
+
+    /**
+     * Get all holidays for a year and country
+     *
+     * @return array<string, string> ['2026-04-02' => 'Jueves Santo', ...]
+     */
+    public function getHolidaysForYear(int $year, ?string $country = null): array
+    {
+        $country = strtoupper($country ?: config('business_calendar.default_country', 'CO'));
+        $cacheKey = $country.':'.$year;
+
+        if (! isset($this->cache[$cacheKey])) {
+            $this->cache[$cacheKey] = $this->providerFor($country)->forYear($year);
+        }
+
+        return $this->cache[$cacheKey];
+    }
+
+    /**
+     * Get all available countries with their display names
+     *
+     * @return array<string, string>
+     */
+    public function getAvailableCountries(): array
+    {
+        $countries = [];
+
+        // Get from config providers
+        $providers = config('business_calendar.providers', []);
+
+        foreach ($providers as $countryCode => $providerClass) {
+            if ($this->container->bound($providerClass)) {
+                $provider = $this->container->make($providerClass);
+                $countries[$countryCode] = $provider::availableCountries()[$countryCode] ?? $countryCode;
+            }
+        }
+
+        // Add defaults if not in config
+        $defaults = [
+            'CO' => 'Colombia',
+        ];
+
+        foreach ($defaults as $code => $name) {
+            if (! isset($countries[$code])) {
+                $countries[$code] = $name;
+            }
+        }
+
+        return $countries;
     }
 
     /**

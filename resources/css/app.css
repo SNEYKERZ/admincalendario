@@ -192,13 +192,12 @@
     font-weight: bold;
 }
 
-
 .input {
-    @apply w-full border p-2 rounded bg-white text-gray-900;
+    @apply w-full rounded border bg-white p-2 text-gray-900;
 }
 
 .dark .input {
-    @apply bg-gray-800 text-gray-100 border-gray-700;
+    @apply border-gray-700 bg-gray-800 text-gray-100;
 }
 
 .fc-event {
@@ -209,5 +208,32 @@
 }
 
 .fc-col-header-cell-cushion {
-     color: #111827; /* texto oscuro */
+    color: #111827; /* texto oscuro */
+}
+
+.dark .fc-col-header-cell-cushion {
+    color: #000000; /* texto claro */
+}
+
+.fc-event-title {
+    color: #000000 !important; /* texto oscuro */
+    font-size: .90rem !important;
+}
+.dark .fc-event-title {
+    color: #000000 !important;; /* texto claro */
+}
+
+.fc .fc-bg-event{
+    opacity: 1 !important;
+}
+
+.fc-daygrid-day-number {
+    font-size: 0.9rem;
+}
+
+/* .dark .fc-daygrid-day-frame .fc-scrollgrid-sync-inner {
+   background-color: turquoise !important;
+} */
+.fc .fc-daygrid-day.fc-day-today {
+     background-color: #9b9b9b5e ;
 }

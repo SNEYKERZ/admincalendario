@@ -57,7 +57,7 @@ const logoPreview = computed(() => {
 const loadSettings = async () => {
     loading.value = true;
     try {
-        const res = await axios.get('/settings/company');
+        const res = await axios.get('/settings/company/data');
         settings.value = res.data;
         form.value = {
             company_name: res.data.company_name || '',

@@ -8,6 +8,7 @@ import {
     Users,
     FileBarChart,
     Settings,
+    Cog,
 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -27,7 +28,8 @@ import type { NavItem } from '@/types';
 
 const page = usePage();
 const user = page.props.auth?.user;
-const isAdmin = user?.role === 'admin';
+const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
+const isSuperAdmin = user?.role === 'superadmin';
 
 const mainNavItems: NavItem[] = [
     {
@@ -64,6 +66,15 @@ const mainNavItems: NavItem[] = [
                   title: 'Configuración',
                   href: '/settings/company',
                   icon: Settings,
+              },
+          ]
+        : []),
+    ...(isSuperAdmin
+        ? [
+              {
+                  title: 'Gestión del Sistema',
+                  href: '/gestion-sistema',
+                  icon: Cog,
               },
           ]
         : []),

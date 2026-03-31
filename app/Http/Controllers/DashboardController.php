@@ -29,6 +29,8 @@ class DashboardController extends Controller
             'users' => $this->getUsersList($isAdmin),
             'is_admin' => $isAdmin,
             'current_user_id' => $user->id,
+            // Only show subscription to admins (not superadmin)
+            'subscription' => ($isAdmin && ! $user->isSuperAdmin()) ? $this->getSubscriptionInfo($user) : null,
         ]);
     }
 
@@ -38,17 +40,19 @@ class DashboardController extends Controller
 
         // Los colaboradores solo ven la lista de usuarios para filtro
         if (! $isAdmin) {
-            return $query->where('id', auth()->id())->get();
+            $userId = auth()->id();
+
+            return $query->where('id', $userId)->get();
         }
 
-        return $query->where('role', '!=', 'admin')
+        return $query->whereNotIn('role', ['admin', 'superadmin'])
             ->orderBy('name')
             ->get();
     }
 
     protected function getMetrics(?int $userId = null, bool $isAdmin = true): array
     {
-        $employeeQuery = User::where('role', '!=', 'admin');
+        $employeeQuery = User::whereNotIn('role', ['admin', 'superadmin']);
         $absenceQuery = Absence::query();
         $vacationQuery = VacationYear::query();
 
@@ -211,7 +215,7 @@ class DashboardController extends Controller
 
     protected function getVacationBalance(?int $userId = null, ?string $search = null)
     {
-        $query = User::where('role', '!=', 'admin')
+        $query = User::whereNotIn('role', ['admin', 'superadmin'])
             ->with(['vacationYears' => fn ($q) => $q->where('expires_at', '>=', now())]);
 
         if ($userId) {
@@ -244,5 +248,35 @@ class DashboardController extends Controller
             ->sortByDesc('available')
             ->take(10)
             ->values();
+    }
+
+    protected function getSubscriptionInfo(User $user): ?array
+    {
+        $subscription = $user->subscriptions()
+            ->where('is_active', true)
+            ->where('expires_at', '>', now())
+            ->with('plan')
+            ->first();
+
+        if (! $subscription) {
+            return [
+                'has_subscription' => false,
+                'show_ad' => false,
+            ];
+        }
+
+        $settings = \App\Models\SubscriptionSettings::first();
+        $daysThreshold = $settings?->show_ads_days_before ?? 5;
+        $daysRemaining = $subscription->daysRemaining();
+
+        return [
+            'has_subscription' => true,
+            'is_active' => $subscription->is_active,
+            'plan_name' => $subscription->plan?->name,
+            'starts_at' => $subscription->starts_at->toDateString(),
+            'expires_at' => $subscription->expires_at->toDateString(),
+            'days_remaining' => $daysRemaining,
+            'show_ad' => $daysRemaining <= $daysThreshold,
+        ];
     }
 }

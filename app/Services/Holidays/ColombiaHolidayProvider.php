@@ -11,30 +11,36 @@ class ColombiaHolidayProvider implements HolidayProvider
     {
         $easter = CarbonImmutable::create($year, 3, 21)->addDays(easter_days($year));
 
-        return collect([
-            CarbonImmutable::create($year, 1, 1),
-            $this->moveToNextMonday(CarbonImmutable::create($year, 1, 6)),
-            $this->moveToNextMonday(CarbonImmutable::create($year, 3, 19)),
-            $easter->subDays(3),
-            $easter->subDays(2),
-            CarbonImmutable::create($year, 5, 1),
-            $this->moveToNextMonday($easter->addDays(39)),
-            $this->moveToNextMonday($easter->addDays(60)),
-            $this->moveToNextMonday($easter->addDays(68)),
-            CarbonImmutable::create($year, 7, 20),
-            CarbonImmutable::create($year, 8, 7),
-            $this->moveToNextMonday(CarbonImmutable::create($year, 8, 15)),
-            $this->moveToNextMonday(CarbonImmutable::create($year, 10, 12)),
-            $this->moveToNextMonday(CarbonImmutable::create($year, 11, 1)),
-            $this->moveToNextMonday(CarbonImmutable::create($year, 11, 11)),
-            CarbonImmutable::create($year, 12, 8),
-            CarbonImmutable::create($year, 12, 25),
-        ])
-            ->map(fn (CarbonImmutable $date) => $date->toDateString())
-            ->unique()
-            ->sort()
-            ->values()
-            ->all();
+        $holidays = collect([
+            ['date' => CarbonImmutable::create($year, 1, 1), 'name' => 'Año Nuevo'],
+            ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 1, 6)), 'name' => 'Día de los Reyes'],
+            ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 3, 19)), 'name' => 'San José'],
+            ['date' => $easter->subDays(3), 'name' => 'Jueves Santo'],
+            ['date' => $easter->subDays(2), 'name' => 'Viernes Santo'],
+            ['date' => CarbonImmutable::create($year, 5, 1), 'name' => 'Día del Trabajo'],
+            ['date' => $this->moveToNextMonday($easter->addDays(39)), 'name' => 'Ascensión'],
+            ['date' => $this->moveToNextMonday($easter->addDays(60)), 'name' => 'Corpus Christi'],
+            ['date' => $this->moveToNextMonday($easter->addDays(68)), 'name' => 'Sagrado Corazón'],
+            ['date' => CarbonImmutable::create($year, 7, 20), 'name' => 'Día de la Independencia'],
+            ['date' => CarbonImmutable::create($year, 8, 7), 'name' => 'Batalla de Boyacá'],
+            ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 8, 15)), 'name' => 'Asunción'],
+            ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 10, 12)), 'name' => 'Día de la Raza'],
+            ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 11, 1)), 'name' => 'Todos los Santos'],
+            ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 11, 11)), 'name' => 'Independencia de Cartagena'],
+            ['date' => CarbonImmutable::create($year, 12, 8), 'name' => 'Inmaculada Concepción'],
+            ['date' => CarbonImmutable::create($year, 12, 25), 'name' => 'Navidad'],
+        ]);
+
+        return $holidays
+            ->mapWithKeys(fn ($item) => [$item['date']->toDateString() => $item['name']])
+            ->toArray();
+    }
+
+    public static function availableCountries(): array
+    {
+        return [
+            'CO' => 'Colombia',
+        ];
     }
 
     private function moveToNextMonday(CarbonImmutable $date): CarbonImmutable

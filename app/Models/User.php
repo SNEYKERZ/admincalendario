@@ -65,6 +65,16 @@ class User extends Authenticatable
         return $this->hasMany(Absence::class, 'approved_by');
     }
 
+    public function subscriptions(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
+    public function subscription(): HasMany
+    {
+        return $this->hasMany(Subscription::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -72,6 +82,11 @@ class User extends Authenticatable
     */
 
     public function scopeAdmins($query)
+    {
+        return $query->whereIn('role', [UserRole::ADMIN->value, UserRole::SUPERADMIN->value]);
+    }
+
+    public function scopeRegularAdmins($query)
     {
         return $query->where('role', UserRole::ADMIN->value);
     }
@@ -91,7 +106,14 @@ class User extends Authenticatable
     {
         return $this->role instanceof UserRole
             ? $this->role->isAdmin()
-            : $this->role === UserRole::ADMIN->value;
+            : in_array($this->role, [UserRole::ADMIN->value, UserRole::SUPERADMIN->value]);
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return $this->role instanceof UserRole
+            ? $this->role === UserRole::SUPERADMIN
+            : $this->role === UserRole::SUPERADMIN->value;
     }
 
     public function isColaborador(): bool

@@ -23,6 +23,9 @@ const users = ref<
 const isAdmin = ref(false);
 const searchQuery = ref('');
 const toast = useToast();
+const selectedCountry = ref('CO');
+const holidays = ref<{ date: string; title: string }[]>([]);
+const countries = ref<{ code: string; name: string }[]>([]);
 
 const filteredUsers = ref<
     { id: number; name: string; identification: string; email: string }[]
@@ -57,10 +60,47 @@ onMounted(async () => {
             email: u.email || '',
         }));
         filteredUsers.value = users.value;
+
+        // Load countries and holidays
+        await loadCountries();
+        await loadHolidays(new Date().getFullYear());
     } catch (e) {
         console.error('Error loading data:', e);
     }
 });
+
+// Reload holidays when country changes
+watch(selectedCountry, async (newCountry) => {
+    if (newCountry) {
+        await loadHolidays(new Date().getFullYear());
+        refreshCalendar();
+    }
+});
+
+const loadHolidays = async (year: number) => {
+    try {
+        const res = await axios.get('/holidays', {
+            params: { year, country: selectedCountry.value },
+        });
+        holidays.value = res.data;
+    } catch (e) {
+        console.error('Error loading holidays:', e);
+    }
+};
+
+const loadCountries = async () => {
+    try {
+        const res = await axios.get('/holidays/countries');
+        countries.value = Object.entries(res.data).map(([code, name]) => ({
+            code,
+            name: name as string,
+        }));
+    } catch (e) {
+        console.error('Error loading countries:', e);
+        // Fallback
+        countries.value = [{ code: 'CO', name: 'Colombia' }];
+    }
+};
 
 const getColor = (status: string) => {
     switch (status) {
@@ -92,7 +132,7 @@ const fetchEvents = async (
 
         const res = await axios.get('/absences', { params });
 
-        const data = res.data.map((item: any) => ({
+        const absenceEvents = res.data.map((item: any) => ({
             id: item.id,
             title: `${item.user?.name ?? ''} - ${item.type?.name ?? ''}`,
             start: item.start_datetime,
@@ -101,7 +141,17 @@ const fetchEvents = async (
             extendedProps: item,
         }));
 
-        successCallback(data);
+        // Add holidays as background events
+        const holidayEvents = holidays.value.map((h: any) => ({
+            start: h.date,
+            allDay: true,
+            display: 'background',
+            backgroundColor: '#green',
+            title: h.title,
+            extendedProps: { isHoliday: true },
+        }));
+
+        successCallback([...absenceEvents, ...holidayEvents]);
     } catch (e) {
         console.error(e);
         failureCallback(e);
@@ -137,11 +187,25 @@ const handleUserChange = (userId: number | null) => {
 const handleEventDidMount = (info: any) => {
     try {
         const data = info.event.extendedProps;
+
+        // Handle holiday events
+        if (data?.isHoliday) {
+            tippy(info.el, {
+                content: `
+                    <div style="font-size:18px">
+                        <strong>🎉 ${info.event.title}</strong>
+                    </div>
+                `,
+                allowHTML: true,
+            });
+            return;
+        }
+
         if (!data?.user) return;
 
         tippy(info.el, {
             content: `
-                <div style="font-size:12px">
+                <div style="font-size:18px">
                     <strong>${data.user.name}</strong><br/>
                     Tipo: ${data.type.name}<br/>
                     Estado: ${data.status}<br/>
@@ -264,6 +328,25 @@ const calendarOptions = {
                     </div>
                 </div>
 
+                <!-- Country selector for holidays -->
+                <div class="flex items-center gap-2">
+                    <label class="text-sm text-gray-600 dark:text-gray-400">
+                        Feriados:
+                    </label>
+                    <select
+                        v-model="selectedCountry"
+                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                    >
+                        <option
+                            v-for="country in countries"
+                            :key="country.code"
+                            :value="country.code"
+                        >
+                            {{ country.name }}
+                        </option>
+                    </select>
+                </div>
+
                 <!-- User Filter -->
                 <div class="flex items-center gap-2 overflow-x-auto pb-2">
                     <button
@@ -311,6 +394,12 @@ const calendarOptions = {
                     <div class="h-3 w-3 rounded-full bg-red-500"></div>
                     <span class="text-gray-600 dark:text-gray-400"
                         >Rechazado</span
+                    >
+                </div>
+                <div class="flex items-center gap-2">
+                    <div class="h-3 w-3 rounded-full bg-amber-200"></div>
+                    <span class="text-gray-100 dark:text-gray-400"
+                        >Festivo</span
                     >
                 </div>
             </div>

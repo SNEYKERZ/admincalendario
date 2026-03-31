@@ -11,7 +11,23 @@ class VacationController extends Controller
     {
         $this->authorize('viewAny', User::class);
 
-        $users = User::with('vacationYears')->get();
+        $user = auth()->user();
+
+        // Get users - exclude superadmin for admins, exclude both admin and superadmin for regular users
+        $query = User::with('vacationYears');
+
+        if ($user->isSuperAdmin()) {
+            // Superadmin sees everyone except themselves (handled by UI)
+            $query->where('role', '!=', \App\Enums\UserRole::SUPERADMIN->value);
+        } elseif ($user->isAdmin()) {
+            // Admin sees only colaboradores
+            $query->where('role', \App\Enums\UserRole::COLLABORATOR->value);
+        } else {
+            // Regular users see only themselves
+            $query->where('id', $user->id);
+        }
+
+        $users = $query->get();
 
         return response()->json($users->map(function ($u) {
 

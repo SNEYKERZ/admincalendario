@@ -3,8 +3,10 @@
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
+use App\Http\Controllers\SystemManagementController;
 use App\Http\Controllers\VacationController;
 use App\Http\Controllers\VacationYearController;
 use App\Models\AbsenceType;
@@ -66,8 +68,7 @@ Route::middleware(['auth'])->group(function () {
     // Reportes
     Route::inertia('/reportes', 'Reportes')->name('reportes');
 
-    // Settings
-    Route::inertia('/settings/company', 'SettingsCompany')->name('settings.company');
+    // Settings (handled by inertia inside auth group)
     Route::inertia('/legal/terms', 'LegalTerms')->name('legal.terms');
     Route::inertia('/legal/privacy', 'LegalPrivacy')->name('legal.privacy');
 
@@ -116,6 +117,14 @@ Route::middleware(['auth'])->group(function () {
 
     /*
     |--------------------------------------------------------------------------
+    | Holidays / Feriados
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/holidays', [HolidayController::class, 'index'])->name('holidays.index');
+    Route::get('/holidays/countries', [HolidayController::class, 'countries'])->name('holidays.countries');
+
+    /*
+    |--------------------------------------------------------------------------
     | Absence Types (para Vue)
     |--------------------------------------------------------------------------
     */
@@ -155,6 +164,30 @@ Route::middleware(['auth'])->group(function () {
     | Settings
     |--------------------------------------------------------------------------
     */
-    Route::get('/settings/company', [SettingsController::class, 'index'])->name('settings.company');
+    Route::inertia('/settings/company', 'SettingsCompany')->name('settings.company');
+    Route::get('/settings/company/data', [SettingsController::class, 'index'])->name('settings.company.data');
     Route::put('/settings/company', [SettingsController::class, 'update'])->name('settings.company.update');
+
+    /*
+    |--------------------------------------------------------------------------
+    | System Management (SuperAdmin)
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['auth', 'can:superadmin'])->group(function () {
+        Route::inertia('/gestion-sistema', 'SystemManagement')->name('system-management');
+        Route::get('/gestion-sistema/api/data', [SystemManagementController::class, 'getData'])->name('system-management.data');
+        Route::put('/gestion-sistema/settings', [SystemManagementController::class, 'updateSettings'])->name('system-management.settings');
+        Route::post('/gestion-sistema/plans', [SystemManagementController::class, 'storePlan'])->name('system-management.plans.store');
+        Route::put('/gestion-sistema/plans/{plan}', [SystemManagementController::class, 'updatePlan'])->name('system-management.plans.update');
+        Route::delete('/gestion-sistema/plans/{plan}', [SystemManagementController::class, 'destroyPlan'])->name('system-management.plans.destroy');
+        Route::post('/gestion-sistema/subscription/activate', [SystemManagementController::class, 'activateSubscription'])->name('system-management.subscription.activate');
+        Route::post('/gestion-sistema/subscription/deactivate', [SystemManagementController::class, 'deactivateSubscription'])->name('system-management.subscription.deactivate');
+        Route::post('/gestion-sistema/recalculate-prices', [SystemManagementController::class, 'recalculatePrices'])->name('system-management.recalculate-prices');
+
+        // Announcements
+        Route::get('/gestion-sistema/api/announcements', [SystemManagementController::class, 'getAnnouncements'])->name('system-management.announcements.index');
+        Route::post('/gestion-sistema/announcements', [SystemManagementController::class, 'storeAnnouncement'])->name('system-management.announcements.store');
+        Route::put('/gestion-sistema/announcements/{announcement}', [SystemManagementController::class, 'updateAnnouncement'])->name('system-management.announcements.update');
+        Route::delete('/gestion-sistema/announcements/{announcement}', [SystemManagementController::class, 'destroyAnnouncement'])->name('system-management.announcements.destroy');
+    });
 });
