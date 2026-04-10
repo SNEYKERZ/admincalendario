@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AbsenceStatus;
 use App\Models\Absence;
+use App\Models\Area;
 use App\Models\User;
 use App\Models\VacationYear;
 use Illuminate\Http\JsonResponse;
@@ -19,19 +20,100 @@ class DashboardController extends Controller
         // Si no es admin, solo puede ver sus propios datos
         $userId = ! $isAdmin ? $user->id : request()->get('user_id');
         $search = request()->get('search');
+        $areaId = request()->get('area_id');
 
         return response()->json([
-            'metrics' => $this->getMetrics($userId, $isAdmin),
-            'chartData' => $this->getChartData($userId, $isAdmin),
-            'recentAbsences' => $this->getRecentAbsences($userId, $search, $isAdmin),
-            'pendingApprovals' => $this->getPendingApprovals($userId, $search, $isAdmin),
+            'metrics' => $this->getMetrics($userId, $isAdmin, $areaId),
+            'chartData' => $this->getChartData($userId, $isAdmin, $areaId),
+            'recentAbsences' => $this->getRecentAbsences($userId, $search, $isAdmin, $areaId),
+            'pendingApprovals' => $this->getPendingApprovals($userId, $search, $isAdmin, $areaId),
             'vacationBalance' => $this->getVacationBalance($userId, $search, $isAdmin),
             'users' => $this->getUsersList($isAdmin),
+            'areas' => $this->getAreasList(),
+            'employeeStatuses' => $this->getEmployeeStatuses($isAdmin, $areaId),
             'is_admin' => $isAdmin,
             'current_user_id' => $user->id,
             // Only show subscription to admins (not superadmin)
             'subscription' => ($isAdmin && ! $user->isSuperAdmin()) ? $this->getSubscriptionInfo($user) : null,
         ]);
+    }
+
+    protected function getAreasList(): \Illuminate\Database\Eloquent\Collection
+    {
+        return Area::active()
+            ->ordered()
+            ->get(['id', 'name', 'color']);
+    }
+
+    protected function getEmployeeStatuses(bool $isAdmin, ?int $areaId = null): array
+    {
+        // Obtener empleados (colaboradores)
+        $employeeQuery = User::whereNotIn('role', ['admin', 'superadmin'])
+            ->where('is_active', true);
+
+        if ($areaId) {
+            $employeeQuery->where('area_id', $areaId);
+        }
+
+        $employees = $employeeQuery->get();
+        $currentMonth = now()->month;
+        $currentYear = now()->year;
+
+        $statuses = [];
+
+        foreach ($employees as $employee) {
+            // 🟢 Verde: Disponible (sin ausencias en el mes)
+            // 🟡 Amarillo: Ausencia próxima (dentro del mes en curso)
+            // 🔴 Rojo: En ausencia actual
+
+            $currentAbsence = Absence::where('user_id', $employee->id)
+                ->where('status', AbsenceStatus::APPROVED->value)
+                ->whereDate('start_datetime', '<=', now())
+                ->whereDate('end_datetime', '>=', now())
+                ->first();
+
+            $upcomingAbsence = Absence::where('user_id', $employee->id)
+                ->where('status', AbsenceStatus::APPROVED->value)
+                ->whereMonth('start_datetime', $currentMonth)
+                ->whereYear('start_datetime', $currentYear)
+                ->whereDate('start_datetime', '>', now())
+                ->first();
+
+            if ($currentAbsence) {
+                $status = 'red';
+            } elseif ($upcomingAbsence) {
+                $status = 'yellow';
+            } else {
+                $status = 'green';
+            }
+
+            $statuses[] = [
+                'id' => $employee->id,
+                'name' => $employee->name,
+                'status' => $status,
+                'current_absence' => $currentAbsence ? [
+                    'type' => $currentAbsence->absenceType?->name,
+                    'end' => $currentAbsence->end_datetime->format('Y-m-d'),
+                ] : null,
+                'upcoming_absence' => $upcomingAbsence ? [
+                    'type' => $upcomingAbsence->absenceType?->name,
+                    'start' => $upcomingAbsence->start_datetime->format('Y-m-d'),
+                ] : null,
+            ];
+        }
+
+        // Resumen por estado
+        $summary = [
+            'green' => collect($statuses)->where('status', 'green')->count(),
+            'yellow' => collect($statuses)->where('status', 'yellow')->count(),
+            'red' => collect($statuses)->where('status', 'red')->count(),
+            'total' => count($statuses),
+        ];
+
+        return [
+            'employees' => $statuses,
+            'summary' => $summary,
+        ];
     }
 
     protected function getUsersList(bool $isAdmin): \Illuminate\Database\Eloquent\Collection
@@ -50,7 +132,7 @@ class DashboardController extends Controller
             ->get();
     }
 
-    protected function getMetrics(?int $userId = null, bool $isAdmin = true): array
+    protected function getMetrics(?int $userId = null, bool $isAdmin = true, ?int $areaId = null): array
     {
         $employeeQuery = User::whereNotIn('role', ['admin', 'superadmin']);
         $absenceQuery = Absence::query();
@@ -60,6 +142,16 @@ class DashboardController extends Controller
             $employeeQuery->where('id', $userId);
             $absenceQuery->where('user_id', $userId);
             $vacationQuery->where('user_id', $userId);
+        }
+
+        if ($areaId) {
+            $employeeQuery->where('area_id', $areaId);
+            $absenceQuery->whereHas('user', function ($q) use ($areaId) {
+                $q->where('area_id', $areaId);
+            });
+            $vacationQuery->whereHas('user', function ($q) use ($areaId) {
+                $q->where('area_id', $areaId);
+            });
         }
 
         $totalEmployees = $employeeQuery->count();

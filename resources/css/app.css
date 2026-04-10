@@ -217,13 +217,13 @@
 
 .fc-event-title {
     color: #000000 !important; /* texto oscuro */
-    font-size: .90rem !important;
+    font-size: 0.9rem !important;
 }
 .dark .fc-event-title {
-    color: #000000 !important;; /* texto claro */
+    color: #000000 !important; /* texto claro */
 }
 
-.fc .fc-bg-event{
+.fc .fc-bg-event {
     opacity: 1 !important;
 }
 
@@ -235,5 +235,163 @@
    background-color: turquoise !important;
 } */
 .fc .fc-daygrid-day.fc-day-today {
-     background-color: #9b9b9b5e ;
+    background-color: #9b9b9b5e;
+}
+
+/* ==========================================================================
+   ESTILOS GLOBALES PARA DARK/LIGHT MODE - CORREGIDOS
+   ========================================================================== */
+
+/* Input base - Light mode */
+.input {
+    @apply w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm text-gray-900;
+    @apply focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20;
+    @apply transition-colors duration-200;
+}
+
+/* Input - Dark mode */
+.dark .input {
+    @apply border-gray-600 bg-gray-800 text-gray-100;
+    @apply focus:border-blue-400 focus:ring-blue-400/20;
+}
+
+/* Input disabled */
+.input:disabled,
+.dark .input:disabled {
+    @apply cursor-not-allowed opacity-50;
+}
+
+/* Labels - Light mode */
+.label {
+    @apply mb-1 block text-sm font-medium text-gray-700;
+}
+
+/* Labels - Dark mode */
+.dark .label {
+    @apply text-gray-300;
+}
+
+/* Select base - Light mode */
+select.input,
+.input[type='select'] {
+    @apply cursor-pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%236b7280'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 0.5rem center;
+    background-size: 1.25rem;
+    padding-right: 2.5rem;
+}
+
+/* Select - Dark mode */
+.dark select.input,
+.dark .input[type='select'] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%239ca3af'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+}
+
+/* Textarea - Light mode */
+textarea.input {
+    @apply min-h-[80px] resize-y;
+}
+
+/* Textarea - Dark mode */
+.dark textarea.input {
+    @apply resize-y;
+}
+
+/* Checkbox custom */
+input[type='checkbox'].input {
+    @apply h-4 w-4 rounded border-gray-300 text-blue-600;
+    @apply focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2;
+}
+
+.dark input[type='checkbox'].input {
+    @apply border-gray-500 bg-gray-700;
+}
+
+/* Radio custom */
+input[type='radio'].input {
+    @apply h-4 w-4 border-gray-300 text-blue-600;
+    @apply focus:ring-2 focus:ring-blue-500/20 focus:ring-offset-2;
+}
+
+.dark input[type='radio'].input {
+    @apply border-gray-500 bg-gray-700;
+}
+
+/* Botones primarios */
+.btn-primary {
+    @apply inline-flex items-center justify-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white;
+    @apply hover:bg-blue-700 focus:ring-2 focus:ring-blue-500/20 focus:outline-none;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply transition-colors duration-200;
+}
+
+.dark .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700;
+}
+
+/* Botones secundarios */
+.btn-secondary {
+    @apply inline-flex items-center justify-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700;
+    @apply hover:bg-gray-50 focus:ring-2 focus:ring-gray-500/20 focus:outline-none;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply transition-colors duration-200;
+}
+
+.dark .btn-secondary {
+    @apply border-gray-600 bg-gray-700 text-gray-200 hover:bg-gray-600;
+}
+
+/* Botones de peligro */
+.btn-danger {
+    @apply inline-flex items-center justify-center rounded-md bg-rose-600 px-4 py-2 text-sm font-medium text-white;
+    @apply hover:bg-rose-700 focus:ring-2 focus:ring-rose-500/20 focus:outline-none;
+    @apply disabled:cursor-not-allowed disabled:opacity-50;
+    @apply transition-colors duration-200;
+}
+
+.dark .btn-danger {
+    @apply bg-rose-600 hover:bg-rose-700;
+}
+
+/* Dropdowns/Selects en general */
+select {
+    @apply text-gray-900;
+}
+
+.dark select {
+    @apply border-gray-600 bg-gray-800 text-gray-100;
+}
+
+/* Textos en tablas */
+table {
+    @apply text-gray-900;
+}
+
+.dark table {
+    @apply text-gray-100;
+}
+
+.dark table th {
+    @apply text-gray-300;
+}
+
+.dark table td {
+    @apply text-gray-300;
+}
+
+/* Placeholder */
+.input::placeholder,
+.dark .input::placeholder {
+    @apply text-gray-400;
+}
+
+/* Links */
+a {
+    @apply text-blue-600 hover:underline;
+}
+
+.dark a {
+    @apply text-blue-400 hover:text-blue-300;
 }

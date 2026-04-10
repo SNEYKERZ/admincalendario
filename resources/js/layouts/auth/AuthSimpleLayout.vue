@@ -37,7 +37,7 @@ defineProps<{
                             <AppLogoIcon class="size-8 text-white" />
                         </div>
                         <span class="text-3xl font-bold tracking-tight"
-                            >AdminCalendar</span
+                            >Ausentra</span
                         >
                     </div>
                 </div>
@@ -119,7 +119,7 @@ defineProps<{
             </div>
 
             <div class="absolute bottom-8 text-xs text-white/40">
-                © 2026 AdminCalendar. Todos los derechos reservados.
+                © 2026 Ausentra. Todos los derechos reservados.
             </div>
         </div>
 
@@ -142,7 +142,7 @@ defineProps<{
                                     class="size-7 text-primary-foreground"
                                 />
                             </div>
-                            <span class="text-xl font-bold">AdminCalendar</span>
+                            <span class="text-xl font-bold">Ausentra</span>
                         </Link>
                     </div>
 

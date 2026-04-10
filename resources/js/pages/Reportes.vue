@@ -29,6 +29,7 @@ interface VacationReport {
 }
 
 interface SummaryData {
+    filters: Record<string, any>;
     absences: {
         total: number;
         total_days: number;
@@ -39,6 +40,7 @@ interface SummaryData {
         total: number;
         vacation_summary: {
             name: string;
+            area: string | null;
             allocated: number;
             used: number;
             available: number;
@@ -52,8 +54,10 @@ const reportType = ref<'absences' | 'vacations' | 'summary'>('absences');
 const startDate = ref(new Date().getFullYear() + '-01-01');
 const endDate = ref(new Date().getFullYear() + '-12-31');
 const selectedUser = ref('');
+const selectedArea = ref('');
 const loading = ref(false);
 const users = ref<{ id: number; name: string }[]>([]);
+const areas = ref<{ id: number; name: string }[]>([]);
 
 const absencesData = ref<AbsenceReport[]>([]);
 const vacationsData = ref<VacationReport[]>([]);
@@ -63,6 +67,15 @@ const loadUsers = async () => {
     try {
         const res = await axios.get('/users-list');
         users.value = res.data.map((u: any) => ({ id: u.id, name: u.name }));
+    } catch (e) {
+        console.error(e);
+    }
+};
+
+const loadAreas = async () => {
+    try {
+        const res = await axios.get('/areas-list');
+        areas.value = res.data;
     } catch (e) {
         console.error(e);
     }
@@ -78,6 +91,9 @@ const loadReport = async () => {
         });
         if (selectedUser.value) {
             params.append('user_id', selectedUser.value);
+        }
+        if (selectedArea.value) {
+            params.append('area_id', selectedArea.value);
         }
 
         const res = await axios.get(`/reports?${params}`);
@@ -107,6 +123,9 @@ const exportReport = async () => {
         if (selectedUser.value) {
             params.append('user_id', selectedUser.value);
         }
+        if (selectedArea.value) {
+            params.append('area_id', selectedArea.value);
+        }
 
         const response = await axios.get(`/reports/export?${params}`, {
             responseType: 'blob',
@@ -115,10 +134,10 @@ const exportReport = async () => {
         const url = window.URL.createObjectURL(new Blob([response.data]));
         const link = document.createElement('a');
         link.href = url;
-        link.setAttribute(
-            'download',
-            `reporte-${reportType.value}-${startDate.value}-${endDate.value}.csv`,
-        );
+        const filename = selectedArea.value
+            ? `reporte-${reportType.value}-${startDate.value}-${endDate.value}-area-${selectedArea.value}.csv`
+            : `reporte-${reportType.value}-${startDate.value}-${endDate.value}.csv`;
+        link.setAttribute('download', filename);
         document.body.appendChild(link);
         link.click();
         link.remove();
@@ -132,6 +151,7 @@ const exportReport = async () => {
 
 onMounted(() => {
     loadUsers();
+    loadAreas();
     loadReport();
 });
 
@@ -238,6 +258,23 @@ const getStatusBadge = (status: string) => {
                             </option>
                         </select>
                     </div>
+                    <div>
+                        <label class="label">Área</label>
+                        <select
+                            v-model="selectedArea"
+                            @change="loadReport"
+                            class="input"
+                        >
+                            <option value="">Todas</option>
+                            <option
+                                v-for="a in areas"
+                                :key="a.id"
+                                :value="a.id"
+                            >
+                                {{ a.name }}
+                            </option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -254,6 +291,11 @@ const getStatusBadge = (status: string) => {
                                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                                 >
                                     Empleado
+                                </th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                                >
+                                    Área
                                 </th>
                                 <th
                                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
@@ -291,7 +333,7 @@ const getStatusBadge = (status: string) => {
                             class="divide-y divide-gray-100 dark:divide-gray-700"
                         >
                             <tr v-if="loading" class="text-center">
-                                <td colspan="7" class="py-8 text-gray-500">
+                                <td colspan="8" class="py-8 text-gray-500">
                                     Cargando...
                                 </td>
                             </tr>
@@ -299,7 +341,7 @@ const getStatusBadge = (status: string) => {
                                 v-else-if="absencesData.length === 0"
                                 class="text-center"
                             >
-                                <td colspan="7" class="py-8 text-gray-500">
+                                <td colspan="8" class="py-8 text-gray-500">
                                     No hay datos
                                 </td>
                             </tr>
@@ -312,6 +354,11 @@ const getStatusBadge = (status: string) => {
                                     class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100"
                                 >
                                     {{ item.empleado }}
+                                </td>
+                                <td
+                                    class="px-4 py-3 text-gray-600 dark:text-gray-400"
+                                >
+                                    {{ item.area || '-' }}
                                 </td>
                                 <td
                                     class="px-4 py-3 text-gray-600 dark:text-gray-400"
@@ -367,6 +414,11 @@ const getStatusBadge = (status: string) => {
                                 <th
                                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                                 >
+                                    Área
+                                </th>
+                                <th
+                                    class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                                >
                                     Año
                                 </th>
                                 <th
@@ -400,7 +452,7 @@ const getStatusBadge = (status: string) => {
                             class="divide-y divide-gray-100 dark:divide-gray-700"
                         >
                             <tr v-if="loading" class="text-center">
-                                <td colspan="7" class="py-8 text-gray-500">
+                                <td colspan="8" class="py-8 text-gray-500">
                                     Cargando...
                                 </td>
                             </tr>
@@ -408,7 +460,7 @@ const getStatusBadge = (status: string) => {
                                 v-else-if="vacationsData.length === 0"
                                 class="text-center"
                             >
-                                <td colspan="7" class="py-8 text-gray-500">
+                                <td colspan="8" class="py-8 text-gray-500">
                                     No hay datos
                                 </td>
                             </tr>
@@ -421,6 +473,11 @@ const getStatusBadge = (status: string) => {
                                     class="px-4 py-3 font-medium text-gray-900 dark:text-gray-100"
                                 >
                                     {{ item.empleado }}
+                                </td>
+                                <td
+                                    class="px-4 py-3 text-gray-600 dark:text-gray-400"
+                                >
+                                    {{ item.area || '-' }}
                                 </td>
                                 <td class="px-4 py-3 text-center">
                                     {{ item.año }}
@@ -551,8 +608,13 @@ const getStatusBadge = (status: string) => {
                                 >
                                     <span
                                         class="text-gray-600 dark:text-gray-400"
-                                        >{{ emp.name }}</span
-                                    >
+                                        >{{ emp.name }}
+                                        <span
+                                            v-if="emp.area"
+                                            class="text-xs text-gray-400"
+                                            >({{ emp.area }})</span
+                                        >
+                                    </span>
                                     <span
                                         class="font-medium text-emerald-600 dark:text-emerald-400"
                                         >{{
@@ -569,32 +631,3 @@ const getStatusBadge = (status: string) => {
         </div>
     </AppLayout>
 </template>
-
-<style scoped>
-.input {
-    width: 100%;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    background-color: white;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    color: #111827;
-}
-.label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-}
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 0.25rem;
-    background-color: #2563eb;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: white;
-}
-</style>

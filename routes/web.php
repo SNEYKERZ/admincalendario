@@ -2,8 +2,11 @@
 
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AreaController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HolidayController;
+use App\Http\Controllers\HrDocumentController;
+use App\Http\Controllers\PublicApiController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SystemManagementController;
@@ -26,11 +29,25 @@ Route::inertia('/', 'Welcome', [
 | Public
 |--------------------------------------------------------------------------
 */
-/*
-|--------------------------------------------------------------------------
-| Authenticated
-|--------------------------------------------------------------------------
-*/
+
+// API Pública para el landing page y verificación de licencias
+Route::prefix('api/public')->group(function () {
+    // Planes de suscripción (para el landing)
+    Route::get('/plans', [PublicApiController::class, 'getPlans'])->name('public.plans');
+
+    // Verificación de licencias (para que Ausentra consulte)
+    Route::get('/verify-license/{token}', [PublicApiController::class, 'verifyLicense'])->name('public.verify-license');
+    Route::get('/license/{token}', [PublicApiController::class, 'getLicenseStatus'])->name('public.license-status');
+
+    // Checkout y payment
+    Route::post('/create-checkout-session', [PublicApiController::class, 'createCheckoutSession'])->name('public.checkout');
+    Route::get('/payment-callback', [PublicApiController::class, 'paymentCallback'])->name('public.payment-callback');
+
+    // Estadísticas para superadmin (solo con autenticación)
+    Route::get('/admin/licenses/stats', [PublicApiController::class, 'getLicenseStats'])
+        ->middleware('auth')
+        ->name('public.licenses.stats');
+});
 
 Route::middleware(['auth'])->group(function () {
 
@@ -67,17 +84,32 @@ Route::middleware(['auth'])->group(function () {
 
     // Reportes
     Route::inertia('/reportes', 'Reportes')->name('reportes');
+    Route::inertia('/documentos', 'Documents')
+        ->middleware('can:admin')
+        ->name('documents');
+
+    // Áreas organizacionales
+    Route::inertia('/areas', 'Areas')->name('areas');
+    Route::get('/areas-list', [AreaController::class, 'list'])->name('areas.list');
+    Route::get('/api/areas', [AreaController::class, 'index'])->name('areas.index');
+    Route::post('/api/areas', [AreaController::class, 'store'])->name('areas.store');
+    Route::get('/api/areas/{area}', [AreaController::class, 'show'])->name('areas.show');
+    Route::put('/api/areas/{area}', [AreaController::class, 'update'])->name('areas.update');
+    Route::delete('/api/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+    Route::get('/api/areas/metrics', [AreaController::class, 'metrics'])->name('areas.metrics');
 
     // Settings (handled by inertia inside auth group)
     Route::inertia('/legal/terms', 'LegalTerms')->name('legal.terms');
     Route::inertia('/legal/privacy', 'LegalPrivacy')->name('legal.privacy');
 
     // Users Admin CRUD
-    Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
-    Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
-    Route::get('/admin/users/{user}', [UserController::class, 'show'])->name('admin.users.show');
-    Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
-    Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+    Route::middleware('can:admin')->group(function () {
+        Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
+        Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
+        Route::get('/admin/users/{user}', [UserController::class, 'show'])->name('admin.users.show');
+        Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
+        Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+    });
 
     Route::get('/users-list', function () {
         return User::with(['vacationYears' => function ($q) {
@@ -147,6 +179,15 @@ Route::middleware(['auth'])->group(function () {
             Route::get('/', [VacationYearController::class, 'index'])->name('vacation-years.index');
             Route::post('/', [VacationYearController::class, 'store'])->name('vacation-years.store');
         });
+
+        // roles (solo superadmin)
+        Route::prefix('roles')->group(function () {
+            Route::get('/', 'App\Http\Controllers\RoleController@index')->name('roles.index');
+            Route::get('/{role}', 'App\Http\Controllers\RoleController@show')->name('roles.show');
+            Route::post('/', 'App\Http\Controllers\RoleController@store')->name('roles.store');
+            Route::put('/{role}', 'App\Http\Controllers\RoleController@update')->name('roles.update');
+            Route::delete('/{role}', 'App\Http\Controllers\RoleController@destroy')->name('roles.destroy');
+        });
     });
 
     /*
@@ -158,6 +199,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/export', [ReportController::class, 'export'])->name('reports.export');
     });
+
+    Route::prefix('documents')
+        ->middleware('can:admin')
+        ->group(function () {
+            Route::get('/', [HrDocumentController::class, 'index'])->name('documents.index');
+            Route::post('/', [HrDocumentController::class, 'store'])->name('documents.store');
+            Route::post('/{document}', [HrDocumentController::class, 'update'])->name('documents.update');
+            Route::delete('/{document}', [HrDocumentController::class, 'destroy'])->name('documents.destroy');
+            Route::get('/{document}/audits', [HrDocumentController::class, 'audits'])->name('documents.audits');
+            Route::get('/{document}/download', [HrDocumentController::class, 'download'])->name('documents.download');
+        });
 
     /*
     |--------------------------------------------------------------------------
@@ -189,5 +241,13 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/gestion-sistema/announcements', [SystemManagementController::class, 'storeAnnouncement'])->name('system-management.announcements.store');
         Route::put('/gestion-sistema/announcements/{announcement}', [SystemManagementController::class, 'updateAnnouncement'])->name('system-management.announcements.update');
         Route::delete('/gestion-sistema/announcements/{announcement}', [SystemManagementController::class, 'destroyAnnouncement'])->name('system-management.announcements.destroy');
+
+        // License Tokens API
+        Route::get('/gestion-sistema/api/licenses', [PublicApiController::class, 'listLicenses'])->name('system-management.licenses.index');
+        Route::post('/gestion-sistema/api/licenses', [PublicApiController::class, 'createLicense'])->name('system-management.licenses.store');
+        Route::put('/gestion-sistema/api/licenses/{id}', [PublicApiController::class, 'updateLicense'])->name('system-management.licenses.update');
+        Route::delete('/gestion-sistema/api/licenses/{id}', [PublicApiController::class, 'deleteLicense'])->name('system-management.licenses.destroy');
+        Route::post('/gestion-sistema/api/licenses/{id}/renew', [PublicApiController::class, 'renewLicense'])->name('system-management.licenses.renew');
+        Route::post('/gestion-sistema/api/licenses/{id}/toggle', [PublicApiController::class, 'toggleLicense'])->name('system-management.licenses.toggle');
     });
 });

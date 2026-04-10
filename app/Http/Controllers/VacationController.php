@@ -14,7 +14,7 @@ class VacationController extends Controller
         $user = auth()->user();
 
         // Get users - exclude superadmin for admins, exclude both admin and superadmin for regular users
-        $query = User::with('vacationYears');
+        $query = User::with(['vacationYears', 'area']);
 
         if ($user->isSuperAdmin()) {
             // Superadmin sees everyone except themselves (handled by UI)
@@ -50,6 +50,8 @@ class VacationController extends Controller
                 'allocated' => $allocated,
                 'used' => $used,
                 'available' => $allocated - $used,
+                'area_id' => $u->area_id,
+                'area_name' => $u->area?->name,
             ];
         }));
     }

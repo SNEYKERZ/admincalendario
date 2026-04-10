@@ -24,6 +24,7 @@ class User extends Authenticatable
         'birth_date',
         'hire_date',
         'photo_path',
+        'area_id',
     ];
 
     protected $appends = [
@@ -55,6 +56,11 @@ class User extends Authenticatable
         return $this->hasMany(Absence::class);
     }
 
+    public function area(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Area::class, 'area_id');
+    }
+
     public function vacationYears(): HasMany
     {
         return $this->hasMany(VacationYear::class);
@@ -73,6 +79,11 @@ class User extends Authenticatable
     public function subscription(): HasMany
     {
         return $this->hasMany(Subscription::class);
+    }
+
+    public function documents(): HasMany
+    {
+        return $this->hasMany(HrDocument::class);
     }
 
     /*

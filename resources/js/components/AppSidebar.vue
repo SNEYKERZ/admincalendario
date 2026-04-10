@@ -2,13 +2,17 @@
 import { Link, usePage } from '@inertiajs/vue3';
 import {
     BookOpen,
+    Building2,
     FolderGit2,
     LayoutDashboard,
     LayoutGrid,
     Users,
     FileBarChart,
+    FileText,
     Settings,
     Cog,
+    Menu,
+    X,
 } from 'lucide-vue-next';
 import AppLogo from '@/components/AppLogo.vue';
 import NavFooter from '@/components/NavFooter.vue';
@@ -25,11 +29,19 @@ import {
 } from '@/components/ui/sidebar';
 
 import type { NavItem } from '@/types';
+import { ref } from 'vue';
 
 const page = usePage();
 const user = page.props.auth?.user;
 const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 const isSuperAdmin = user?.role === 'superadmin';
+
+// Mobile menu state
+const mobileMenuOpen = ref(false);
+
+const toggleMobileMenu = () => {
+    mobileMenuOpen.value = !mobileMenuOpen.value;
+};
 
 const mainNavItems: NavItem[] = [
     {
@@ -54,9 +66,27 @@ const mainNavItems: NavItem[] = [
     ...(isAdmin
         ? [
               {
+                  title: 'Áreas',
+                  href: '/areas',
+                  icon: Building2,
+              },
+          ]
+        : []),
+    ...(isAdmin
+        ? [
+              {
                   title: 'Reportes',
                   href: '/reportes',
                   icon: FileBarChart,
+              },
+          ]
+        : []),
+    ...(isAdmin
+        ? [
+              {
+                  title: 'Documentos',
+                  href: '/documentos',
+                  icon: FileText,
               },
           ]
         : []),

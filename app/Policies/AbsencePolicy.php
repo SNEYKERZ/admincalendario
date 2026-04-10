@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Enums\AbsenceStatus;
 use App\Models\Absence;
 use App\Models\User;
 
@@ -44,7 +45,7 @@ class AbsencePolicy
         }
 
         return $user->id === $absence->user_id
-            && $absence->status === 'pendiente';
+            && $absence->status === AbsenceStatus::PENDING;
     }
 
     public function update(User $user, Absence $absence): bool
@@ -54,7 +55,7 @@ class AbsencePolicy
         }
 
         return $user->id === $absence->user_id
-            && $absence->status === 'pendiente';
+            && $absence->status === AbsenceStatus::PENDING;
     }
 }
 

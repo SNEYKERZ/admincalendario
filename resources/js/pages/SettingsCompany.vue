@@ -378,6 +378,26 @@ onMounted(loadSettings);
                         :disabled="saving"
                         class="btn-primary"
                     >
+                        <svg
+                            v-if="saving"
+                            class="mr-2 h-4 w-4 animate-spin"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                        >
+                            <circle
+                                class="opacity-25"
+                                cx="12"
+                                cy="12"
+                                r="10"
+                                stroke="currentColor"
+                                stroke-width="4"
+                            ></circle>
+                            <path
+                                class="opacity-75"
+                                fill="currentColor"
+                                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                            ></path>
+                        </svg>
                         <span v-if="saving">Guardando...</span>
                         <span v-else>Guardar Configuración</span>
                     </button>
@@ -403,32 +423,3 @@ onMounted(loadSettings);
         </div>
     </AppLayout>
 </template>
-
-<style scoped>
-.input {
-    width: 100%;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    background-color: white;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    color: #111827;
-}
-.label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-}
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 0.25rem;
-    background-color: #2563eb;
-    padding: 0.625rem 1.5rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: white;
-}
-</style>

@@ -124,35 +124,3 @@ const iconColor = computed(() => {
         </div>
     </div>
 </template>
-
-<style scoped>
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 0.375rem;
-    background-color: #2563eb;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: white;
-}
-.btn-primary:hover {
-    background-color: #1d4ed8;
-}
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 0.375rem;
-    border: 1px solid #d1d5db;
-    background-color: white;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-}
-.dark .btn-secondary {
-    background-color: #1f2937;
-    border-color: #374151;
-    color: #d1d5db;
-}
-</style>

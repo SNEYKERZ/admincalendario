@@ -25,8 +25,9 @@ class UserController extends Controller
                 'role',
                 'birth_date',
                 'hire_date',
-                'photo_path'
-            )->get()
+                'photo_path',
+                'area_id'
+            )->with('area')->get()
         );
     }
 
@@ -43,6 +44,7 @@ class UserController extends Controller
             'birth_date' => 'nullable|date',
             'hire_date' => 'nullable|date',
             'photo' => 'nullable|image|max:2048',
+            'area_id' => 'nullable|exists:areas,id',
         ]);
 
         $data['name'] = trim($data['first_name'].' '.$data['last_name']);
@@ -62,7 +64,7 @@ class UserController extends Controller
 
     public function show(User $user)
     {
-        $user->load('vacationYears');
+        $user->load(['vacationYears', 'area']);
 
         $allocated = $user->vacationYears->sum('allocated_days');
         $used = $user->vacationYears->sum('used_days');
@@ -83,6 +85,8 @@ class UserController extends Controller
             'allocated' => $allocated,
             'used' => $used,
             'available' => $allocated - $used,
+            'area_id' => $user->area_id,
+            'area_name' => $user->area?->name,
         ]);
     }
 
@@ -98,6 +102,7 @@ class UserController extends Controller
             'birth_date' => 'nullable|date',
             'hire_date' => 'nullable|date',
             'photo' => 'nullable|image|max:2048',
+            'area_id' => 'nullable|exists:areas,id',
         ]);
 
         $firstName = $data['first_name'] ?? $user->first_name;

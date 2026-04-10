@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { ref, onMounted, watch, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
 import AbsenceModal from '@/components/AbsenceModal.vue';
@@ -44,6 +44,20 @@ interface User {
     email: string;
 }
 
+interface Area {
+    id: number;
+    name: string;
+    color: string;
+}
+
+interface EmployeeStatus {
+    id: number;
+    name: string;
+    status: 'green' | 'yellow' | 'red';
+    current_absence: { type: string; end: string } | null;
+    upcoming_absence: { type: string; start: string } | null;
+}
+
 const loading = ref(true);
 const metrics = ref<Metric | null>(null);
 const chartData = ref<ChartData | null>(null);
@@ -53,6 +67,12 @@ const vacationBalance = ref<VacationBalance[]>([]);
 const users = ref<User[]>([]);
 const selectedUser = ref<number | null>(null);
 const searchQuery = ref('');
+
+// Filter by area
+const areas = ref<Area[]>([]);
+const selectedArea = ref<number | null>(null);
+const employeeStatuses = ref<EmployeeStatus[]>([]);
+const employeeStatusSummary = ref({ green: 0, yellow: 0, red: 0, total: 0 });
 
 // Modal state
 const showAbsenceModal = ref(false);
@@ -80,6 +100,9 @@ const loadDashboard = async () => {
         if (searchQuery.value) {
             params.search = searchQuery.value;
         }
+        if (selectedArea.value) {
+            params.area_id = selectedArea.value;
+        }
 
         const res = await axios.get('/dashboard/data', { params });
         metrics.value = res.data.metrics;
@@ -89,6 +112,15 @@ const loadDashboard = async () => {
         vacationBalance.value = res.data.vacationBalance;
         if (res.data.users) {
             users.value = res.data.users;
+        }
+        // Cargar áreas para filtro
+        if (res.data.areas) {
+            areas.value = res.data.areas;
+        }
+        // Cargar estados de empleados
+        if (res.data.employeeStatuses) {
+            employeeStatuses.value = res.data.employeeStatuses.employees;
+            employeeStatusSummary.value = res.data.employeeStatuses.summary;
         }
         // Get admin status from API response
         if (res.data.is_admin !== undefined) {
@@ -130,13 +162,56 @@ const loadDashboard = async () => {
     }
 };
 
-watch([selectedUser, searchQuery], () => {
+watch([selectedUser, searchQuery, selectedArea], () => {
     loadDashboard();
 });
 
 onMounted(loadDashboard);
 
-const formatNumber = (n: number) => n.toLocaleString();
+// Pagination
+const paginationOptions = [5, 10, 15, 20];
+const recentAbsencesPageSize = ref(5);
+const pendingApprovalsPageSize = ref(5);
+const currentRecentPage = ref(1);
+const currentPendingPage = ref(1);
+
+const paginatedRecentAbsences = computed(() => {
+    const start = (currentRecentPage.value - 1) * recentAbsencesPageSize.value;
+    return recentAbsences.value.slice(
+        start,
+        start + recentAbsencesPageSize.value,
+    );
+});
+
+const paginatedPendingApprovals = computed(() => {
+    if (!pendingApprovals.value || pendingApprovals.value.length === 0)
+        return [];
+    const start =
+        (currentPendingPage.value - 1) * pendingApprovalsPageSize.value;
+    return pendingApprovals.value.slice(
+        start,
+        start + pendingApprovalsPageSize.value,
+    );
+});
+
+const recentAbsencesTotalPages = computed(() => {
+    if (!recentAbsences.value || recentAbsences.value.length === 0) return 0;
+    return Math.ceil(
+        recentAbsences.value.length / recentAbsencesPageSize.value,
+    );
+});
+
+const pendingApprovalsTotalPages = computed(() => {
+    if (!pendingApprovals.value || pendingApprovals.value.length === 0)
+        return 0;
+    return Math.ceil(
+        pendingApprovals.value.length / pendingApprovalsPageSize.value,
+    );
+});
+
+// Reset to page 1 when page size changes
+watch(recentAbsencesPageSize, () => (currentRecentPage.value = 1));
+watch(pendingApprovalsPageSize, () => (currentPendingPage.value = 1));
 
 const getStatusColor = (status: string) => {
     switch (status) {
@@ -307,6 +382,19 @@ const getStatusLabel = (status: string) => {
                         :value="user.id"
                     >
                         {{ user.name }}
+                    </option>
+                </select>
+                <select
+                    v-model="selectedArea"
+                    class="rounded-lg border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                >
+                    <option :value="null">Todas las áreas</option>
+                    <option
+                        v-for="area in areas"
+                        :key="area.id"
+                        :value="area.id"
+                    >
+                        {{ area.name }}
                     </option>
                 </select>
             </div>
@@ -480,36 +568,264 @@ const getStatusLabel = (status: string) => {
                     </div>
                 </div>
 
+                <!-- Employee Status Summary (Rojo/Amarillo/Verde) -->
+                <div
+                    v-if="isAdmin && employeeStatusSummary.total > 0"
+                    class="mb-6"
+                >
+                    <h3
+                        class="mb-4 text-lg font-semibold text-slate-900 dark:text-slate-100"
+                    >
+                        Estado de Empleados
+                    </h3>
+                    <div class="grid grid-cols-2 gap-4 md:grid-cols-4">
+                        <!-- Verde: Disponible -->
+                        <div
+                            class="rounded-xl border border-emerald-200 bg-emerald-50 p-4"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-100"
+                                >
+                                    <span class="font-bold text-emerald-600">{{
+                                        employeeStatusSummary.green
+                                    }}</span>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-emerald-700"
+                                    >
+                                        Disponibles
+                                    </p>
+                                    <p class="text-xs text-emerald-600">
+                                        Sin ausencias
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Amarillo: Próxima ausencia -->
+                        <div
+                            class="rounded-xl border border-amber-200 bg-amber-50 p-4"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-amber-100"
+                                >
+                                    <span class="font-bold text-amber-600">{{
+                                        employeeStatusSummary.yellow
+                                    }}</span>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-amber-700"
+                                    >
+                                        Próximos
+                                    </p>
+                                    <p class="text-xs text-amber-600">
+                                        Ausencia este mes
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Rojo: En ausencia -->
+                        <div
+                            class="rounded-xl border border-rose-200 bg-rose-50 p-4"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-rose-100"
+                                >
+                                    <span class="font-bold text-rose-600">{{
+                                        employeeStatusSummary.red
+                                    }}</span>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-rose-700"
+                                    >
+                                        Ausentes
+                                    </p>
+                                    <p class="text-xs text-rose-600">
+                                        En ausencia actual
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                        <!-- Total -->
+                        <div
+                            class="rounded-xl border border-slate-200 bg-slate-50 p-4"
+                        >
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="flex h-10 w-10 items-center justify-center rounded-full bg-slate-100"
+                                >
+                                    <span class="font-bold text-slate-600">{{
+                                        employeeStatusSummary.total
+                                    }}</span>
+                                </div>
+                                <div>
+                                    <p
+                                        class="text-sm font-medium text-slate-700"
+                                    >
+                                        Total
+                                    </p>
+                                    <p class="text-xs text-slate-500">
+                                        Empleados
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Employee List with Status -->
+                    <div class="mt-4 overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="border-b border-slate-200">
+                                    <th
+                                        class="px-3 py-2 text-left font-medium text-slate-600"
+                                    >
+                                        Empleado
+                                    </th>
+                                    <th
+                                        class="px-3 py-2 text-center font-medium text-slate-600"
+                                    >
+                                        Estado
+                                    </th>
+                                    <th
+                                        class="px-3 py-2 text-left font-medium text-slate-600"
+                                    >
+                                        Ausencia Actual
+                                    </th>
+                                    <th
+                                        class="px-3 py-2 text-left font-medium text-slate-600"
+                                    >
+                                        Próxima Ausencia
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr
+                                    v-for="emp in employeeStatuses"
+                                    :key="emp.id"
+                                    class="border-b border-slate-100 hover:bg-slate-50"
+                                >
+                                    <td
+                                        class="px-3 py-2 font-medium text-slate-900"
+                                    >
+                                        {{ emp.name }}
+                                    </td>
+                                    <td class="px-3 py-2 text-center">
+                                        <span
+                                            class="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-medium"
+                                            :class="{
+                                                'bg-emerald-100 text-emerald-700':
+                                                    emp.status === 'green',
+                                                'bg-amber-100 text-amber-700':
+                                                    emp.status === 'yellow',
+                                                'bg-rose-100 text-rose-700':
+                                                    emp.status === 'red',
+                                            }"
+                                        >
+                                            <span
+                                                class="h-2 w-2 rounded-full"
+                                                :class="{
+                                                    'bg-emerald-500':
+                                                        emp.status === 'green',
+                                                    'bg-amber-500':
+                                                        emp.status === 'yellow',
+                                                    'bg-rose-500':
+                                                        emp.status === 'red',
+                                                }"
+                                            ></span>
+                                            {{
+                                                emp.status === 'green'
+                                                    ? 'Disponible'
+                                                    : emp.status === 'yellow'
+                                                      ? 'Próxima'
+                                                      : 'Ausente'
+                                            }}
+                                        </span>
+                                    </td>
+                                    <td class="px-3 py-2 text-slate-600">
+                                        <span
+                                            v-if="emp.current_absence"
+                                            class="text-rose-600"
+                                        >
+                                            {{ emp.current_absence.type }}
+                                            (hasta
+                                            {{ emp.current_absence.end }})
+                                        </span>
+                                        <span v-else class="text-slate-400"
+                                            >-</span
+                                        >
+                                    </td>
+                                    <td class="px-3 py-2 text-slate-600">
+                                        <span
+                                            v-if="emp.upcoming_absence"
+                                            class="text-amber-600"
+                                        >
+                                            {{ emp.upcoming_absence.type }} ({{
+                                                emp.upcoming_absence.start
+                                            }})
+                                        </span>
+                                        <span v-else class="text-slate-400"
+                                            >-</span
+                                        >
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
                 <!-- Pending Approvals -->
                 <div
                     v-if="pendingApprovals.length > 0"
                     class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-900/20"
                 >
-                    <div class="mb-4 flex items-center gap-2">
-                        <svg
-                            class="h-5 w-5 text-amber-600"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                            />
-                        </svg>
-                        <h3
-                            class="font-semibold text-amber-900 dark:text-amber-200"
-                        >
-                            Aprobaciones Pendientes
-                        </h3>
+                    <div class="mb-4 flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <svg
+                                class="h-5 w-5 text-amber-600"
+                                fill="none"
+                                stroke="currentColor"
+                                viewBox="0 0 24 24"
+                            >
+                                <path
+                                    stroke-linecap="round"
+                                    stroke-linejoin="round"
+                                    stroke-width="2"
+                                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                                />
+                            </svg>
+                            <h3
+                                class="font-semibold text-amber-900 dark:text-amber-200"
+                            >
+                                Aprobaciones Pendientes
+                            </h3>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500">Mostrar:</span>
+                            <select
+                                v-model="pendingApprovalsPageSize"
+                                class="rounded border border-gray-300 px-2 py-1 text-sm"
+                            >
+                                <option
+                                    v-for="opt in paginationOptions"
+                                    :key="opt"
+                                    :value="opt"
+                                >
+                                    {{ opt }}
+                                </option>
+                            </select>
+                        </div>
                     </div>
                     <div
                         class="grid gap-3 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"
                     >
                         <div
-                            v-for="item in pendingApprovals.slice(0, 10)"
+                            v-for="item in paginatedPendingApprovals"
                             :key="item.id"
                             class="rounded-lg bg-white p-3 dark:bg-gray-800"
                         >
@@ -534,64 +850,40 @@ const getStatusLabel = (status: string) => {
                             </div>
                         </div>
                     </div>
+                    <!-- Pagination -->
+                    <div
+                        v-if="pendingApprovalsTotalPages > 1"
+                        class="mt-4 flex items-center justify-between"
+                    >
+                        <span class="text-sm text-gray-500">
+                            Página {{ currentPendingPage }} de
+                            {{ pendingApprovalsTotalPages }} (
+                            {{ pendingApprovals.length }} total)
+                        </span>
+                        <div class="flex gap-1">
+                            <button
+                                @click="currentPendingPage--"
+                                :disabled="currentPendingPage === 1"
+                                class="rounded px-3 py-1 text-sm hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Anterior
+                            </button>
+                            <button
+                                @click="currentPendingPage++"
+                                :disabled="
+                                    currentPendingPage ===
+                                    pendingApprovalsTotalPages
+                                "
+                                class="rounded px-3 py-1 text-sm hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Charts & Tables Grid -->
                 <div class="grid gap-6 lg:grid-cols-2">
-                    <!-- Vacation Balance -->
-                    <div
-                        class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
-                    >
-                        <h3
-                            class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100"
-                        >
-                            Balance de Vacaciones
-                        </h3>
-                        <div class="space-y-3">
-                            <div
-                                v-if="vacationBalance.length === 0"
-                                class="py-4 text-center text-gray-500"
-                            >
-                                No hay datos de vacaciones
-                            </div>
-                            <div
-                                v-for="user in vacationBalance"
-                                :key="user.id"
-                                class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-700/50"
-                            >
-                                <div>
-                                    <p
-                                        class="font-medium text-gray-900 dark:text-gray-100"
-                                    >
-                                        {{ user.name }}
-                                    </p>
-                                    <div
-                                        v-if="user.expiring_soon.length > 0"
-                                        class="mt-1 flex items-center gap-2"
-                                    >
-                                        <span
-                                            v-for="exp in user.expiring_soon"
-                                            :key="exp.year"
-                                            class="inline-flex items-center gap-1 rounded bg-red-100 px-2 py-0.5 text-xs text-red-700 dark:bg-red-900/30 dark:text-red-300"
-                                        >
-                                            {{ exp.days }}d ({{ exp.year }})
-                                        </span>
-                                    </div>
-                                </div>
-                                <div class="text-right">
-                                    <p
-                                        class="text-lg font-bold text-emerald-600 dark:text-emerald-400"
-                                    >
-                                        {{ user.available.toFixed(1) }}
-                                    </p>
-                                    <p class="text-xs text-gray-500">
-                                        días disponibles
-                                    </p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
                     <!-- Absences by Type -->
                     <div
                         class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
@@ -635,11 +927,28 @@ const getStatusLabel = (status: string) => {
                 <div
                     class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
                 >
-                    <h3
-                        class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100"
-                    >
-                        Ausencias Recientes
-                    </h3>
+                    <div class="mb-4 flex items-center justify-between">
+                        <h3
+                            class="text-lg font-semibold text-gray-900 dark:text-gray-100"
+                        >
+                            Ausencias Recientes
+                        </h3>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm text-gray-500">Mostrar:</span>
+                            <select
+                                v-model="recentAbsencesPageSize"
+                                class="rounded border border-gray-300 px-2 py-1 text-sm"
+                            >
+                                <option
+                                    v-for="opt in paginationOptions"
+                                    :key="opt"
+                                    :value="opt"
+                                >
+                                    {{ opt }}
+                                </option>
+                            </select>
+                        </div>
+                    </div>
                     <div class="overflow-x-auto">
                         <table class="w-full">
                             <thead>
@@ -655,7 +964,7 @@ const getStatusLabel = (status: string) => {
                                 </tr>
                             </thead>
                             <tbody>
-                                <tr v-if="recentAbsences.length === 0">
+                                <tr v-if="paginatedRecentAbsences.length === 0">
                                     <td
                                         colspan="6"
                                         class="py-4 text-center text-gray-500"
@@ -664,7 +973,7 @@ const getStatusLabel = (status: string) => {
                                     </td>
                                 </tr>
                                 <tr
-                                    v-for="item in recentAbsences"
+                                    v-for="item in paginatedRecentAbsences"
                                     :key="item.id"
                                     class="border-b border-gray-100 last:border-0 dark:border-gray-700"
                                 >
@@ -704,6 +1013,36 @@ const getStatusLabel = (status: string) => {
                             </tbody>
                         </table>
                     </div>
+                    <!-- Pagination -->
+                    <div
+                        v-if="recentAbsencesTotalPages > 1"
+                        class="mt-4 flex items-center justify-between"
+                    >
+                        <span class="text-sm text-gray-500">
+                            Página {{ currentRecentPage }} de
+                            {{ recentAbsencesTotalPages }} (
+                            {{ recentAbsences.length }} total)
+                        </span>
+                        <div class="flex gap-1">
+                            <button
+                                @click="currentRecentPage--"
+                                :disabled="currentRecentPage === 1"
+                                class="rounded px-3 py-1 text-sm hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Anterior
+                            </button>
+                            <button
+                                @click="currentRecentPage++"
+                                :disabled="
+                                    currentRecentPage ===
+                                    recentAbsencesTotalPages
+                                "
+                                class="rounded px-3 py-1 text-sm hover:bg-gray-100 disabled:opacity-50"
+                            >
+                                Siguiente
+                            </button>
+                        </div>
+                    </div>
                 </div>
             </template>
         </div>
@@ -735,34 +1074,3 @@ const getStatusLabel = (status: string) => {
         />
     </AppLayout>
 </template>
-
-<style scoped>
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    border: none;
-    border-radius: 0.25rem;
-    background-color: #2563eb;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: white;
-    cursor: pointer;
-}
-
-.btn-primary:hover {
-    background-color: #1d4ed8;
-}
-
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    background-color: white;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-}
-</style>

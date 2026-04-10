@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
+import { usePage } from '@inertiajs/vue3';
 import ConfirmDialog from './ConfirmDialog.vue';
 
 interface User {
@@ -20,6 +21,8 @@ interface User {
     allocated: number;
     used: number;
     available: number;
+    area_id: number | null;
+    area_name: string | null;
 }
 
 interface VacationYear {
@@ -30,11 +33,35 @@ interface VacationYear {
     expires_at: string;
 }
 
+interface Area {
+    id: number;
+    name: string;
+    color: string;
+}
+
+interface Role {
+    id: number;
+    name: string;
+    display_name: string;
+    description: string | null;
+    color: string;
+    is_system: boolean;
+    is_active: boolean;
+    user_count: number;
+}
+
 const toast = useToast();
+const page = usePage();
+const isSuperAdmin = computed(
+    () => page.props.auth?.user?.role === 'superadmin',
+);
 
 const users = ref<User[]>([]);
+const areas = ref<Area[]>([]);
+const roles = ref<Role[]>([]);
 const loading = ref(false);
 const showModal = ref(false);
+const showRolesModal = ref(false);
 const modalMode = ref<'create' | 'edit' | 'view'>('create');
 const selectedUser = ref<User | null>(null);
 
@@ -46,11 +73,23 @@ const form = ref({
     phone: '',
     email: '',
     password: '',
-    role: 'colaborador' as 'admin' | 'colaborador',
+    role: 'colaborador' as string,
     birth_date: '',
     hire_date: '',
     photo: null as File | null,
+    area_id: null as number | null,
 });
+
+// Role form state
+const roleForm = ref({
+    name: '',
+    display_name: '',
+    description: '',
+    color: '#6B7280',
+    is_active: true,
+    display_order: 0,
+});
+const editingRole = ref<Role | null>(null);
 
 const search = ref('');
 const filterRole = ref('');
@@ -69,14 +108,107 @@ const filteredUsers = computed(() => {
 const loadUsers = async () => {
     loading.value = true;
     try {
-        const res = await axios.get('/gestion-usuarios/data');
-        users.value = res.data;
+        const promises = [
+            axios.get('/gestion-usuarios/data'),
+            axios.get('/api/areas'),
+        ];
+
+        // Solo superadmin carga roles
+        if (isSuperAdmin.value) {
+            promises.push(axios.get('/admin/roles'));
+        }
+
+        const results = await Promise.all(promises);
+        users.value = results[0].data;
+        areas.value = results[1].data.areas || [];
+
+        if (isSuperAdmin.value && results[2]) {
+            roles.value = results[2].data;
+        }
     } catch (e) {
         console.error(e);
-        toast.error('Error cargando usuarios');
+        toast.error('Error cargando datos');
     } finally {
         loading.value = false;
     }
+};
+
+// Funciones para gestionar roles (solo superadmin)
+const loadRoles = async () => {
+    try {
+        const res = await axios.get('/admin/roles');
+        roles.value = res.data;
+    } catch (e) {
+        toast.error('Error cargando roles');
+    }
+};
+
+const openRolesModal = () => {
+    showRolesModal.value = true;
+    loadRoles();
+};
+
+const saveRole = async () => {
+    try {
+        if (editingRole.value) {
+            await axios.put(
+                `/admin/roles/${editingRole.value.id}`,
+                roleForm.value,
+            );
+            toast.success('Rol actualizado');
+        } else {
+            await axios.post('/admin/roles', roleForm.value);
+            toast.success('Rol creado');
+        }
+        loadRoles();
+        resetRoleForm();
+    } catch (e: any) {
+        if (e.response?.data?.message) {
+            toast.error(e.response.data.message);
+        } else {
+            toast.error('Error guardando rol');
+        }
+    }
+};
+
+const deleteRole = async (role: Role) => {
+    if (!confirm(`¿Eliminar el rol "${role.display_name}"?`)) return;
+
+    try {
+        await axios.delete(`/admin/roles/${role.id}`);
+        toast.success('Rol eliminado');
+        loadRoles();
+    } catch (e: any) {
+        if (e.response?.data?.message) {
+            toast.error(e.response.data.message);
+        } else {
+            toast.error('Error eliminando rol');
+        }
+    }
+};
+
+const editRole = (role: Role) => {
+    editingRole.value = role;
+    roleForm.value = {
+        name: role.name,
+        display_name: role.display_name,
+        description: role.description || '',
+        color: role.color,
+        is_active: role.is_active,
+        display_order: role.display_order,
+    };
+};
+
+const resetRoleForm = () => {
+    editingRole.value = null;
+    roleForm.value = {
+        name: '',
+        display_name: '',
+        description: '',
+        color: '#6B7280',
+        is_active: true,
+        display_order: 0,
+    };
 };
 
 const openCreate = () => {
@@ -93,6 +225,7 @@ const openCreate = () => {
         birth_date: '',
         hire_date: '',
         photo: null,
+        area_id: null,
     };
     showModal.value = true;
 };
@@ -111,6 +244,7 @@ const openEdit = (user: User) => {
         birth_date: user.birth_date || '',
         hire_date: user.hire_date || '',
         photo: null,
+        area_id: user.area_id || null,
     };
     showModal.value = true;
 };
@@ -221,6 +355,34 @@ const getRoleBadge = (role: string) => {
                 </svg>
                 Nuevo Usuario
             </button>
+
+            <!-- Botón gestión de roles (solo superadmin) -->
+            <button
+                v-if="isSuperAdmin"
+                @click="openRolesModal"
+                class="btn-secondary"
+            >
+                <svg
+                    class="mr-2 h-5 w-5"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                >
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
+                    />
+                    <path
+                        stroke-linecap="round"
+                        stroke-linejoin="round"
+                        stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                    />
+                </svg>
+                Gestionar Roles
+            </button>
         </div>
 
         <!-- Filters -->
@@ -235,8 +397,19 @@ const getRoleBadge = (role: string) => {
             </div>
             <select v-model="filterRole" class="input w-auto">
                 <option value="">Todos los roles</option>
-                <option value="admin">Administradores</option>
-                <option value="colaborador">Colaboradores</option>
+                <template v-if="roles.length > 0">
+                    <option
+                        v-for="role in roles"
+                        :key="role.id"
+                        :value="role.name"
+                    >
+                        {{ role.display_name }}
+                    </option>
+                </template>
+                <template v-else>
+                    <option value="admin">Administradores</option>
+                    <option value="colaborador">Colaboradores</option>
+                </template>
             </select>
         </div>
 
@@ -271,6 +444,11 @@ const getRoleBadge = (role: string) => {
                             <th
                                 class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                             >
+                                Área
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
+                            >
                                 Asignados
                             </th>
                             <th
@@ -294,7 +472,7 @@ const getRoleBadge = (role: string) => {
                         class="divide-y divide-gray-100 dark:divide-gray-700"
                     >
                         <tr v-if="loading" class="text-center">
-                            <td colspan="8" class="py-8 text-gray-500">
+                            <td colspan="9" class="py-8 text-gray-500">
                                 Cargando...
                             </td>
                         </tr>
@@ -302,7 +480,7 @@ const getRoleBadge = (role: string) => {
                             v-else-if="filteredUsers.length === 0"
                             class="text-center"
                         >
-                            <td colspan="8" class="py-8 text-gray-500">
+                            <td colspan="9" class="py-8 text-gray-500">
                                 No hay usuarios
                             </td>
                         </tr>
@@ -366,6 +544,26 @@ const getRoleBadge = (role: string) => {
                                             : 'Colaborador'
                                     }}
                                 </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span
+                                    v-if="user.area_name"
+                                    class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
+                                    :style="{
+                                        backgroundColor:
+                                            areas.find(
+                                                (a) => a.id === user.area_id,
+                                            )?.color + '20',
+                                        color: areas.find(
+                                            (a) => a.id === user.area_id,
+                                        )?.color,
+                                    }"
+                                >
+                                    {{ user.area_name }}
+                                </span>
+                                <span v-else class="text-xs text-gray-400"
+                                    >Sin área</span
+                                >
                             </td>
                             <td class="px-4 py-3 text-center">
                                 {{ user.allocated }}
@@ -599,8 +797,37 @@ const getRoleBadge = (role: string) => {
                             class="input"
                             :disabled="modalMode === 'view'"
                         >
-                            <option value="colaborador">Colaborador</option>
-                            <option value="admin">Administrador</option>
+                            <template v-if="roles.length > 0">
+                                <option
+                                    v-for="role in roles"
+                                    :key="role.id"
+                                    :value="role.name"
+                                >
+                                    {{ role.display_name }}
+                                </option>
+                            </template>
+                            <template v-else>
+                                <option value="colaborador">Colaborador</option>
+                                <option value="admin">Administrador</option>
+                            </template>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="label">Área</label>
+                        <select
+                            v-model="form.area_id"
+                            class="input"
+                            :disabled="modalMode === 'view'"
+                        >
+                            <option :value="null">Sin área asignada</option>
+                            <option
+                                v-for="area in areas"
+                                :key="area.id"
+                                :value="area.id"
+                            >
+                                {{ area.name }}
+                            </option>
                         </select>
                     </div>
 
@@ -681,53 +908,207 @@ const getRoleBadge = (role: string) => {
             </div>
         </div>
     </div>
-</template>
 
-<style scoped>
-.input {
-    width: 100%;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    background-color: white;
-    padding: 0.5rem 0.75rem;
-    font-size: 0.875rem;
-    color: #111827;
-}
-.label {
-    display: block;
-    margin-bottom: 0.25rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-}
-.btn-primary {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 0.25rem;
-    background-color: #2563eb;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: white;
-}
-.btn-secondary {
-    display: inline-flex;
-    align-items: center;
-    border: 1px solid #d1d5db;
-    border-radius: 0.25rem;
-    background-color: white;
-    padding: 0.5rem 1rem;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: #374151;
-}
-.btn-icon {
-    display: inline-flex;
-    width: 2rem;
-    height: 2rem;
-    align-items: center;
-    justify-content: center;
-    border-radius: 0.25rem;
-    color: #6b7280;
-}
-</style>
+    <!-- Modal de Gestión de Roles (solo superadmin) -->
+    <div
+        v-if="showRolesModal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+        @click.self="showRolesModal = false"
+    >
+        <div class="w-full max-w-2xl rounded-xl bg-white p-6 dark:bg-gray-800">
+            <div class="mb-4 flex items-center justify-between">
+                <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
+                    Gestión de Roles
+                </h2>
+                <button
+                    @click="showRolesModal = false"
+                    class="text-gray-500 hover:text-gray-700"
+                >
+                    <svg
+                        class="h-6 w-6"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                    >
+                        <path
+                            stroke-linecap="round"
+                            stroke-linejoin="round"
+                            stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12"
+                        />
+                    </svg>
+                </button>
+            </div>
+
+            <!-- Formulario para crear/editar rol -->
+            <div class="mb-6 rounded-lg bg-gray-50 p-4 dark:bg-gray-700">
+                <h3 class="mb-3 font-medium text-gray-900 dark:text-gray-100">
+                    {{ editingRole ? 'Editar Rol' : 'Crear Nuevo Rol' }}
+                </h3>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="label">Nombre (slug)</label>
+                        <input
+                            v-model="roleForm.name"
+                            type="text"
+                            class="input"
+                            placeholder="ej: supervisor"
+                            :disabled="!!editingRole"
+                        />
+                    </div>
+                    <div>
+                        <label class="label">Nombre Display</label>
+                        <input
+                            v-model="roleForm.display_name"
+                            type="text"
+                            class="input"
+                            placeholder="ej: Supervisor"
+                        />
+                    </div>
+                    <div class="col-span-2">
+                        <label class="label">Descripción</label>
+                        <input
+                            v-model="roleForm.description"
+                            type="text"
+                            class="input"
+                            placeholder="Descripción del rol"
+                        />
+                    </div>
+                    <div>
+                        <label class="label">Color</label>
+                        <input
+                            v-model="roleForm.color"
+                            type="color"
+                            class="h-10 w-full rounded border border-gray-300"
+                        />
+                    </div>
+                    <div>
+                        <label class="label">Orden</label>
+                        <input
+                            v-model.number="roleForm.display_order"
+                            type="number"
+                            class="input"
+                            min="0"
+                        />
+                    </div>
+                    <div class="col-span-2 flex items-center gap-2">
+                        <input
+                            v-model="roleForm.is_active"
+                            type="checkbox"
+                            id="role_is_active"
+                            class="h-4 w-4 rounded border-gray-300"
+                        />
+                        <label
+                            for="role_is_active"
+                            class="text-sm text-gray-700 dark:text-gray-300"
+                        >
+                            Rol activo
+                        </label>
+                    </div>
+                </div>
+                <div class="mt-3 flex gap-2">
+                    <button @click="saveRole" class="btn-primary text-sm">
+                        {{ editingRole ? 'Actualizar' : 'Crear' }}
+                    </button>
+                    <button
+                        v-if="editingRole"
+                        @click="resetRoleForm"
+                        class="btn-secondary text-sm"
+                    >
+                        Cancelar
+                    </button>
+                </div>
+            </div>
+
+            <!-- Lista de roles existentes -->
+            <div>
+                <h3 class="mb-3 font-medium text-gray-900 dark:text-gray-100">
+                    Roles Existentes
+                </h3>
+                <div class="space-y-2">
+                    <div
+                        v-for="role in roles"
+                        :key="role.id"
+                        class="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-600"
+                    >
+                        <div class="flex items-center gap-3">
+                            <div
+                                class="h-4 w-4 rounded-full"
+                                :style="{ backgroundColor: role.color }"
+                            ></div>
+                            <div>
+                                <div
+                                    class="font-medium text-gray-900 dark:text-gray-100"
+                                >
+                                    {{ role.display_name }}
+                                </div>
+                                <div class="text-xs text-gray-500">
+                                    {{ role.name }} ·
+                                    {{ role.user_count }} usuarios
+                                    <span
+                                        v-if="role.is_system"
+                                        class="text-blue-600"
+                                    >
+                                        · Sistema
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span
+                                v-if="role.is_active"
+                                class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/30 dark:text-green-400"
+                            >
+                                Activo
+                            </span>
+                            <span
+                                v-else
+                                class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800"
+                            >
+                                Inactivo
+                            </span>
+                            <button
+                                v-if="!role.is_system"
+                                @click="editRole(role)"
+                                class="rounded p-1 text-gray-500 hover:bg-gray-100"
+                            >
+                                <svg
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
+                                    />
+                                </svg>
+                            </button>
+                            <button
+                                v-if="!role.is_system && role.user_count === 0"
+                                @click="deleteRole(role)"
+                                class="rounded p-1 text-red-500 hover:bg-red-50"
+                            >
+                                <svg
+                                    class="h-4 w-4"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    viewBox="0 0 24 24"
+                                >
+                                    <path
+                                        stroke-linecap="round"
+                                        stroke-linejoin="round"
+                                        stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                                    />
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
