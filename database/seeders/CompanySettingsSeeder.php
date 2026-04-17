@@ -3,14 +3,25 @@
 namespace Database\Seeders;
 
 use App\Models\CompanySettings;
+use App\Models\Tenant;
 use Illuminate\Database\Seeder;
 
 class CompanySettingsSeeder extends Seeder
 {
     public function run(): void
     {
+        // Obtener el tenant principal
+        $mainTenant = Tenant::where('is_main', true)->first();
+
+        if (! $mainTenant) {
+            $this->command->warn('⚠️ No hay tenant principal. Ejecutá TenantSeeder primero.');
+
+            return;
+        }
+
+        // Crear o actualizar settings para el tenant principal
         CompanySettings::updateOrCreate(
-            ['id' => 1],
+            ['tenant_id' => $mainTenant->id],
             [
                 'company_name' => 'Ausentra - Gestión de Ausencias',
                 'company_identification' => 'NIT: 901.234.567-1',
@@ -29,6 +40,6 @@ class CompanySettingsSeeder extends Seeder
             ]
         );
 
-        $this->command->info('✅ CompanySettings sembrado correctamente');
+        $this->command->info('✅ CompanySettings sembrado para tenant principal');
     }
 }

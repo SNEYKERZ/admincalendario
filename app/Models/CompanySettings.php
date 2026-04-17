@@ -2,11 +2,15 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Tenantable;
 use Illuminate\Database\Eloquent\Model;
 
 class CompanySettings extends Model
 {
+    use Tenantable;
+
     protected $fillable = [
+        'tenant_id',
         'company_name',
         'company_logo',
         'company_address',
@@ -34,7 +38,10 @@ class CompanySettings extends Model
 
     public static function getSettings(): self
     {
-        return static::first() ?? static::create([
+        $tenantId = app(\App\Managers\TenantManager::class)->getTenantId();
+
+        return static::where('tenant_id', $tenantId)->first() ?? static::create([
+            'tenant_id' => $tenantId,
             'company_name' => config('app.name'),
             'vacation_days_default' => 15,
             'vacation_days_advance' => 30,

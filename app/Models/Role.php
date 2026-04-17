@@ -2,15 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Tenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Role extends Model
 {
-    use HasFactory;
+    use HasFactory, Tenantable;
 
     protected $fillable = [
+        'tenant_id',
         'name',
         'display_name',
         'description',

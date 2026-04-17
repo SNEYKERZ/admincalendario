@@ -3,13 +3,14 @@
 namespace App\Models;
 
 use App\Enums\AbsenceStatus;
+use App\Models\Concerns\Tenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Absence extends Model
 {
-    use HasFactory;
+    use HasFactory, Tenantable;
 
     protected $fillable = [
         'user_id',

@@ -1,15 +1,30 @@
 <?php
+
 namespace Database\Seeders;
 
-use Illuminate\Database\Seeder;
 use App\Models\AbsenceType;
+use App\Models\Tenant;
+use Illuminate\Database\Seeder;
 
 class AbsenceTypeSeeder extends Seeder
 {
     public function run(): void
     {
+        // Obtener el tenant principal
+        $mainTenant = Tenant::where('is_main', true)->first();
+
+        if (! $mainTenant) {
+            $this->command->warn('⚠️ No hay tenant principal. Ejecutá TenantSeeder primero.');
+
+            return;
+        }
+
+        // Limpiar tipos existentes del tenant principal
+        AbsenceType::where('tenant_id', $mainTenant->id)->delete();
+
         AbsenceType::insert([
             [
+                'tenant_id' => $mainTenant->id,
                 'name' => 'Vacaciones',
                 'deducts_vacation' => true,
                 'requires_approval' => true,
@@ -22,6 +37,7 @@ class AbsenceTypeSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'tenant_id' => $mainTenant->id,
                 'name' => 'Dia libre',
                 'deducts_vacation' => true,
                 'requires_approval' => true,
@@ -34,6 +50,7 @@ class AbsenceTypeSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'tenant_id' => $mainTenant->id,
                 'name' => 'Permiso',
                 'deducts_vacation' => false,
                 'requires_approval' => true,
@@ -46,6 +63,7 @@ class AbsenceTypeSeeder extends Seeder
                 'updated_at' => now(),
             ],
             [
+                'tenant_id' => $mainTenant->id,
                 'name' => 'Cumpleaños',
                 'deducts_vacation' => false,
                 'requires_approval' => false,
@@ -58,6 +76,7 @@ class AbsenceTypeSeeder extends Seeder
                 'updated_at' => now(),
             ],
         ]);
+
+        $this->command->info('✅ AbsenceType sembrado para tenant principal');
     }
 }
-

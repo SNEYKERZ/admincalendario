@@ -22,6 +22,9 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
+        // Registrar el TenantManager como singleton
+        $this->app->singleton(TenantManager::class);
+
         // Registrar proveedores de feriados por defecto
         $this->app->singleton(ColombiaHolidayProvider::class);
     }

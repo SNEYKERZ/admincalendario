@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\UserRole;
 use App\Models\Area;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Models\VacationYear;
 use Illuminate\Database\Seeder;
@@ -13,15 +14,24 @@ class UserSeeder extends Seeder
 {
     public function run(): void
     {
-        // Obtener áreas
-        $rrhh = Area::where('name', 'Recursos Humanos')->first();
-        $tecnologia = Area::where('name', 'Tecnología')->first();
-        $ventas = Area::where('name', 'Ventas')->first();
-        $marketing = Area::where('name', 'Marketing')->first();
-        $finanzas = Area::where('name', 'Finanzas')->first();
-        $operaciones = Area::where('name', 'Operaciones')->first();
-        $servicioCliente = Area::where('name', 'Servicio al Cliente')->first();
-        $adminArea = Area::where('name', 'Administración')->first();
+        // Obtener el tenant principal
+        $mainTenant = Tenant::where('is_main', true)->first();
+
+        if (! $mainTenant) {
+            $this->command->warn('⚠️ No hay tenant principal. Ejecutá TenantSeeder primero.');
+
+            return;
+        }
+
+        // Obtener áreas (sin TenantScope para obtener las del tenant principal)
+        $rrhh = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Recursos Humanos')->first();
+        $tecnologia = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Tecnología')->first();
+        $ventas = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Ventas')->first();
+        $marketing = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Marketing')->first();
+        $finanzas = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Finanzas')->first();
+        $operaciones = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Operaciones')->first();
+        $servicioCliente = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Servicio al Cliente')->first();
+        $adminArea = Area::withoutGlobalScopes()->where('tenant_id', $mainTenant->id)->where('name', 'Administración')->first();
 
         // ============================================
         // 1 SUPERADMIN
@@ -29,6 +39,7 @@ class UserSeeder extends Seeder
         $superadmin = User::updateOrCreate(
             ['email' => 'superadmin@ausentra.com'],
             [
+                'tenant_id' => $mainTenant->id,
                 'name' => 'Carlos Andrés Rodríguez',
                 'first_name' => 'Carlos Andrés',
                 'last_name' => 'Rodríguez',
@@ -48,6 +59,7 @@ class UserSeeder extends Seeder
         $admin1 = User::updateOrCreate(
             ['email' => 'admin@ausentra.com'],
             [
+                'tenant_id' => $mainTenant->id,
                 'name' => 'María Elena González',
                 'first_name' => 'María Elena',
                 'last_name' => 'González',
@@ -66,6 +78,7 @@ class UserSeeder extends Seeder
         $admin2 = User::updateOrCreate(
             ['email' => 'jefe.operaciones@ausentra.com'],
             [
+                'tenant_id' => $mainTenant->id,
                 'name' => 'José Luis Martínez',
                 'first_name' => 'José Luis',
                 'last_name' => 'Martínez',
@@ -215,6 +228,7 @@ class UserSeeder extends Seeder
             $user = User::updateOrCreate(
                 ['email' => $colab['email']],
                 array_merge($colab, [
+                    'tenant_id' => $mainTenant->id,
                     'password' => Hash::make('password'),
                     'role' => UserRole::COLLABORATOR->value,
                     'is_active' => true,
@@ -226,6 +240,7 @@ class UserSeeder extends Seeder
             VacationYear::updateOrCreate(
                 ['user_id' => $user->id, 'year' => $year],
                 [
+                    'tenant_id' => $mainTenant->id,
                     'allocated_days' => $colab['vacation_days'] ?? 15,
                     'used_days' => 0,
                     'expires_at' => now()->endOfYear(),
@@ -236,6 +251,7 @@ class UserSeeder extends Seeder
             VacationYear::updateOrCreate(
                 ['user_id' => $user->id, 'year' => $year - 1],
                 [
+                    'tenant_id' => $mainTenant->id,
                     'allocated_days' => $colab['vacation_days'] ?? 15,
                     'used_days' => rand(5, 15),
                     'expires_at' => now()->subYear()->endOfYear(),
@@ -246,7 +262,7 @@ class UserSeeder extends Seeder
         // ============================================
         // RESUMEN
         // ============================================
-        $this->command->info('✅ Usuarios sembrados correctamente:');
+        $this->command->info('✅ Usuarios sembrados correctamente para tenant principal:');
         $this->command->info('   - 1 Superadmin: superadmin@ausentra.com / password');
         $this->command->info('   - 2 Administradores: admin@ausentra.com / password');
         $this->command->info('   - 10 Colaboradores: [nombre]@ausentra.com / password');
