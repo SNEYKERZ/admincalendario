@@ -112,9 +112,19 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::get('/users-list', function () {
-        return User::with(['vacationYears' => function ($q) {
+        $query = User::query()->withCount([
+            'absences as absences_any_status_count' => function ($absenceQuery) {
+                $absenceQuery->withoutTenant();
+            },
+        ]);
+
+        if (request()->boolean('with_absences')) {
+            $query->having('absences_any_status_count', '>', 0);
+        }
+
+        return $query->with(['vacationYears' => function ($q) {
             $q->where('expires_at', '>=', now());
-        }])->get()->map(function ($user) {
+        }])->orderBy('name')->get()->map(function ($user) {
 
             $available = $user->vacationYears->sum(function ($year) {
                 return $year->allocated_days - $year->used_days;

@@ -68,7 +68,6 @@ const reject = async () => {
     } finally {
         loading.value = false
     }
-    }
 };
 </script>
 

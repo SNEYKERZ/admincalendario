@@ -1068,7 +1068,7 @@ const getStatusLabel = (status: string) => {
             @close="showSubscriptionAnnouncement = false"
             @renew="
                 () => {
-                    showSubscriptionAnnouncement.value = false;
+                    showSubscriptionAnnouncement = false;
                 }
             "
         />

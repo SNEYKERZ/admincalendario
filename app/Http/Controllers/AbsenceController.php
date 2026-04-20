@@ -20,14 +20,34 @@ class AbsenceController extends Controller
     {
         $this->authorize('viewAny', Absence::class);
 
-        $query = Absence::with(['user', 'type', 'approver']);
+        $query = Absence::withoutTenant()
+            ->with(['user', 'type', 'approver']);
 
-        if (! auth()->user()->isAdmin()) {
-            $query->where('user_id', auth()->id());
-        }
+        if ($request->filled('user_ids')) {
+            $userIds = $request->input('user_ids');
 
-        if ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
+            if (is_string($userIds)) {
+                $userIds = explode(',', $userIds);
+            }
+
+            $userIds = collect($userIds)
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->values()
+                ->all();
+
+            if (!empty($userIds)) {
+                $query->whereIn('user_id', $userIds);
+            }
+
+        } elseif ($request->filled('user_id')) {
+            $query->where('user_id', (int) $request->user_id);
+
+        } else {
+            // Solo aplica restricción si no hay filtros
+            if (!auth()->user()->isAdmin()) {
+                $query->where('user_id', auth()->id());
+            }
         }
 
         if ($request->filled('status')) {
@@ -43,7 +63,7 @@ class AbsenceController extends Controller
                     ->orWhereBetween('end_datetime', [$start, $end])
                     ->orWhere(function ($q2) use ($start, $end) {
                         $q2->where('start_datetime', '<=', $start)
-                            ->where('end_datetime', '>=', $end);
+                           ->where('end_datetime', '>=', $end);
                     });
             });
         }
@@ -63,6 +83,10 @@ class AbsenceController extends Controller
     public function show(Absence $absence): JsonResponse
     {
         $this->authorize('view', $absence);
+
+        $absence = auth()->user()->isSuperAdmin()
+            ? Absence::withoutTenant()->findOrFail($absence->id)
+            : Absence::findOrFail($absence->id);
 
         return response()->json($absence->load(['user', 'type', 'approver']));
     }
@@ -98,7 +122,6 @@ class AbsenceController extends Controller
     {
         $this->authorize('delete', $absence);
 
-        // Restaurar días de vacaciones ANTES de eliminar si estaba aprobado
         if ($absence->status === 'aprobado' && $absence->type->deducts_vacation) {
             $this->vacationService->restoreDays($absence->user, $absence->total_days);
         }

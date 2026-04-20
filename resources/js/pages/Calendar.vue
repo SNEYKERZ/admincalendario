@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue';
+import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
@@ -9,64 +9,68 @@ import axios from 'axios';
 import AbsenceModal from '@/components/AbsenceModal.vue';
 import { useToast } from 'vue-toastification';
 import tippy from 'tippy.js';
+import $ from 'jquery';
+import { normalizeForSearch } from '@/lib/search';
 import 'tippy.js/dist/tippy.css';
+import 'select2/dist/css/select2.min.css';
 
-const calendarRef = ref(null);
+const calendarRef = ref<any>(null);
 const showModal = ref(false);
 const modalMode = ref('create');
 const selectedRange = ref(null);
 const selectedAbsence = ref(null);
-const selectedUser = ref<number | null>(null);
+const selectedUsers = ref<number[]>([]);
+const usersSelectRef = ref<HTMLSelectElement | null>(null);
 const users = ref<
     { id: number; name: string; identification: string; email: string }[]
 >([]);
 const isAdmin = ref(false);
-const searchQuery = ref('');
 const toast = useToast();
 const selectedCountry = ref('CO');
 const holidays = ref<{ date: string; title: string }[]>([]);
 const countries = ref<{ code: string; name: string }[]>([]);
 
-const filteredUsers = ref<
-    { id: number; name: string; identification: string; email: string }[]
->([]);
+let usersSelect2: any = null;
+let select2Loaded = false;
+const isMobile = ref(false);
 
-watch(searchQuery, (query) => {
-    if (!query.trim()) {
-        filteredUsers.value = users.value;
-    } else {
-        const q = query.toLowerCase();
-        filteredUsers.value = users.value.filter(
-            (u) =>
-                u.name.toLowerCase().includes(q) ||
-                u.identification?.toLowerCase().includes(q) ||
-                u.email.toLowerCase().includes(q),
-        );
-    }
-});
+const updateViewportFlags = () => {
+    isMobile.value = window.innerWidth < 640;
+};
 
 onMounted(async () => {
+    updateViewportFlags();
+    window.addEventListener('resize', updateViewportFlags);
+
     try {
         const userRes = await axios.get('/me');
         const user = userRes.data;
         isAdmin.value = user?.role === 'admin' || user?.is_admin;
 
-        // Load users list for filtering (only admins need full list)
-        const usersRes = await axios.get('/users-list');
+        // Cargar solo usuarios que tengan ausencias, sin filtrar por estado.
+        const usersRes = await axios.get('/users-list', {
+            params: { with_absences: true },
+        });
         users.value = usersRes.data.map((u: any) => ({
             id: u.id,
             name: u.name,
             identification: u.identification || '',
             email: u.email || '',
         }));
-        filteredUsers.value = users.value;
 
         // Load countries and holidays
         await loadCountries();
         await loadHolidays(new Date().getFullYear());
+        await nextTick();
+        await initUsersSelect2();
     } catch (e) {
         console.error('Error loading data:', e);
     }
+});
+
+onBeforeUnmount(() => {
+    destroyUsersSelect2();
+    window.removeEventListener('resize', updateViewportFlags);
 });
 
 // Reload holidays when country changes
@@ -126,13 +130,16 @@ const fetchEvents = async (
             end: info.endStr,
         };
 
-        if (selectedUser.value) {
-            params.user_id = selectedUser.value;
+        // Filtrar por usuarios seleccionados.
+        if (selectedUsers.value.length > 0) {
+            params.user_ids = selectedUsers.value.join(',');
         }
 
         const res = await axios.get('/absences', { params });
 
-        const absenceEvents = res.data.map((item: any) => ({
+        const absences = res.data;
+
+        const absenceEvents = absences.map((item: any) => ({
             id: item.id,
             title: `${item.user?.name ?? ''} - ${item.type?.name ?? ''}`,
             start: item.start_datetime,
@@ -146,7 +153,7 @@ const fetchEvents = async (
             start: h.date,
             allDay: true,
             display: 'background',
-            backgroundColor: '#green',
+            backgroundColor: '#fde68a',
             title: h.title,
             extendedProps: { isHoliday: true },
         }));
@@ -179,10 +186,117 @@ const refreshCalendar = () => {
     calendarRef.value?.getApi()?.refetchEvents();
 };
 
-const handleUserChange = (userId: number | null) => {
-    selectedUser.value = userId;
+const handleUserChange = (userIds: number[]) => {
+    selectedUsers.value = userIds;
     refreshCalendar();
 };
+
+const handleUsersSelect2Change = () => {
+    if (!usersSelect2) return;
+
+    const rawValue = usersSelect2.val();
+    const ids = Array.isArray(rawValue)
+        ? rawValue
+              .map((value: string | number) => Number(value))
+              .filter((value: number) => Number.isInteger(value))
+        : [];
+
+    handleUserChange(ids);
+};
+
+const destroyUsersSelect2 = () => {
+    if (!usersSelect2) return;
+    usersSelect2.off('.calendarUsers');
+    usersSelect2.select2('destroy');
+    usersSelect2 = null;
+};
+
+const ensureSelect2Loaded = async () => {
+    if (select2Loaded && typeof ($ as any).fn?.select2 === 'function') {
+        return true;
+    }
+
+    // Select2 necesita jQuery en el objeto global.
+    (window as any).$ = $;
+    (window as any).jQuery = $;
+
+    if (typeof ($ as any).fn?.select2 !== 'function') {
+        const select2Module: any = await import('select2');
+        const select2Initializer = select2Module.default ?? select2Module;
+
+        if (typeof select2Initializer === 'function') {
+            select2Initializer(window, $);
+        }
+    }
+
+    if (typeof ($ as any).fn?.select2 !== 'function') {
+        const select2FullModule: any = await import('select2/dist/js/select2.full.js');
+        const select2FullInitializer =
+            select2FullModule.default ?? select2FullModule;
+
+        if (typeof select2FullInitializer === 'function') {
+            select2FullInitializer(window, $);
+        }
+    }
+
+    select2Loaded = typeof ($ as any).fn?.select2 === 'function';
+    return select2Loaded;
+};
+
+const initUsersSelect2 = async () => {
+    if (!usersSelectRef.value) return;
+
+    const pluginReady = await ensureSelect2Loaded();
+    if (!pluginReady) {
+        console.error('Select2 no pudo inicializarse');
+        return;
+    }
+
+    destroyUsersSelect2();
+
+    usersSelect2 = $(usersSelectRef.value);
+    usersSelect2.select2({
+        width: '100%',
+        placeholder: 'Todos los usuarios con ausencias',
+        allowClear: true,
+        closeOnSelect: false,
+        minimumResultsForSearch: 0,
+        matcher: (params: any, data: any) => {
+            const term = normalizeForSearch(params?.term);
+            if (!term) return data;
+
+            const text = normalizeForSearch(data?.text);
+            return text.includes(term) ? data : null;
+        },
+        language: {
+            noResults: () => 'No se encontraron usuarios',
+            searching: () => 'Buscando...',
+        },
+    });
+
+    usersSelect2.val(selectedUsers.value.map(String)).trigger('change.select2');
+    usersSelect2.on('change.calendarUsers', handleUsersSelect2Change);
+    usersSelect2.on('select2:open.calendarUsers', () => {
+        const searchField = document.querySelector<HTMLInputElement>(
+            '.select2-container--open .select2-search__field',
+        );
+        searchField?.focus();
+    });
+};
+
+const clearSelectedUsers = () => {
+    if (!usersSelect2) {
+        handleUserChange([]);
+        return;
+    }
+
+    usersSelect2.val(null).trigger('change');
+};
+
+watch(users, async () => {
+    await nextTick();
+    await initUsersSelect2();
+});
 
 const handleEventDidMount = (info: any) => {
     try {
@@ -251,9 +365,9 @@ const canEditEvent = (event: any) => {
     return event.extendedProps.status === 'pendiente';
 };
 
-const calendarOptions = {
+const calendarOptions = computed(() => ({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-    initialView: 'dayGridMonth',
+    initialView: isMobile.value ? 'listWeek' : 'dayGridMonth',
     selectable: true,
     editable: true,
     events: fetchEvents,
@@ -264,11 +378,18 @@ const calendarOptions = {
     eventDidMount: handleEventDidMount,
     eventAllow: canEditEvent,
     height: 'auto',
-    headerToolbar: {
-        left: 'prev,next today',
-        center: 'title',
-        right: 'dayGridMonth,timeGridWeek,listWeek',
-    },
+    dayMaxEvents: isMobile.value ? 2 : true,
+    headerToolbar: isMobile.value
+        ? {
+              left: 'prev,next',
+              center: 'title',
+              right: 'today',
+          }
+        : {
+              left: 'prev,next today',
+              center: 'title',
+              right: 'dayGridMonth,timeGridWeek,listWeek',
+          },
     locale: 'es',
     buttonText: {
         today: 'Hoy',
@@ -277,12 +398,12 @@ const calendarOptions = {
         day: 'Día',
         list: 'Lista',
     },
-};
+}));
 </script>
 
 <template>
     <AppLayout>
-        <div class="space-y-4 p-4">
+        <div class="space-y-4 p-3 sm:p-4">
             <!-- Header -->
             <div
                 class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
@@ -299,43 +420,16 @@ const calendarOptions = {
                 </div>
             </div>
 
-            <!-- Search and Filter -->
-            <div
-                class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"
-            >
-                <!-- Search by name, identification or email -->
-                <div class="max-w-md flex-1">
-                    <div class="relative">
-                        <svg
-                            class="absolute top-1/2 left-3 h-5 w-5 -translate-y-1/2 text-gray-400"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                            />
-                        </svg>
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Buscar por nombre, identificación o correo..."
-                            class="w-full rounded-lg border border-gray-300 py-2 pr-4 pl-10 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                        />
-                    </div>
-                </div>
-
+            <!-- Filters Row: Feriados + User Select (same level) -->
+            <div class="calendar-filters flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
                 <!-- Country selector for holidays -->
-                <div class="flex items-center gap-2">
+                <div class="flex items-center justify-between gap-2 sm:justify-start">
                     <label class="text-sm text-gray-600 dark:text-gray-400">
                         Feriados:
                     </label>
                     <select
                         v-model="selectedCountry"
-                        class="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
+                        class="h-10 w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                     >
                         <option
                             v-for="country in countries"
@@ -347,37 +441,57 @@ const calendarOptions = {
                     </select>
                 </div>
 
-                <!-- User Filter -->
-                <div class="flex items-center gap-2 overflow-x-auto pb-2">
+                <!-- User Select Searchable -->
+                <div class="calendar-users-filter flex items-center justify-between gap-2 sm:justify-start">
+                    <label class="text-sm text-gray-600 dark:text-gray-400">
+                        Usuarios:
+                    </label>
+                    <div class="relative w-full sm:w-56">
+                        <select
+                            ref="usersSelectRef"
+                            multiple
+                            class="calendar-users-select"
+                        >
+                            <option
+                                v-for="user in users"
+                                :key="user.id"
+                                :value="user.id"
+                            >
+                                {{ user.name }}
+                            </option>
+                        </select>
+                    </div>
                     <button
-                        @click="handleUserChange(null)"
-                        :class="[
-                            'flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                            selectedUser === null
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300',
-                        ]"
+                        v-if="selectedUsers.length"
+                        @click="clearSelectedUsers"
+                        class="text-sm text-red-500 hover:text-red-700 dark:text-red-400"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <!--
+                <div class="flex items-center gap-1 overflow-x-auto">
+                    <button
+                        @click="handleUserChange([])"
+                        class="flex-shrink-0 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white transition-colors"
                     >
                         Todos
                     </button>
                     <button
-                        v-for="user in filteredUsers"
+                        v-for="user in users.slice(0, 5)"
                         :key="user.id"
-                        @click="handleUserChange(user.id)"
-                        :class="[
-                            'flex-shrink-0 rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                            selectedUser === user.id
-                                ? 'bg-blue-600 text-white'
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300',
-                        ]"
+                        @click="handleUserChange([user.id])"
+                        class="flex-shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
                     >
-                        {{ user.name }}
+                        {{ user.name.split(' ')[0] }}
                     </button>
                 </div>
+                -->
             </div>
 
             <!-- Legend -->
-            <div class="flex flex-wrap items-center gap-4 text-sm">
+            <div class="grid grid-cols-2 gap-2 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-4">
                 <div class="flex items-center gap-2">
                     <div class="h-3 w-3 rounded-full bg-amber-500"></div>
                     <span class="text-gray-600 dark:text-gray-400"
@@ -398,16 +512,14 @@ const calendarOptions = {
                 </div>
                 <div class="flex items-center gap-2">
                     <div class="h-3 w-3 rounded-full bg-amber-200"></div>
-                    <span class="text-gray-100 dark:text-gray-400"
+                    <span class="text-gray-600 dark:text-gray-400"
                         >Festivo</span
                     >
                 </div>
             </div>
 
             <!-- Calendar -->
-            <div
-                class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800"
-            >
+            <div class="rounded-xl border border-gray-200 bg-white p-2 sm:p-4 dark:border-gray-700 dark:bg-gray-800">
                 <FullCalendar :options="calendarOptions" ref="calendarRef" />
             </div>
         </div>
@@ -458,5 +570,26 @@ const calendarOptions = {
     cursor: pointer;
     border-radius: 0.25rem;
     padding: 2px 4px;
+}
+
+@media (max-width: 640px) {
+    .fc .fc-toolbar {
+        gap: 0.5rem;
+    }
+
+    .fc .fc-toolbar.fc-header-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .fc .fc-toolbar-title {
+        font-size: 1rem;
+        text-align: center;
+    }
+
+    .fc .fc-button {
+        padding: 0.375rem 0.5rem;
+        font-size: 0.75rem;
+    }
 }
 </style>

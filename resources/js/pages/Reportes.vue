@@ -7,6 +7,7 @@ import { useToast } from 'vue-toastification';
 interface AbsenceReport {
     id: number;
     empleado: string;
+    area: string | null;
     tipo: string;
     inicio: string;
     fin: string;
@@ -20,6 +21,7 @@ interface AbsenceReport {
 interface VacationReport {
     id: number;
     empleado: string;
+    area: string | null;
     año: number;
     asignados: number;
     usados: number;

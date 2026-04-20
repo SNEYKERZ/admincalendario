@@ -4,6 +4,7 @@ import axios from 'axios';
 import { useToast } from 'vue-toastification';
 import { usePage } from '@inertiajs/vue3';
 import ConfirmDialog from './ConfirmDialog.vue';
+import { includesNormalized } from '@/lib/search';
 
 interface User {
     id: number;
@@ -47,6 +48,7 @@ interface Role {
     color: string;
     is_system: boolean;
     is_active: boolean;
+    display_order: number;
     user_count: number;
 }
 
@@ -97,9 +99,9 @@ const filterRole = ref('');
 const filteredUsers = computed(() => {
     return users.value.filter((u) => {
         const matchesSearch =
-            !search.value ||
-            u.name.toLowerCase().includes(search.value.toLowerCase()) ||
-            u.email.toLowerCase().includes(search.value.toLowerCase());
+            includesNormalized(u.name, search.value) ||
+            includesNormalized(u.email, search.value) ||
+            includesNormalized(u.identification, search.value);
         const matchesRole = !filterRole.value || u.role === filterRole.value;
         return matchesSearch && matchesRole;
     });
@@ -260,7 +262,7 @@ const saveUser = async () => {
         const formData = new FormData();
         Object.entries(form.value).forEach(([key, value]) => {
             if (key === 'photo' && value) {
-                formData.append('photo', value);
+                formData.append('photo', value as File);
             } else if (value !== null && value !== '') {
                 formData.append(key, String(value));
             }
@@ -284,7 +286,7 @@ const saveUser = async () => {
         if (e.response?.data?.errors) {
             Object.values(e.response.data.errors)
                 .flat()
-                .forEach((msg: string) => toast.error(msg));
+                .forEach((msg) => toast.error(String(msg)));
         } else {
             toast.error('Error guardando usuario');
         }
@@ -328,9 +330,7 @@ const getRoleBadge = (role: string) => {
 <template>
     <div class="space-y-4">
         <!-- Header -->
-        <div
-            class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-        >
+        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
                 <h1 class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                     Gestión de Usuarios
@@ -340,69 +340,34 @@ const getRoleBadge = (role: string) => {
                 </p>
             </div>
             <button @click="openCreate" class="btn-primary">
-                <svg
-                    class="mr-2 h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M12 4v16m8-8H4"
-                    />
+                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                 </svg>
                 Nuevo Usuario
             </button>
 
             <!-- Botón gestión de roles (solo superadmin) -->
-            <button
-                v-if="isSuperAdmin"
-                @click="openRolesModal"
-                class="btn-secondary"
-            >
-                <svg
-                    class="mr-2 h-5 w-5"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                >
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"
-                    />
-                    <path
-                        stroke-linecap="round"
-                        stroke-linejoin="round"
-                        stroke-width="2"
-                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
+            <button v-if="isSuperAdmin" @click="openRolesModal" class="btn-secondary">
+                <svg class="mr-2 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
                 </svg>
                 Gestionar Roles
             </button>
         </div>
 
-        <!-- Filters -->
-        <div class="flex gap-4">
-            <div class="flex-1">
-                <input
-                    v-model="search"
-                    type="text"
-                    placeholder="Buscar por nombre o email..."
-                    class="input"
-                />
+        <div class="flex flex-col gap-3 sm:flex-row">
+            <div class="relative h-10 w-full sm:flex-1">
+                <input v-model="search" type="text" placeholder="Buscar por nombre, email o identificación..."
+                    autocomplete="off" class="input h-10 w-full pl-10" />
             </div>
-            <select v-model="filterRole" class="input w-auto">
+
+            <select v-model="filterRole" class="input h-10 w-full sm:flex-1">
                 <option value="">Todos los roles</option>
                 <template v-if="roles.length > 0">
-                    <option
-                        v-for="role in roles"
-                        :key="role.id"
-                        :value="role.name"
-                    >
+                    <option v-for="role in roles" :key="role.id" :value="role.name">
                         {{ role.display_name }}
                     </option>
                 </template>
@@ -414,105 +379,76 @@ const getRoleBadge = (role: string) => {
         </div>
 
         <!-- Users Table -->
-        <div
-            class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
-        >
+        <div class="overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
             <div class="overflow-x-auto">
                 <table class="w-full">
                     <thead class="bg-gray-50 dark:bg-gray-700/50">
                         <tr>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Usuario
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Identificación
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Teléfono
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Rol
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Área
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Asignados
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Usados
                             </th>
                             <th
-                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Disponibles
                             </th>
                             <th
-                                class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
-                            >
+                                class="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Acciones
                             </th>
                         </tr>
                     </thead>
-                    <tbody
-                        class="divide-y divide-gray-100 dark:divide-gray-700"
-                    >
+                    <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                         <tr v-if="loading" class="text-center">
                             <td colspan="9" class="py-8 text-gray-500">
                                 Cargando...
                             </td>
                         </tr>
-                        <tr
-                            v-else-if="filteredUsers.length === 0"
-                            class="text-center"
-                        >
+                        <tr v-else-if="filteredUsers.length === 0" class="text-center">
                             <td colspan="9" class="py-8 text-gray-500">
                                 No hay usuarios
                             </td>
                         </tr>
-                        <tr
-                            v-for="user in filteredUsers"
-                            :key="user.id"
-                            class="hover:bg-gray-50 dark:hover:bg-gray-700/30"
-                        >
+                        <tr v-for="user in filteredUsers" :key="user.id"
+                            class="hover:bg-gray-50 dark:hover:bg-gray-700/30">
                             <td class="px-4 py-3">
                                 <div class="flex items-center gap-3">
                                     <div
-                                        class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600"
-                                    >
-                                        <img
-                                            v-if="user.photo_url"
-                                            :src="user.photo_url"
-                                            class="h-10 w-10 rounded-full object-cover"
-                                        />
-                                        <span
-                                            v-else
-                                            class="text-lg font-medium text-gray-600 dark:text-gray-300"
-                                            >{{
-                                                user.name
-                                                    .charAt(0)
-                                                    .toUpperCase()
-                                            }}</span
-                                        >
+                                        class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
+                                        <img v-if="user.photo_url" :src="user.photo_url"
+                                            class="h-10 w-10 rounded-full object-cover" />
+                                        <span v-else class="text-lg font-medium text-gray-600 dark:text-gray-300">{{
+                                            user.name
+                                                .charAt(0)
+                                                .toUpperCase()
+                                        }}</span>
                                     </div>
                                     <div>
-                                        <div
-                                            class="font-medium text-gray-900 dark:text-gray-100"
-                                        >
+                                        <div class="font-medium text-gray-900 dark:text-gray-100">
                                             {{ user.name }}
                                         </div>
                                         <div class="text-sm text-gray-500">
@@ -521,23 +457,17 @@ const getRoleBadge = (role: string) => {
                                     </div>
                                 </div>
                             </td>
-                            <td
-                                class="px-4 py-3 text-gray-600 dark:text-gray-400"
-                            >
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
                                 {{ user.identification || '-' }}
                             </td>
-                            <td
-                                class="px-4 py-3 text-gray-600 dark:text-gray-400"
-                            >
+                            <td class="px-4 py-3 text-gray-600 dark:text-gray-400">
                                 {{ user.phone || '-' }}
                             </td>
                             <td class="px-4 py-3">
-                                <span
-                                    :class="[
-                                        'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                                        getRoleBadge(user.role),
-                                    ]"
-                                >
+                                <span :class="[
+                                    'rounded-full px-2.5 py-0.5 text-xs font-medium',
+                                    getRoleBadge(user.role),
+                                ]">
                                     {{
                                         user.role === 'admin'
                                             ? 'Admin'
@@ -546,10 +476,8 @@ const getRoleBadge = (role: string) => {
                                 </span>
                             </td>
                             <td class="px-4 py-3">
-                                <span
-                                    v-if="user.area_name"
-                                    class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium"
-                                    :style="{
+                                <span v-if="user.area_name"
+                                    class="inline-flex items-center rounded-md px-2 py-1 text-xs font-medium" :style="{
                                         backgroundColor:
                                             areas.find(
                                                 (a) => a.id === user.area_id,
@@ -557,13 +485,10 @@ const getRoleBadge = (role: string) => {
                                         color: areas.find(
                                             (a) => a.id === user.area_id,
                                         )?.color,
-                                    }"
-                                >
+                                    }">
                                     {{ user.area_name }}
                                 </span>
-                                <span v-else class="text-xs text-gray-400"
-                                    >Sin área</span
-                                >
+                                <span v-else class="text-xs text-gray-400">Sin área</span>
                             </td>
                             <td class="px-4 py-3 text-center">
                                 {{ user.allocated }}
@@ -572,102 +497,49 @@ const getRoleBadge = (role: string) => {
                                 {{ user.used }}
                             </td>
                             <td class="px-4 py-3 text-center">
-                                <span
-                                    class="font-bold text-emerald-600 dark:text-emerald-400"
-                                    >{{ user.available }}</span
-                                >
+                                <span class="font-bold text-emerald-600 dark:text-emerald-400">{{ user.available
+                                    }}</span>
                             </td>
                             <td class="px-4 py-3">
-                                <div
-                                    class="flex items-center justify-end gap-1"
-                                >
-                                    <button
-                                        @click="adjustDays(user, 1)"
+                                <div class="flex items-center justify-end gap-1">
+                                    <button @click="adjustDays(user, 1)"
                                         class="btn-icon bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                        title="+1 día"
-                                    >
+                                        title="+1 día">
                                         +
                                     </button>
-                                    <button
-                                        @click="adjustDays(user, -1)"
+                                    <button @click="adjustDays(user, -1)"
                                         class="btn-icon bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
-                                        title="-1 día"
-                                    >
+                                        title="-1 día">
                                         -
                                     </button>
-                                    <button
-                                        @click="openView(user)"
-                                        class="btn-icon"
-                                        title="Ver"
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                                            />
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
-                                            />
+                                    <button @click="openView(user)" class="btn-icon" title="Ver">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                         </svg>
                                     </button>
-                                    <button
-                                        @click="openEdit(user)"
-                                        class="btn-icon"
-                                        title="Editar"
-                                    >
-                                        <svg
-                                            class="h-4 w-4"
-                                            fill="none"
-                                            stroke="currentColor"
-                                            viewBox="0 0 24 24"
-                                        >
-                                            <path
-                                                stroke-linecap="round"
-                                                stroke-linejoin="round"
-                                                stroke-width="2"
-                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"
-                                            />
+                                    <button @click="openEdit(user)" class="btn-icon" title="Editar">
+                                        <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                                d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                     </button>
-                                    <ConfirmDialog
-                                        title="Eliminar usuario"
-                                        :description="
-                                            '¿Está seguro de que desea eliminar el usuario ' +
-                                            user.name +
-                                            '? Esta acción no se puede deshacer.'
-                                        "
-                                        confirm-text="Eliminar"
-                                        cancel-text="Cancelar"
-                                        variant="destructive"
-                                        @confirm="deleteUser(user)"
-                                    >
+                                    <ConfirmDialog title="Eliminar usuario" :description="'¿Está seguro de que desea eliminar el usuario ' +
+                                        user.name +
+                                        '? Esta acción no se puede deshacer.'
+                                        " confirm-text="Eliminar" cancel-text="Cancelar" variant="destructive"
+                                        @confirm="deleteUser(user)">
                                         <template #trigger>
                                             <button
                                                 class="btn-icon text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-900/20"
-                                                title="Eliminar"
-                                            >
-                                                <svg
-                                                    class="h-4 w-4"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    viewBox="0 0 24 24"
-                                                >
-                                                    <path
-                                                        stroke-linecap="round"
-                                                        stroke-linejoin="round"
+                                                title="Eliminar">
+                                                <svg class="h-4 w-4" fill="none" stroke="currentColor"
+                                                    viewBox="0 0 24 24">
+                                                    <path stroke-linecap="round" stroke-linejoin="round"
                                                         stroke-width="2"
-                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                                    />
+                                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                                 </svg>
                                             </button>
                                         </template>
@@ -681,41 +553,22 @@ const getRoleBadge = (role: string) => {
         </div>
 
         <!-- Modal -->
-        <div
-            v-if="showModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-        >
-            <div
-                class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900"
-            >
+        <div v-if="showModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+            <div class="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900">
                 <div class="mb-4 flex items-center justify-between">
-                    <h2
-                        class="text-lg font-bold text-gray-900 dark:text-gray-100"
-                    >
+                    <h2 class="text-lg font-bold text-gray-900 dark:text-gray-100">
                         {{
                             modalMode === 'create'
                                 ? 'Nuevo Usuario'
                                 : modalMode === 'edit'
-                                  ? 'Editar Usuario'
-                                  : 'Detalles del Usuario'
+                                    ? 'Editar Usuario'
+                                    : 'Detalles del Usuario'
                         }}
                     </h2>
-                    <button
-                        @click="showModal = false"
-                        class="text-gray-400 hover:text-gray-600"
-                    >
-                        <svg
-                            class="h-6 w-6"
-                            fill="none"
-                            stroke="currentColor"
-                            viewBox="0 0 24 24"
-                        >
-                            <path
-                                stroke-linecap="round"
-                                stroke-linejoin="round"
-                                stroke-width="2"
-                                d="M6 18L18 6M6 6l12 12"
-                            />
+                    <button @click="showModal = false" class="text-gray-400 hover:text-gray-600">
+                        <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M6 18L18 6M6 6l12 12" />
                         </svg>
                     </button>
                 </div>
@@ -724,85 +577,49 @@ const getRoleBadge = (role: string) => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="label">Nombre</label>
-                            <input
-                                v-model="form.first_name"
-                                type="text"
-                                class="input"
-                                :disabled="modalMode === 'view'"
-                            />
+                            <input v-model="form.first_name" type="text" class="input"
+                                :disabled="modalMode === 'view'" />
                         </div>
                         <div>
                             <label class="label">Apellido</label>
-                            <input
-                                v-model="form.last_name"
-                                type="text"
-                                class="input"
-                                :disabled="modalMode === 'view'"
-                            />
+                            <input v-model="form.last_name" type="text" class="input"
+                                :disabled="modalMode === 'view'" />
                         </div>
                     </div>
 
                     <div>
                         <label class="label">Identificación</label>
-                        <input
-                            v-model="form.identification"
-                            type="text"
-                            class="input"
-                            :disabled="modalMode === 'view'"
-                        />
+                        <input v-model="form.identification" type="text" class="input"
+                            :disabled="modalMode === 'view'" />
                     </div>
 
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="label">Teléfono</label>
-                            <input
-                                v-model="form.phone"
-                                type="text"
-                                class="input"
-                                :disabled="modalMode === 'view'"
-                            />
+                            <input v-model="form.phone" type="text" class="input" :disabled="modalMode === 'view'" />
                         </div>
                         <div>
                             <label class="label">Email</label>
-                            <input
-                                v-model="form.email"
-                                type="email"
-                                class="input"
-                                :disabled="modalMode === 'view'"
-                            />
+                            <input v-model="form.email" type="email" class="input" :disabled="modalMode === 'view'" />
                         </div>
                     </div>
 
                     <div v-if="modalMode !== 'view'">
-                        <label class="label"
-                            >Contraseña
+                        <label class="label">Contraseña
                             {{
                                 modalMode === 'edit'
                                     ? '(dejar vacío para mantener)'
                                     : ''
-                            }}</label
-                        >
-                        <input
-                            v-model="form.password"
-                            type="password"
-                            class="input"
-                            :required="modalMode === 'create'"
-                        />
+                            }}</label>
+                        <input v-model="form.password" type="password" class="input"
+                            :required="modalMode === 'create'" />
                     </div>
 
                     <div>
                         <label class="label">Rol</label>
-                        <select
-                            v-model="form.role"
-                            class="input"
-                            :disabled="modalMode === 'view'"
-                        >
+                        <select v-model="form.role" class="input" :disabled="modalMode === 'view'">
                             <template v-if="roles.length > 0">
-                                <option
-                                    v-for="role in roles"
-                                    :key="role.id"
-                                    :value="role.name"
-                                >
+                                <option v-for="role in roles" :key="role.id" :value="role.name">
                                     {{ role.display_name }}
                                 </option>
                             </template>
@@ -815,17 +632,9 @@ const getRoleBadge = (role: string) => {
 
                     <div>
                         <label class="label">Área</label>
-                        <select
-                            v-model="form.area_id"
-                            class="input"
-                            :disabled="modalMode === 'view'"
-                        >
+                        <select v-model="form.area_id" class="input" :disabled="modalMode === 'view'">
                             <option :value="null">Sin área asignada</option>
-                            <option
-                                v-for="area in areas"
-                                :key="area.id"
-                                :value="area.id"
-                            >
+                            <option v-for="area in areas" :key="area.id" :value="area.id">
                                 {{ area.name }}
                             </option>
                         </select>
@@ -834,59 +643,37 @@ const getRoleBadge = (role: string) => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label class="label">Fecha de Nacimiento</label>
-                            <input
-                                v-model="form.birth_date"
-                                type="date"
-                                class="input"
-                                :disabled="modalMode === 'view'"
-                            />
+                            <input v-model="form.birth_date" type="date" class="input"
+                                :disabled="modalMode === 'view'" />
                         </div>
                         <div>
                             <label class="label">Fecha de Contratación</label>
-                            <input
-                                v-model="form.hire_date"
-                                type="date"
-                                class="input"
-                                :disabled="modalMode === 'view'"
-                            />
+                            <input v-model="form.hire_date" type="date" class="input"
+                                :disabled="modalMode === 'view'" />
                         </div>
                     </div>
 
                     <div v-if="modalMode !== 'view'">
                         <label class="label">Foto</label>
-                        <input
-                            type="file"
-                            accept="image/*"
-                            @change="
-                                (e) =>
-                                    (form.photo =
-                                        (e.target as HTMLInputElement)
-                                            .files?.[0] || null)
-                            "
-                            class="input"
-                        />
+                        <input type="file" accept="image/*" @change="
+                            (e) =>
+                            (form.photo =
+                                (e.target as HTMLInputElement)
+                                    .files?.[0] || null)
+                        " class="input" />
                     </div>
 
-                    <div
-                        v-if="modalMode === 'view' && selectedUser"
-                        class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800"
-                    >
-                        <h3
-                            class="mb-2 font-medium text-gray-900 dark:text-gray-100"
-                        >
+                    <div v-if="modalMode === 'view' && selectedUser" class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                        <h3 class="mb-2 font-medium text-gray-900 dark:text-gray-100">
                             Información adicional
                         </h3>
                         <div class="grid grid-cols-2 gap-2 text-sm">
                             <div>
-                                <span class="text-gray-500"
-                                    >Fecha de nacimiento:</span
-                                >
+                                <span class="text-gray-500">Fecha de nacimiento:</span>
                                 {{ formatDate(selectedUser.birth_date) }}
                             </div>
                             <div>
-                                <span class="text-gray-500"
-                                    >Fecha de contratación:</span
-                                >
+                                <span class="text-gray-500">Fecha de contratación:</span>
                                 {{ formatDate(selectedUser.hire_date) }}
                             </div>
                         </div>
@@ -897,11 +684,7 @@ const getRoleBadge = (role: string) => {
                     <button @click="showModal = false" class="btn-secondary">
                         {{ modalMode === 'view' ? 'Cerrar' : 'Cancelar' }}
                     </button>
-                    <button
-                        v-if="modalMode !== 'view'"
-                        @click="saveUser"
-                        class="btn-primary"
-                    >
+                    <button v-if="modalMode !== 'view'" @click="saveUser" class="btn-primary">
                         {{ modalMode === 'create' ? 'Crear' : 'Guardar' }}
                     </button>
                 </div>
@@ -910,32 +693,17 @@ const getRoleBadge = (role: string) => {
     </div>
 
     <!-- Modal de Gestión de Roles (solo superadmin) -->
-    <div
-        v-if="showRolesModal"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-        @click.self="showRolesModal = false"
-    >
+    <div v-if="showRolesModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+        @click.self="showRolesModal = false">
         <div class="w-full max-w-2xl rounded-xl bg-white p-6 dark:bg-gray-800">
             <div class="mb-4 flex items-center justify-between">
                 <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
                     Gestión de Roles
                 </h2>
-                <button
-                    @click="showRolesModal = false"
-                    class="text-gray-500 hover:text-gray-700"
-                >
-                    <svg
-                        class="h-6 w-6"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M6 18L18 6M6 6l12 12"
-                        />
+                <button @click="showRolesModal = false" class="text-gray-500 hover:text-gray-700">
+                    <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
@@ -948,60 +716,31 @@ const getRoleBadge = (role: string) => {
                 <div class="grid grid-cols-2 gap-3">
                     <div>
                         <label class="label">Nombre (slug)</label>
-                        <input
-                            v-model="roleForm.name"
-                            type="text"
-                            class="input"
-                            placeholder="ej: supervisor"
-                            :disabled="!!editingRole"
-                        />
+                        <input v-model="roleForm.name" type="text" class="input" placeholder="ej: supervisor"
+                            :disabled="!!editingRole" />
                     </div>
                     <div>
                         <label class="label">Nombre Display</label>
-                        <input
-                            v-model="roleForm.display_name"
-                            type="text"
-                            class="input"
-                            placeholder="ej: Supervisor"
-                        />
+                        <input v-model="roleForm.display_name" type="text" class="input" placeholder="ej: Supervisor" />
                     </div>
                     <div class="col-span-2">
                         <label class="label">Descripción</label>
-                        <input
-                            v-model="roleForm.description"
-                            type="text"
-                            class="input"
-                            placeholder="Descripción del rol"
-                        />
+                        <input v-model="roleForm.description" type="text" class="input"
+                            placeholder="Descripción del rol" />
                     </div>
                     <div>
                         <label class="label">Color</label>
-                        <input
-                            v-model="roleForm.color"
-                            type="color"
-                            class="h-10 w-full rounded border border-gray-300"
-                        />
+                        <input v-model="roleForm.color" type="color"
+                            class="h-10 w-full rounded border border-gray-300" />
                     </div>
                     <div>
                         <label class="label">Orden</label>
-                        <input
-                            v-model.number="roleForm.display_order"
-                            type="number"
-                            class="input"
-                            min="0"
-                        />
+                        <input v-model.number="roleForm.display_order" type="number" class="input" min="0" />
                     </div>
                     <div class="col-span-2 flex items-center gap-2">
-                        <input
-                            v-model="roleForm.is_active"
-                            type="checkbox"
-                            id="role_is_active"
-                            class="h-4 w-4 rounded border-gray-300"
-                        />
-                        <label
-                            for="role_is_active"
-                            class="text-sm text-gray-700 dark:text-gray-300"
-                        >
+                        <input v-model="roleForm.is_active" type="checkbox" id="role_is_active"
+                            class="h-4 w-4 rounded border-gray-300" />
+                        <label for="role_is_active" class="text-sm text-gray-700 dark:text-gray-300">
                             Rol activo
                         </label>
                     </div>
@@ -1010,11 +749,7 @@ const getRoleBadge = (role: string) => {
                     <button @click="saveRole" class="btn-primary text-sm">
                         {{ editingRole ? 'Actualizar' : 'Crear' }}
                     </button>
-                    <button
-                        v-if="editingRole"
-                        @click="resetRoleForm"
-                        class="btn-secondary text-sm"
-                    >
+                    <button v-if="editingRole" @click="resetRoleForm" class="btn-secondary text-sm">
                         Cancelar
                     </button>
                 </div>
@@ -1026,83 +761,43 @@ const getRoleBadge = (role: string) => {
                     Roles Existentes
                 </h3>
                 <div class="space-y-2">
-                    <div
-                        v-for="role in roles"
-                        :key="role.id"
-                        class="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-600"
-                    >
+                    <div v-for="role in roles" :key="role.id"
+                        class="flex items-center justify-between rounded-lg border border-gray-200 p-3 dark:border-gray-600">
                         <div class="flex items-center gap-3">
-                            <div
-                                class="h-4 w-4 rounded-full"
-                                :style="{ backgroundColor: role.color }"
-                            ></div>
+                            <div class="h-4 w-4 rounded-full" :style="{ backgroundColor: role.color }"></div>
                             <div>
-                                <div
-                                    class="font-medium text-gray-900 dark:text-gray-100"
-                                >
+                                <div class="font-medium text-gray-900 dark:text-gray-100">
                                     {{ role.display_name }}
                                 </div>
                                 <div class="text-xs text-gray-500">
                                     {{ role.name }} ·
                                     {{ role.user_count }} usuarios
-                                    <span
-                                        v-if="role.is_system"
-                                        class="text-blue-600"
-                                    >
+                                    <span v-if="role.is_system" class="text-blue-600">
                                         · Sistema
                                     </span>
                                 </div>
                             </div>
                         </div>
                         <div class="flex items-center gap-2">
-                            <span
-                                v-if="role.is_active"
-                                class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/30 dark:text-green-400"
-                            >
+                            <span v-if="role.is_active"
+                                class="rounded-full bg-green-100 px-2 py-0.5 text-xs text-green-800 dark:bg-green-900/30 dark:text-green-400">
                                 Activo
                             </span>
-                            <span
-                                v-else
-                                class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800"
-                            >
+                            <span v-else class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800">
                                 Inactivo
                             </span>
-                            <button
-                                v-if="!role.is_system"
-                                @click="editRole(role)"
-                                class="rounded p-1 text-gray-500 hover:bg-gray-100"
-                            >
-                                <svg
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                                    />
+                            <button v-if="!role.is_system" @click="editRole(role)"
+                                class="rounded p-1 text-gray-500 hover:bg-gray-100">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
                             </button>
-                            <button
-                                v-if="!role.is_system && role.user_count === 0"
-                                @click="deleteRole(role)"
-                                class="rounded p-1 text-red-500 hover:bg-red-50"
-                            >
-                                <svg
-                                    class="h-4 w-4"
-                                    fill="none"
-                                    stroke="currentColor"
-                                    viewBox="0 0 24 24"
-                                >
-                                    <path
-                                        stroke-linecap="round"
-                                        stroke-linejoin="round"
-                                        stroke-width="2"
-                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
-                                    />
+                            <button v-if="!role.is_system && role.user_count === 0" @click="deleteRole(role)"
+                                class="rounded p-1 text-red-500 hover:bg-red-50">
+                                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                                 </svg>
                             </button>
                         </div>

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from 'vue';
 import axios from 'axios';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { useToast } from 'vue-toastification';
+import { includesNormalized, normalizeForSearch } from '@/lib/search';
 
 interface UserOption {
     id: number;
@@ -71,15 +72,15 @@ const form = ref({
 });
 
 const filteredDocuments = computed(() => {
-    const search = filters.value.search.trim().toLowerCase();
+    const search = normalizeForSearch(filters.value.search);
     return documents.value.filter((doc) => {
         const statusOk =
             filters.value.status === 'all' || doc.status === filters.value.status;
         const searchOk =
             search.length === 0 ||
-            doc.title.toLowerCase().includes(search) ||
-            doc.original_name.toLowerCase().includes(search) ||
-            (doc.user?.name.toLowerCase().includes(search) ?? false);
+            includesNormalized(doc.title, search) ||
+            includesNormalized(doc.original_name, search) ||
+            includesNormalized(doc.user?.name, search);
 
         return statusOk && searchOk;
     });
@@ -211,11 +212,11 @@ const submit = async () => {
 
         resetForm();
         await loadDocuments();
-    } catch (error: any) {
+} catch (error: any) {
         if (error?.response?.data?.errors) {
             Object.values(error.response.data.errors)
                 .flat()
-                .forEach((msg: string) => toast.error(msg));
+                .forEach((msg) => toast.error(String(msg)));
         } else {
             toast.error('No se pudo guardar el documento');
         }

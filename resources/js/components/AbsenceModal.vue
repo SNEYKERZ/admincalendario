@@ -34,8 +34,24 @@ type AbsenceRecord = {
     reason?: string;
     start_datetime: string;
     end_datetime: string;
-    user?: { id: number };
-    type?: { id: number };
+    total_days: number;
+    total_hours: number;
+    user?: {
+        id: number;
+        name: string;
+        email: string;
+        photo_path?: string;
+    };
+    type?: {
+        id: number;
+        name: string;
+        counts_as_hours: boolean;
+    };
+    approver?: {
+        id: number;
+        name: string;
+    };
+    approved_at?: string;
 };
 
 const toast = useToast();
@@ -305,7 +321,60 @@ const remove = async () => {
                 </div>
             </div>
 
-            <div v-if="isAdmin" class="space-y-1">
+            <!-- Info del usuario y ausencia (solo en modo view) -->
+            <div
+                v-if="mode === 'view' && absence?.user"
+                class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800"
+            >
+                <div class="grid gap-3 md:grid-cols-2">
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Usuario
+                        </p>
+                        <p class="font-medium text-gray-900 dark:text-gray-100">
+                            {{ absence.user.name }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Correo
+                        </p>
+                        <p class="text-sm text-gray-900 dark:text-gray-100">
+                            {{ absence.user.email }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Tipo de ausencia
+                        </p>
+                        <p class="font-medium text-gray-900 dark:text-gray-100">
+                            {{ absence.type?.name }}
+                        </p>
+                    </div>
+                    <div>
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
+                            Duración
+                        </p>
+                        <p class="font-medium text-gray-900 dark:text-gray-100">
+                            {{ absence.total_days }} días / {{ absence.total_hours }} horas
+                        </p>
+                    </div>
+                </div>
+                <div v-if="absence.approved_at" class="mt-3 border-t pt-3">
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        Aprobado por:
+                        <span class="font-medium text-gray-900 dark:text-gray-100">
+                            {{ absence.approver?.name ?? 'Sistema' }}
+                        </span>
+                        el
+                        <span class="font-medium text-gray-900 dark:text-gray-100">
+                            {{ new Date(absence.approved_at).toLocaleDateString('es-CO') }}
+                        </span>
+                    </p>
+                </div>
+            </div>
+
+            <div v-if="isAdmin && mode === 'create'" class="space-y-1">
                 <label class="text-sm text-gray-600 dark:text-gray-300"
                     >Usuario</label
                 >

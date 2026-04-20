@@ -3,6 +3,7 @@ import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
 import AppLayout from '@/layouts/AppLayout.vue';
+import { includesNormalized } from '@/lib/search';
 import {
     Plus,
     Search,
@@ -46,9 +47,7 @@ const form = ref({
 
 const filteredAreas = computed(() => {
     return areas.value.filter((a) => {
-        const matchesSearch =
-            !search.value ||
-            a.name.toLowerCase().includes(search.value.toLowerCase());
+        const matchesSearch = includesNormalized(a.name, search.value);
         const matchesActive =
             filterActive.value === 'all' ||
             (filterActive.value === 'active' && a.is_active) ||

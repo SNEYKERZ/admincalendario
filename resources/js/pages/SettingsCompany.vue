@@ -89,7 +89,7 @@ const saveSettings = async () => {
         const formData = new FormData();
         Object.entries(form.value).forEach(([key, value]) => {
             if (key === 'company_logo' && value) {
-                formData.append('company_logo', value);
+                formData.append('company_logo', value as File);
             } else if (typeof value === 'boolean') {
                 formData.append(key, value ? '1' : '0');
             } else if (value !== null && value !== '') {
@@ -106,7 +106,7 @@ const saveSettings = async () => {
         if (e.response?.data?.errors) {
             Object.values(e.response.data.errors)
                 .flat()
-                .forEach((msg: string) => toast.error(msg));
+                .forEach((msg) => toast.error(String(msg)));
         } else {
             toast.error('Error guardando configuración');
         }

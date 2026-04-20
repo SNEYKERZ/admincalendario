@@ -49,17 +49,17 @@ class Absence extends Model
 
     public function user(): BelongsTo
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class)->withoutGlobalScopes();
     }
 
     public function type(): BelongsTo
     {
-        return $this->belongsTo(AbsenceType::class, 'absence_type_id');
+        return $this->belongsTo(AbsenceType::class, 'absence_type_id')->withoutGlobalScopes();
     }
 
     public function approver(): BelongsTo
     {
-        return $this->belongsTo(User::class, 'approved_by');
+        return $this->belongsTo(User::class, 'approved_by')->withoutGlobalScopes();
     }
 
     /*
