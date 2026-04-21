@@ -45,12 +45,13 @@ onMounted(async () => {
     try {
         const userRes = await axios.get('/me');
         const user = userRes.data;
-        isAdmin.value = user?.role === 'admin' || user?.is_admin;
+        isAdmin.value =
+            user?.role === 'admin' ||
+            user?.role === 'superadmin' ||
+            user?.is_admin;
 
-        // Cargar solo usuarios que tengan ausencias, sin filtrar por estado.
-        const usersRes = await axios.get('/users-list', {
-            params: { with_absences: true },
-        });
+        // Cargar todos los usuarios disponibles para selección/asignación.
+        const usersRes = await axios.get('/users-list');
         users.value = usersRes.data.map((u: any) => ({
             id: u.id,
             name: u.name,
@@ -257,7 +258,7 @@ const initUsersSelect2 = async () => {
     usersSelect2 = $(usersSelectRef.value);
     usersSelect2.select2({
         width: '100%',
-        placeholder: 'Todos los usuarios con ausencias',
+        placeholder: 'Todos los usuarios',
         allowClear: true,
         closeOnSelect: false,
         minimumResultsForSearch: 0,

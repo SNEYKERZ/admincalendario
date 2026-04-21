@@ -1,55 +1,64 @@
 <script setup lang="ts">
+import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
-import AppLogoIcon from '@/components/AppLogoIcon.vue';
+import { useAppearance } from '@/composables/useAppearance';
 import { home } from '@/routes';
 
 defineProps<{
     title?: string;
     description?: string;
 }>();
+
+const { resolvedAppearance, updateAppearance } = useAppearance();
+
+const isDark = computed(() => resolvedAppearance.value === 'dark');
+
+const setAuthTheme = () => {
+    updateAppearance(isDark.value ? 'light' : 'dark');
+};
 </script>
 
 <template>
-    <div class="flex min-h-svh">
+    <div class="auth-login-shell flex min-h-svh">
         <!-- Left side - Branding -->
         <div
-            class="relative hidden flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-10 text-white lg:flex lg:w-1/2"
+            :class="[
+                'relative hidden flex-col items-center justify-center p-10 text-white lg:flex lg:w-1/2',
+                isDark
+                    ? 'bg-gradient-to-br from-[#0d264f] via-[#15407f] to-[#0f6f7f]'
+                    : 'bg-gradient-to-br from-[#0f3a8a] via-[#1f6fd2] to-[#1fb7b4]',
+            ]"
         >
             <!-- Decorative elements -->
             <div class="absolute inset-0 overflow-hidden">
                 <div
-                    class="absolute -top-40 -right-40 h-80 w-80 rounded-full bg-blue-500/20 blur-3xl"
+                    class="absolute -top-36 -right-36 h-80 w-80 rounded-full bg-white/10 blur-3xl"
                 ></div>
                 <div
-                    class="absolute -bottom-40 -left-40 h-80 w-80 rounded-full bg-indigo-500/20 blur-3xl"
+                    class="absolute -bottom-36 -left-36 h-80 w-80 rounded-full bg-emerald-300/20 blur-3xl"
                 ></div>
                 <div
-                    class="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-400/10 blur-3xl"
+                    class="absolute top-1/2 left-1/2 h-96 w-96 -translate-x-1/2 -translate-y-1/2 rounded-full bg-cyan-200/10 blur-3xl"
                 ></div>
             </div>
 
             <div class="relative z-10 max-w-lg text-center">
                 <div class="mb-8 flex justify-center">
-                    <div class="flex items-center gap-3">
-                        <div
-                            class="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-white/10 backdrop-blur-sm"
-                        >
-                            <AppLogoIcon class="size-8 text-white" />
-                        </div>
-                        <span class="text-3xl font-bold tracking-tight"
-                            >Ausentra</span
-                        >
-                    </div>
+                    <img
+                        src="/logo-blanco.png"
+                        alt="Ausentra"
+                        class="h-38 w-auto object-contain drop-shadow-lg"
+                    />
                 </div>
 
-                <h2 class="mb-4 text-2xl font-semibold text-white/90">
+                <h2 class="mb-4 text-3xl font-semibold text-white/90">
                     Gestión de Ausencias y Vacaciones
                 </h2>
 
                 <p class="mb-8 text-lg leading-relaxed text-white/70">
-                    Administra las ausencias y vacaciones de tus empleados de
-                    manera eficiente. Controla permisos, ausente y vacaciones en
-                    un solo lugar.
+                    Organiza ausencias, vacaciones y permisos sin complicaciones.
+                    Desde colaboradores hasta administradores, todos pueden gestionar sus solicitudes,
+                     consultar información y mantener el control del equipo con reportes y herramientas claras en un solo lugar.
                 </p>
 
                 <div
@@ -57,10 +66,10 @@ defineProps<{
                 >
                     <div class="flex flex-col items-center gap-2">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10"
+                            class="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-white/15"
                         >
                             <svg
-                                class="h-5 w-5"
+                                class="h-6 w-6"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -77,10 +86,10 @@ defineProps<{
                     </div>
                     <div class="flex flex-col items-center gap-2">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10"
+                            class="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-white/15"
                         >
                             <svg
-                                class="h-5 w-5"
+                                class="h-6 w-6"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -97,10 +106,10 @@ defineProps<{
                     </div>
                     <div class="flex flex-col items-center gap-2">
                         <div
-                            class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10"
+                            class="flex h-12 w-12 items-center justify-center rounded-xl border border-white/20 bg-white/15"
                         >
                             <svg
-                                class="h-5 w-5"
+                                class="h-6 w-6"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -128,6 +137,21 @@ defineProps<{
             class="flex flex-1 flex-col items-center justify-center bg-background px-6 py-12"
         >
             <div class="w-full max-w-sm">
+                <div class="mb-5 flex justify-end">
+                    <button
+                        type="button"
+                        class="inline-flex items-center gap-2 rounded-full border border-[color:var(--auth-border)] bg-[color:var(--auth-surface)] px-3 py-1.5 text-xs font-medium text-[color:var(--auth-ink)] transition hover:bg-[color:var(--auth-surface-hover)]"
+                        @click="setAuthTheme"
+                    >
+                        <span
+                            class="inline-block h-2.5 w-2.5 rounded-full"
+                            :class="
+                                isDark ? 'bg-sky-300' : 'bg-[color:var(--auth-brand)]'
+                            "
+                        ></span>
+                        {{ isDark ? 'Modo claro' : 'Modo oscuro' }}
+                    </button>
+                </div>
                 <div class="flex flex-col gap-8">
                     <!-- Mobile logo -->
                     <div class="flex flex-col items-center gap-4 lg:hidden">
@@ -135,19 +159,18 @@ defineProps<{
                             :href="home()"
                             class="flex flex-col items-center gap-2 font-medium"
                         >
-                            <div
-                                class="mb-1 flex h-11 w-11 items-center justify-center rounded-xl bg-primary"
-                            >
-                                <AppLogoIcon
-                                    class="size-7 text-primary-foreground"
-                                />
-                            </div>
-                            <span class="text-xl font-bold">Ausentra</span>
+                            <img
+                                src="/ausentra-logo.png"
+                                alt="Ausentra"
+                                class="h-34 w-auto object-contain"
+                            />
                         </Link>
                     </div>
 
                     <div class="space-y-2 text-center lg:text-left">
-                        <h1 class="text-2xl font-semibold tracking-tight">
+                        <h1
+                            class="auth-login-title text-2xl font-semibold tracking-tight"
+                        >
                             {{ title }}
                         </h1>
                         <p class="text-sm text-muted-foreground">
@@ -160,3 +183,37 @@ defineProps<{
         </div>
     </div>
 </template>
+
+<style scoped>
+.auth-login-shell {
+    --auth-brand: #1f67c9;
+    --auth-brand-strong: #1b56a8;
+    --auth-ink: #0f2e63;
+    --auth-surface: #eff5ff;
+    --auth-surface-hover: #e2edff;
+    --auth-border: #bfd4fb;
+    --primary: 217 74% 45%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 217 74% 45%;
+}
+
+:global(.dark) .auth-login-shell {
+    --auth-brand: #1f67c9;
+    --auth-brand-strong: #1b56a8;
+    --auth-ink: #d7e7ff;
+    --auth-surface: #12213d;
+    --auth-surface-hover: #19315d;
+    --auth-border: #2b4779;
+    --background: 218 45% 12%;
+    --card: 218 39% 15%;
+    --muted: 218 31% 21%;
+    --border: 218 28% 28%;
+    --primary: 217 74% 45%;
+    --primary-foreground: 0 0% 100%;
+    --ring: 217 74% 45%;
+}
+
+.auth-login-title {
+    color: var(--auth-brand-strong);
+}
+</style>

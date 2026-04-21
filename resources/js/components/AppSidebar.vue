@@ -1,20 +1,6 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import {
-    BookOpen,
-    Building2,
-    FolderGit2,
-    LayoutDashboard,
-    LayoutGrid,
-    Users,
-    FileBarChart,
-    FileText,
-    Settings,
-    Cog,
-    Menu,
-    X,
-} from 'lucide-vue-next';
-import AppLogo from '@/components/AppLogo.vue';
+import { Building2, LayoutDashboard, LayoutGrid, Users, FileBarChart, FileText, Settings, Cog } from 'lucide-vue-next';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -29,19 +15,16 @@ import {
 } from '@/components/ui/sidebar';
 
 import type { NavItem } from '@/types';
-import { ref } from 'vue';
+import { computed } from 'vue';
 
 const page = usePage();
 const user = page.props.auth?.user;
 const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 const isSuperAdmin = user?.role === 'superadmin';
 
-// Mobile menu state
-const mobileMenuOpen = ref(false);
-
-const toggleMobileMenu = () => {
-    mobileMenuOpen.value = !mobileMenuOpen.value;
-};
+const company = computed(() => (page.props as any).company ?? {});
+const companyName = computed(() => company.value?.name || 'Empresa');
+const companyLogoUrl = computed(() => company.value?.logo_url || '/logo.png');
 
 const mainNavItems: NavItem[] = [
     {
@@ -53,6 +36,11 @@ const mainNavItems: NavItem[] = [
         title: 'Calendario',
         href: '/calendario',
         icon: LayoutGrid,
+    },
+    {
+        title: 'Comunidad',
+        href: '/comunidad',
+        icon: Users,
     },
     ...(isAdmin
         ? [
@@ -93,7 +81,7 @@ const mainNavItems: NavItem[] = [
     ...(isAdmin
         ? [
               {
-                  title: 'Configuración',
+                  title: 'Configuración de la Empresa',
                   href: '/settings/company',
                   icon: Settings,
               },
@@ -111,16 +99,7 @@ const mainNavItems: NavItem[] = [
 ];
 
 const footerNavItems: NavItem[] = [
-    /* {
-        title: 'Repository',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: FolderGit2,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },*/
+    //
 ];
 </script>
 
@@ -131,7 +110,21 @@ const footerNavItems: NavItem[] = [
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
                         <Link href="/dashboard">
-                            <AppLogo />
+                            <div class="flex items-center gap-2">
+                                <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+                                    <img
+                                        :src="companyLogoUrl"
+                                        :alt="`Logo de ${companyName}`"
+                                        class="h-full w-full object-contain p-1"
+                                    />
+                                </div>
+                                <div class="grid flex-1 text-left text-sm leading-tight">
+                                    <span class="truncate font-semibold">{{ companyName }}</span>
+                                    <span class="truncate text-xs text-slate-500 dark:text-slate-400">
+                                        Menú de empresa
+                                    </span>
+                                </div>
+                            </div>
                         </Link>
                     </SidebarMenuButton>
                 </SidebarMenuItem>

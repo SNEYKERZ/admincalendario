@@ -15,7 +15,19 @@ class AbsencePolicy
 
     public function view(User $user, Absence $absence): bool
     {
-        return $user->isAdmin() || $user->id === $absence->user_id;
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        $absenceOwner = $absence->relationLoaded('user')
+            ? $absence->user
+            : $absence->user()->first();
+
+        if ($absenceOwner && $absenceOwner->isSuperAdmin()) {
+            return false;
+        }
+
+        return true;
     }
 
     public function create(User $user): bool

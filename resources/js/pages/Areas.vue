@@ -152,10 +152,10 @@ onMounted(() => {
                 class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
             >
                 <div>
-                    <h1 class="text-2xl font-bold text-slate-900">
+                    <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
                         Áreas Organizacionales
                     </h1>
-                    <p class="mt-1 text-slate-500">
+                    <p class="mt-1 text-slate-500 dark:text-slate-400">
                         Gestiona las áreas de tu organización
                     </p>
                 </div>
@@ -178,12 +178,12 @@ onMounted(() => {
                         v-model="search"
                         type="text"
                         placeholder="Buscar áreas..."
-                        class="w-full rounded-lg border border-slate-200 py-2 pr-4 pl-10 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                        class="w-full rounded-lg border border-slate-200 bg-white py-2 pr-4 pl-10 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                     />
                 </div>
                 <select
                     v-model="filterActive"
-                    class="rounded-lg border border-slate-200 px-4 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                    class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                 >
                     <option value="all">Todos los estados</option>
                     <option value="active">Activas</option>
@@ -192,19 +192,19 @@ onMounted(() => {
             </div>
 
             <!-- Areas Grid -->
-            <div v-if="loading" class="py-12 text-center text-slate-500">
+            <div v-if="loading" class="py-12 text-center text-slate-500 dark:text-slate-400">
                 Cargando áreas...
             </div>
 
             <div
                 v-else-if="filteredAreas.length === 0"
-                class="py-12 text-center text-slate-500"
+                class="py-12 text-center text-slate-500 dark:text-slate-400"
             >
-                <Building2 class="mx-auto mb-4 h-12 w-12 text-slate-300" />
+                <Building2 class="mx-auto mb-4 h-12 w-12 text-slate-300 dark:text-slate-600" />
                 <p>No hay áreas registradas</p>
                 <button
                     @click="openCreate"
-                    class="mt-4 text-blue-600 hover:underline"
+                    class="mt-4 text-blue-600 hover:underline dark:text-blue-400"
                 >
                     Crear primera área
                 </button>
@@ -217,7 +217,7 @@ onMounted(() => {
                 <div
                     v-for="area in filteredAreas"
                     :key="area.id"
-                    class="rounded-xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-md"
+                    class="rounded-xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
                 >
                     <div class="mb-3 flex items-start justify-between">
                         <div class="flex items-center gap-3">
@@ -231,14 +231,14 @@ onMounted(() => {
                                 />
                             </div>
                             <div>
-                                <h3 class="font-semibold text-slate-900">
+                                <h3 class="font-semibold text-slate-900 dark:text-slate-100">
                                     {{ area.name }}
                                 </h3>
                                 <span
                                     :class="
                                         area.is_active
-                                            ? 'bg-emerald-100 text-emerald-700'
-                                            : 'bg-slate-100 text-slate-500'
+                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+                                            : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-300'
                                     "
                                     class="rounded-full px-2 py-0.5 text-xs"
                                 >
@@ -249,13 +249,13 @@ onMounted(() => {
                         <div class="flex gap-1">
                             <button
                                 @click="openEdit(area)"
-                                class="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600"
+                                class="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-500 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
                             >
                                 <Edit2 class="h-4 w-4" />
                             </button>
                             <button
                                 @click="deleteArea(area)"
-                                class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600"
+                                class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                             >
                                 <Trash2 class="h-4 w-4" />
                             </button>
@@ -264,19 +264,19 @@ onMounted(() => {
 
                     <p
                         v-if="area.description"
-                        class="mb-3 line-clamp-2 text-sm text-slate-500"
+                        class="mb-3 line-clamp-2 text-sm text-slate-500 dark:text-slate-400"
                     >
                         {{ area.description }}
                     </p>
 
-                    <div class="flex items-center gap-2 text-sm text-slate-500">
+                    <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
                         <Users class="h-4 w-4" />
                         <span>{{ area.employee_count }} empleados</span>
                     </div>
 
                     <button
                         @click="toggleActive(area)"
-                        class="mt-3 w-full rounded-lg border border-slate-200 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50"
+                        class="mt-3 w-full rounded-lg border border-slate-200 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         {{ area.is_active ? 'Desactivar' : 'Activar' }}
                     </button>
@@ -289,9 +289,9 @@ onMounted(() => {
             v-if="showModal"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
-            <div class="w-full max-w-md rounded-xl bg-white">
-                <div class="flex items-center justify-between border-b p-4">
-                    <h2 class="text-lg font-semibold">
+            <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-900">
+                <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
+                    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
                         {{
                             modalMode === 'create'
                                 ? 'Nueva Área'
@@ -300,7 +300,7 @@ onMounted(() => {
                     </h2>
                     <button
                         @click="showModal = false"
-                        class="rounded p-1 hover:bg-slate-100"
+                        class="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >
                         <X class="h-5 w-5" />
                     </button>
@@ -309,7 +309,7 @@ onMounted(() => {
                 <form @submit.prevent="saveArea" class="space-y-4 p-4">
                     <div>
                         <label
-                            class="mb-1 block text-sm font-medium text-slate-700"
+                            class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
                         >
                             Nombre *
                         </label>
@@ -317,21 +317,21 @@ onMounted(() => {
                             v-model="form.name"
                             type="text"
                             required
-                            class="w-full rounded-lg border border-slate-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                             placeholder="Ej: Desarrollo, Marketing, Ventas"
                         />
                     </div>
 
                     <div>
                         <label
-                            class="mb-1 block text-sm font-medium text-slate-700"
+                            class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
                         >
                             Descripción
                         </label>
                         <textarea
                             v-model="form.description"
                             rows="2"
-                            class="w-full rounded-lg border border-slate-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                             placeholder="Descripción opcional del área"
                         ></textarea>
                     </div>
@@ -339,7 +339,7 @@ onMounted(() => {
                     <div class="grid grid-cols-2 gap-4">
                         <div>
                             <label
-                                class="mb-1 block text-sm font-medium text-slate-700"
+                                class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
                             >
                                 Color
                             </label>
@@ -347,16 +347,16 @@ onMounted(() => {
                                 <input
                                     v-model="form.color"
                                     type="color"
-                                    class="h-10 w-10 cursor-pointer rounded border border-slate-200"
+                                    class="h-10 w-10 cursor-pointer rounded border border-slate-200 dark:border-slate-700"
                                 />
-                                <span class="text-sm text-slate-500">{{
+                                <span class="text-sm text-slate-500 dark:text-slate-400">{{
                                     form.color
                                 }}</span>
                             </div>
                         </div>
                         <div>
                             <label
-                                class="mb-1 block text-sm font-medium text-slate-700"
+                                class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
                             >
                                 Orden
                             </label>
@@ -364,7 +364,7 @@ onMounted(() => {
                                 v-model.number="form.display_order"
                                 type="number"
                                 min="0"
-                                class="w-full rounded-lg border border-slate-200 px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:outline-none"
+                                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
                             />
                         </div>
                     </div>
@@ -374,9 +374,9 @@ onMounted(() => {
                             v-model="form.is_active"
                             type="checkbox"
                             id="is_active"
-                            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
                         />
-                        <label for="is_active" class="text-sm text-slate-700">
+                        <label for="is_active" class="text-sm text-slate-700 dark:text-slate-300">
                             Área activa
                         </label>
                     </div>
@@ -385,7 +385,7 @@ onMounted(() => {
                         <button
                             type="button"
                             @click="showModal = false"
-                            class="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-slate-600 hover:bg-slate-50"
+                            class="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
                         >
                             Cancelar
                         </button>

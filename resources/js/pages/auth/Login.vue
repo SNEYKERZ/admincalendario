@@ -88,7 +88,7 @@ defineProps<{
 
                 <Button
                     type="submit"
-                    class="mt-4 w-full"
+                    class="mt-4 w-full !bg-[#1f67c9] !text-white hover:!bg-[#1b56a8] dark:!bg-[#1f67c9] dark:hover:!bg-[#1b56a8]"
                     :tabindex="4"
                     :disabled="processing"
                     data-test="login-button"

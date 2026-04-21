@@ -7,6 +7,8 @@ use Carbon\Carbon;
 
 class AbsenceCalculationService
 {
+    private const HOURLY_ABSENCE_TYPE_ID = 5;
+
     public function __construct(
         protected HolidayService $holidayService
     ) {}
@@ -29,7 +31,7 @@ class AbsenceCalculationService
 
     public function calculate(AbsenceType $type, Carbon $start, Carbon $end, array $options): array
     {
-        if ($type->counts_as_hours) {
+        if ($this->isHourlyAbsenceType($type)) {
             $hours = round($start->diffInMinutes($end) / 60, 2);
 
             return [
@@ -56,6 +58,14 @@ class AbsenceCalculationService
             'total_days' => (float) $days,
             'total_hours' => (float) ($days * config('business_calendar.hours_per_day', 8)),
         ];
+    }
+
+    private function isHourlyAbsenceType(AbsenceType $type): bool
+    {
+        $normalizedName = mb_strtolower(trim((string) $type->name));
+
+        return (int) $type->id === self::HOURLY_ABSENCE_TYPE_ID
+            || $normalizedName === 'permiso(horas)';
     }
 
     public function shouldCountDate(Carbon $date, array $options): bool

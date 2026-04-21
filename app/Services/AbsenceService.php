@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\AbsenceStatus;
+use App\Managers\TenantManager;
 use App\Models\Absence;
 use App\Models\AbsenceType;
 use App\Models\User;
@@ -10,7 +11,9 @@ use App\Notifications\AbsenceApproved;
 use App\Notifications\AbsenceCreated;
 use App\Notifications\AbsenceRejected;
 use Carbon\Carbon;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Validation\ValidationException;
 
@@ -18,7 +21,8 @@ class AbsenceService
 {
     public function __construct(
         protected VacationService $vacationService,
-        protected AbsenceCalculationService $absenceCalculationService
+        protected AbsenceCalculationService $absenceCalculationService,
+        protected TenantManager $tenantManager
     ) {}
 
     public function create(array $data): Absence
@@ -28,7 +32,13 @@ class AbsenceService
                 ? User::findOrFail($data['user_id'])
                 : auth()->user();
 
-            $type = AbsenceType::findOrFail($data['absence_type_id']);
+            $type = $this->resolveAbsenceType($data['absence_type_id']);
+
+            if (! $type) {
+                throw ValidationException::withMessages([
+                    'absence_type_id' => 'El tipo de ausencia no está disponible para este tenant.',
+                ]);
+            }
             $start = Carbon::parse($data['start_datetime']);
             $end = Carbon::parse($data['end_datetime']);
 
@@ -96,7 +106,48 @@ class AbsenceService
     protected function sendNotificationToAdmins($notification): void
     {
         $admins = User::admins()->get();
-        Notification::send($admins, $notification);
+
+        if ($admins->isEmpty()) {
+            return;
+        }
+
+        try {
+            Notification::send($admins, $notification);
+        } catch (QueryException $exception) {
+            if ($this->isMissingNotificationsTableException($exception)) {
+                Log::warning('Tabla notifications no existe. Se omite envío de notificaciones.', [
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return;
+            }
+
+            throw $exception;
+        }
+    }
+
+    protected function notifyUserSafely(User $user, object $notification): void
+    {
+        try {
+            $user->notify($notification);
+        } catch (QueryException $exception) {
+            if ($this->isMissingNotificationsTableException($exception)) {
+                Log::warning('Tabla notifications no existe. Se omite notificación de usuario.', [
+                    'user_id' => $user->id,
+                    'error' => $exception->getMessage(),
+                ]);
+
+                return;
+            }
+
+            throw $exception;
+        }
+    }
+
+    protected function isMissingNotificationsTableException(QueryException $exception): bool
+    {
+        return str_contains(strtolower($exception->getMessage()), 'notifications')
+            && str_contains(strtolower($exception->getMessage()), 'base table or view not found');
     }
 
     public function update(Absence $absence, array $data): Absence
@@ -216,9 +267,9 @@ class AbsenceService
             // Notificar al usuario sobre el cambio de estado
             $absence->load('user');
             if ($status === AbsenceStatus::APPROVED) {
-                $absence->user->notify(new AbsenceApproved($absence));
+                $this->notifyUserSafely($absence->user, new AbsenceApproved($absence));
             } elseif ($status === AbsenceStatus::REJECTED) {
-                $absence->user->notify(new AbsenceRejected($absence));
+                $this->notifyUserSafely($absence->user, new AbsenceRejected($absence));
             }
 
             return $absence->fresh(['user', 'type', 'approver']);
@@ -232,5 +283,27 @@ class AbsenceService
                 'days' => 'No tiene saldo disponible',
             ]);
         }
+    }
+
+    protected function resolveAbsenceType(int|string|null $absenceTypeId): ?AbsenceType
+    {
+        if (! $absenceTypeId) {
+            return null;
+        }
+
+        $tenantId = $this->tenantManager->getTenantId();
+
+        return AbsenceType::withoutGlobalScopes()
+            ->where('id', (int) $absenceTypeId)
+            ->when($tenantId, function ($query) use ($tenantId) {
+                $query->where(function ($innerQuery) use ($tenantId) {
+                    $innerQuery
+                        ->where('tenant_id', $tenantId)
+                        ->orWhereNull('tenant_id');
+                });
+            }, function ($query) {
+                $query->whereNull('tenant_id');
+            })
+            ->first();
     }
 }

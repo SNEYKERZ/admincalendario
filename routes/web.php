@@ -3,6 +3,7 @@
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AreaController;
+use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\HrDocumentController;
@@ -12,6 +13,7 @@ use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SystemManagementController;
 use App\Http\Controllers\VacationController;
 use App\Http\Controllers\VacationYearController;
+use App\Managers\TenantManager;
 use App\Models\AbsenceType;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -67,13 +69,15 @@ Route::middleware(['auth'])->group(function () {
             'name' => $user->name,
             'email' => $user->email,
             'role' => $role,
-            'is_admin' => $role === 'admin',
+            'is_admin' => in_array($role, ['admin', 'superadmin'], true),
         ]);
     })->name('me');
 
     // Dashboard API
     Route::get('/dashboard/data', [DashboardController::class, 'index'])->name('dashboard.data');
     Route::inertia('/dashboard', 'Dashboard')->name('dashboard');
+    Route::inertia('/comunidad', 'Comunidad')->name('comunidad');
+    Route::get('/comunidad/data', [CommunityController::class, 'index'])->name('comunidad.data');
 
     // Calendario
     Route::inertia('/calendario', 'Calendar')->name('calendario');
@@ -171,7 +175,21 @@ Route::middleware(['auth'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::get('/absence-types', function () {
-        return AbsenceType::select('id', 'name', 'counts_as_hours', 'deducts_vacation', 'default_include_saturday', 'default_include_sunday', 'default_include_holidays')->get();
+        $tenantId = app(TenantManager::class)->getTenantId();
+
+        return AbsenceType::withoutGlobalScopes()
+            ->select('id', 'name', 'counts_as_hours', 'deducts_vacation', 'default_include_saturday', 'default_include_sunday', 'default_include_holidays')
+            ->when($tenantId, function ($query) use ($tenantId) {
+                $query->where(function ($innerQuery) use ($tenantId) {
+                    $innerQuery
+                        ->where('tenant_id', $tenantId)
+                        ->orWhereNull('tenant_id');
+                });
+            }, function ($query) {
+                $query->whereNull('tenant_id');
+            })
+            ->orderBy('id')
+            ->get();
     })->name('absence-types.index');
 
     /*

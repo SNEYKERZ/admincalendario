@@ -23,6 +23,13 @@ class AbsenceController extends Controller
         $query = Absence::withoutTenant()
             ->with(['user', 'type', 'approver']);
 
+        // Para administradores y colaboradores se ocultan ausencias de superadmin.
+        if (! auth()->user()->isSuperAdmin()) {
+            $query->whereHas('user', function ($userQuery) {
+                $userQuery->where('role', '!=', 'superadmin');
+            });
+        }
+
         if ($request->filled('user_ids')) {
             $userIds = $request->input('user_ids');
 
@@ -43,11 +50,6 @@ class AbsenceController extends Controller
         } elseif ($request->filled('user_id')) {
             $query->where('user_id', (int) $request->user_id);
 
-        } else {
-            // Solo aplica restricción si no hay filtros
-            if (!auth()->user()->isAdmin()) {
-                $query->where('user_id', auth()->id());
-            }
         }
 
         if ($request->filled('status')) {

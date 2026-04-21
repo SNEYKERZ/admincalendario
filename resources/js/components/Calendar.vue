@@ -30,7 +30,10 @@ onMounted(async () => {
 
     const user = userRes.data
 
-    isAdmin.value = user?.role === 'admin' || user?.is_admin
+    isAdmin.value =
+        user?.role === 'admin' ||
+        user?.role === 'superadmin' ||
+        user?.is_admin
 })
 
 // colores

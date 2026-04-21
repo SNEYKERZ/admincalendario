@@ -254,30 +254,30 @@ onMounted(loadDocuments);
             </div>
 
             <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <div class="rounded-lg border bg-white p-4">
-                    <p class="text-sm text-gray-500">Total</p>
-                    <p class="text-2xl font-semibold">{{ metrics.total }}</p>
+                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total</p>
+                    <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ metrics.total }}</p>
                 </div>
-                <div class="rounded-lg border bg-white p-4">
-                    <p class="text-sm text-gray-500">Activos</p>
+                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Activos</p>
                     <p class="text-2xl font-semibold text-emerald-600">{{ metrics.active }}</p>
                 </div>
-                <div class="rounded-lg border bg-white p-4">
-                    <p class="text-sm text-gray-500">Vencen en 30 días</p>
+                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Vencen en 30 días</p>
                     <p class="text-2xl font-semibold text-amber-600">{{ metrics.expiring_soon }}</p>
                 </div>
-                <div class="rounded-lg border bg-white p-4">
-                    <p class="text-sm text-gray-500">Vencidos</p>
+                <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Vencidos</p>
                     <p class="text-2xl font-semibold text-rose-600">{{ metrics.expired }}</p>
                 </div>
             </div>
 
             <form
-                class="grid gap-4 rounded-xl border border-gray-200 bg-white p-5 md:grid-cols-2"
+                class="grid gap-4 rounded-xl border border-gray-200 bg-white p-5 md:grid-cols-2 dark:border-gray-700 dark:bg-gray-800"
                 @submit.prevent="submit"
             >
                 <div class="md:col-span-2 flex items-center justify-between">
-                    <h2 class="text-lg font-semibold">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         {{ editingId ? 'Editar documento' : 'Nuevo documento' }}
                     </h2>
                     <button
@@ -354,9 +354,9 @@ onMounted(loadDocuments);
                 </div>
             </form>
 
-            <div class="rounded-xl border border-gray-200 bg-white p-5">
+            <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
                 <div class="mb-4 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <h2 class="text-lg font-semibold">Repositorio documental</h2>
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-gray-100">Repositorio documental</h2>
                     <div class="flex gap-2">
                         <input
                             v-model="filters.search"
@@ -372,14 +372,14 @@ onMounted(loadDocuments);
                     </div>
                 </div>
 
-                <div v-if="loading" class="py-6 text-center text-gray-500">Cargando...</div>
-                <div v-else-if="filteredDocuments.length === 0" class="py-6 text-center text-gray-500">
+                <div v-if="loading" class="py-6 text-center text-gray-500 dark:text-gray-400">Cargando...</div>
+                <div v-else-if="filteredDocuments.length === 0" class="py-6 text-center text-gray-500 dark:text-gray-400">
                     No hay documentos registrados
                 </div>
                 <div v-else class="overflow-x-auto">
                     <table class="w-full text-sm">
                         <thead>
-                            <tr class="border-b text-left text-gray-500">
+                            <tr class="border-b border-gray-200 text-left text-gray-500 dark:border-gray-700 dark:text-gray-400">
                                 <th class="py-2">Documento</th>
                                 <th class="py-2">Colaborador</th>
                                 <th class="py-2">Estado</th>
@@ -389,26 +389,26 @@ onMounted(loadDocuments);
                             </tr>
                         </thead>
                         <tbody>
-                            <tr v-for="doc in filteredDocuments" :key="doc.id" class="border-b align-top">
+                            <tr v-for="doc in filteredDocuments" :key="doc.id" class="border-b border-gray-100 align-top dark:border-gray-700">
                                 <td class="py-3">
-                                    <p class="font-medium text-gray-900">{{ doc.title }}</p>
-                                    <p class="text-xs text-gray-500">{{ doc.original_name }}</p>
+                                    <p class="font-medium text-gray-900 dark:text-gray-100">{{ doc.title }}</p>
+                                    <p class="text-xs text-gray-500 dark:text-gray-400">{{ doc.original_name }}</p>
                                 </td>
-                                <td class="py-3">{{ doc.user?.name ?? 'Sin asignar' }}</td>
+                                <td class="py-3 text-gray-700 dark:text-gray-300">{{ doc.user?.name ?? 'Sin asignar' }}</td>
                                 <td class="py-3">
                                     <span
                                         class="rounded-full px-2 py-1 text-xs"
                                         :class="{
-                                            'bg-emerald-100 text-emerald-700': doc.status === 'activo',
-                                            'bg-amber-100 text-amber-700': doc.status === 'borrador',
-                                            'bg-rose-100 text-rose-700': doc.status === 'vencido',
+                                            'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300': doc.status === 'activo',
+                                            'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300': doc.status === 'borrador',
+                                            'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300': doc.status === 'vencido',
                                         }"
                                     >
                                         {{ doc.status }}
                                     </span>
                                 </td>
-                                <td class="py-3">{{ formatDate(doc.expires_at) }}</td>
-                                <td class="py-3">{{ formatSize(doc.file_size) }}</td>
+                                <td class="py-3 text-gray-700 dark:text-gray-300">{{ formatDate(doc.expires_at) }}</td>
+                                <td class="py-3 text-gray-700 dark:text-gray-300">{{ formatSize(doc.file_size) }}</td>
                                 <td class="py-3 text-right">
                                     <a class="btn-secondary mr-2" :href="doc.download_url">Descargar</a>
                                     <button class="btn-secondary mr-2" @click="fillForEdit(doc)">Editar</button>
@@ -431,10 +431,10 @@ onMounted(loadDocuments);
 
             <div
                 v-if="selectedAuditDocumentId"
-                class="rounded-xl border border-gray-200 bg-white p-5"
+                class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
             >
                 <div class="mb-3 flex items-center justify-between">
-                    <h3 class="text-lg font-semibold">
+                    <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
                         Historial del documento #{{ selectedAuditDocumentId }}
                     </h3>
                     <button class="btn-secondary" @click="selectedAuditDocumentId = null">
@@ -442,26 +442,26 @@ onMounted(loadDocuments);
                     </button>
                 </div>
 
-                <div v-if="loadingAuditsFor === selectedAuditDocumentId" class="py-4 text-gray-500">
+                <div v-if="loadingAuditsFor === selectedAuditDocumentId" class="py-4 text-gray-500 dark:text-gray-400">
                     Cargando historial...
                 </div>
-                <div v-else-if="selectedAudits.length === 0" class="py-4 text-gray-500">
+                <div v-else-if="selectedAudits.length === 0" class="py-4 text-gray-500 dark:text-gray-400">
                     Sin eventos registrados.
                 </div>
                 <div v-else class="space-y-3">
                     <div
                         v-for="audit in selectedAudits"
                         :key="audit.id"
-                        class="rounded-lg border border-gray-200 p-3"
+                        class="rounded-lg border border-gray-200 p-3 dark:border-gray-700"
                     >
                         <div class="flex items-center justify-between">
-                            <p class="font-medium text-gray-900">{{ actionLabel(audit.action) }}</p>
-                            <p class="text-xs text-gray-500">{{ formatDate(audit.created_at) }}</p>
+                            <p class="font-medium text-gray-900 dark:text-gray-100">{{ actionLabel(audit.action) }}</p>
+                            <p class="text-xs text-gray-500 dark:text-gray-400">{{ formatDate(audit.created_at) }}</p>
                         </div>
-                        <p class="text-xs text-gray-500">
+                        <p class="text-xs text-gray-500 dark:text-gray-400">
                             Usuario: {{ audit.user?.name ?? 'Sistema' }}
                         </p>
-                        <p v-if="audit.new_values" class="mt-1 text-xs text-gray-600">
+                        <p v-if="audit.new_values" class="mt-1 text-xs text-gray-600 dark:text-gray-300">
                             Cambios: {{ Object.keys(audit.new_values).join(', ') }}
                         </p>
                     </div>

@@ -5,12 +5,15 @@ namespace App\Http\Requests;
 use App\Models\Absence;
 use App\Models\AbsenceType;
 use App\Models\User;
+use App\Managers\TenantManager;
 use App\Services\AbsenceCalculationService;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAbsenceRequest extends FormRequest
 {
+    private const HOURLY_ABSENCE_TYPE_ID = 5;
+
     /**
      * Almacena el cálculo para no duplicar lógica
      */
@@ -84,7 +87,7 @@ class StoreAbsenceRequest extends FormRequest
                 : $this->user()?->id;
 
             $user = User::find($userId);
-            $type = AbsenceType::find($this->absence_type_id);
+            $type = $this->resolveAbsenceType($this->absence_type_id);
 
             if (! $user || ! $type) {
                 return;
@@ -101,11 +104,11 @@ class StoreAbsenceRequest extends FormRequest
 
             $sameDay = $start->toDateString() === $end->toDateString();
 
-            if (! $sameDay && $type->counts_as_hours) {
+            if (! $sameDay && $this->isHourlyAbsenceType($type)) {
                 $validator->errors()->add('end_datetime', 'No puedes usar horas en multiples dias');
             }
 
-            if ($sameDay && $type->counts_as_hours && $start->equalTo($end)) {
+            if ($sameDay && $this->isHourlyAbsenceType($type) && $start->equalTo($end)) {
                 $validator->errors()->add('end_datetime', 'El rango de horas no puede ser igual');
             }
 
@@ -178,7 +181,10 @@ class StoreAbsenceRequest extends FormRequest
 
         if (! $calculation) {
             // Fallback: calcular si no se hizo en el validator (edge case)
-            $type = AbsenceType::findOrFail($data['absence_type_id']);
+            $type = $this->resolveAbsenceType($data['absence_type_id']);
+            if (! $type) {
+                abort(404, 'Tipo de ausencia no encontrado para el tenant actual');
+            }
             $start = Carbon::parse($data['start_datetime']);
             $end = Carbon::parse($data['end_datetime']);
             $calculationService = app(AbsenceCalculationService::class);
@@ -199,5 +205,35 @@ class StoreAbsenceRequest extends FormRequest
             'total_days' => $calculation['total_days'],
             'total_hours' => $calculation['total_hours'],
         ];
+    }
+
+    private function isHourlyAbsenceType(AbsenceType $type): bool
+    {
+        $normalizedName = mb_strtolower(trim((string) $type->name));
+
+        return (int) $type->id === self::HOURLY_ABSENCE_TYPE_ID
+            || $normalizedName === 'permiso(horas)';
+    }
+
+    private function resolveAbsenceType(int|string|null $absenceTypeId): ?AbsenceType
+    {
+        if (! $absenceTypeId) {
+            return null;
+        }
+
+        $tenantId = app(TenantManager::class)->getTenantId();
+
+        return AbsenceType::withoutGlobalScopes()
+            ->where('id', (int) $absenceTypeId)
+            ->when($tenantId, function ($query) use ($tenantId) {
+                $query->where(function ($innerQuery) use ($tenantId) {
+                    $innerQuery
+                        ->where('tenant_id', $tenantId)
+                        ->orWhereNull('tenant_id');
+                });
+            }, function ($query) {
+                $query->whereNull('tenant_id');
+            })
+            ->first();
     }
 }

@@ -472,3 +472,8 @@ a {
         min-width: 0 !important;
     }
 }
+.via-slate-800 {
+    --tw-gradient-via: oklch(0.35 0.12 258.48);
+    --tw-gradient-via-stops: var(--tw-gradient-position), oklch(0.4 0.22 261.65) var(--tw-gradient-from-position), oklch(0.38 0.13 258.49) var(--tw-gradient-via-position), oklch(0.47 0.18 149.82) var(--tw-gradient-to-position);
+    --tw-gradient-stops: var(--tw-gradient-via-stops);
+}

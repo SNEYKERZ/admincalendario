@@ -3,343 +3,541 @@
 namespace App\Http\Controllers;
 
 use App\Enums\AbsenceStatus;
+use App\Enums\UserRole;
 use App\Models\Absence;
 use App\Models\Area;
+use App\Models\Subscription;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Models\VacationYear;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
     public function index(): JsonResponse
     {
+        /** @var User $user */
         $user = auth()->user();
+
         $isAdmin = $user->isAdmin();
+        $isSuperAdmin = $user->isSuperAdmin();
 
-        // Si no es admin, solo puede ver sus propios datos
-        $userId = ! $isAdmin ? $user->id : request()->get('user_id');
-        $search = request()->get('search');
-        $areaId = request()->get('area_id');
+        $selectedUserId = $isAdmin ? $this->nullableInt('user_id') : $user->id;
+        $selectedAreaId = $this->nullableInt('area_id');
 
-        return response()->json([
-            'metrics' => $this->getMetrics($userId, $isAdmin, $areaId),
-            'chartData' => $this->getChartData($userId, $isAdmin, $areaId),
-            'recentAbsences' => $this->getRecentAbsences($userId, $search, $isAdmin, $areaId),
-            'pendingApprovals' => $this->getPendingApprovals($userId, $search, $isAdmin, $areaId),
-            'vacationBalance' => $this->getVacationBalance($userId, $search, $isAdmin),
-            'users' => $this->getUsersList($isAdmin),
-            'areas' => $this->getAreasList(),
-            'employeeStatuses' => $this->getEmployeeStatuses($isAdmin, $areaId),
-            'is_admin' => $isAdmin,
-            'current_user_id' => $user->id,
-            // Only show subscription to admins (not superadmin)
-            'subscription' => ($isAdmin && ! $user->isSuperAdmin()) ? $this->getSubscriptionInfo($user) : null,
-        ]);
+        $response = [
+            'viewer' => [
+                'id' => $user->id,
+                'name' => $user->name,
+                'role' => $this->roleValue($user),
+                'is_admin' => $isAdmin,
+                'is_superadmin' => $isSuperAdmin,
+            ],
+            'metrics' => [
+                'personal' => $this->getPersonalMetrics($user),
+                'organization' => $isAdmin ? $this->getOrganizationMetrics($selectedUserId, $selectedAreaId) : null,
+                'superadmin' => $isSuperAdmin ? $this->getSuperAdminMetrics() : null,
+            ],
+            'filters' => [
+                'selected_user_id' => $selectedUserId,
+                'selected_area_id' => $selectedAreaId,
+                'users' => $isAdmin ? $this->getUsersList() : [],
+                'areas' => $this->getAreasList(),
+            ],
+            'tables' => [
+                'employee_statuses' => $this->getEmployeeStatuses($selectedAreaId),
+                'recent_absences' => $this->getRecentAbsences($user, $selectedUserId, $selectedAreaId),
+                'pending_approvals' => $this->getPendingApprovals($user, $selectedUserId, $selectedAreaId),
+                'vacation_balances' => $isAdmin
+                    ? $this->getVacationBalances($selectedUserId, $selectedAreaId)
+                    : null,
+                'my_expiring_vacations' => ! $isAdmin
+                    ? $this->getMyExpiringVacations($user)
+                    : null,
+            ],
+            'subscription' => ($isAdmin && ! $isSuperAdmin) ? $this->getSubscriptionInfo($user) : null,
+        ];
+
+        return response()->json($response);
     }
 
-    protected function getAreasList(): \Illuminate\Database\Eloquent\Collection
+    protected function getAreasList(): Collection
     {
         return Area::active()
             ->ordered()
             ->get(['id', 'name', 'color']);
     }
 
-    protected function getEmployeeStatuses(bool $isAdmin, ?int $areaId = null): array
+    protected function getUsersList(): Collection
     {
-        // Obtener empleados (colaboradores)
-        $employeeQuery = User::whereNotIn('role', ['admin', 'superadmin'])
-            ->where('is_active', true);
-
-        if ($areaId) {
-            $employeeQuery->where('area_id', $areaId);
-        }
-
-        $employees = $employeeQuery->get();
-        $currentMonth = now()->month;
-        $currentYear = now()->year;
-
-        $statuses = [];
-
-        foreach ($employees as $employee) {
-            // 🟢 Verde: Disponible (sin ausencias en el mes)
-            // 🟡 Amarillo: Ausencia próxima (dentro del mes en curso)
-            // 🔴 Rojo: En ausencia actual
-
-            $currentAbsence = Absence::where('user_id', $employee->id)
-                ->where('status', AbsenceStatus::APPROVED->value)
-                ->whereDate('start_datetime', '<=', now())
-                ->whereDate('end_datetime', '>=', now())
-                ->first();
-
-            $upcomingAbsence = Absence::where('user_id', $employee->id)
-                ->where('status', AbsenceStatus::APPROVED->value)
-                ->whereMonth('start_datetime', $currentMonth)
-                ->whereYear('start_datetime', $currentYear)
-                ->whereDate('start_datetime', '>', now())
-                ->first();
-
-            if ($currentAbsence) {
-                $status = 'red';
-            } elseif ($upcomingAbsence) {
-                $status = 'yellow';
-            } else {
-                $status = 'green';
-            }
-
-            $statuses[] = [
-                'id' => $employee->id,
-                'name' => $employee->name,
-                'status' => $status,
-                'current_absence' => $currentAbsence ? [
-                    'type' => $currentAbsence->absenceType?->name,
-                    'end' => $currentAbsence->end_datetime->format('Y-m-d'),
-                ] : null,
-                'upcoming_absence' => $upcomingAbsence ? [
-                    'type' => $upcomingAbsence->absenceType?->name,
-                    'start' => $upcomingAbsence->start_datetime->format('Y-m-d'),
-                ] : null,
-            ];
-        }
-
-        // Resumen por estado
-        $summary = [
-            'green' => collect($statuses)->where('status', 'green')->count(),
-            'yellow' => collect($statuses)->where('status', 'yellow')->count(),
-            'red' => collect($statuses)->where('status', 'red')->count(),
-            'total' => count($statuses),
-        ];
-
-        return [
-            'employees' => $statuses,
-            'summary' => $summary,
-        ];
-    }
-
-    protected function getUsersList(bool $isAdmin): \Illuminate\Database\Eloquent\Collection
-    {
-        $query = User::select('id', 'name', 'identification', 'email');
-
-        // Los colaboradores solo ven la lista de usuarios para filtro
-        if (! $isAdmin) {
-            $userId = auth()->id();
-
-            return $query->where('id', $userId)->get();
-        }
-
-        return $query->whereNotIn('role', ['admin', 'superadmin'])
+        return User::query()
+            ->where('role', UserRole::COLLABORATOR->value)
+            ->where('is_active', true)
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name', 'identification', 'email']);
     }
 
-    protected function getMetrics(?int $userId = null, bool $isAdmin = true, ?int $areaId = null): array
+    protected function getPersonalMetrics(User $user): array
     {
-        $employeeQuery = User::whereNotIn('role', ['admin', 'superadmin']);
-        $absenceQuery = Absence::query();
-        $vacationQuery = VacationYear::query();
+        $availableVacationDays = VacationYear::query()
+            ->where('user_id', $user->id)
+            ->where('expires_at', '>=', now())
+            ->get()
+            ->sum(fn (VacationYear $year) => $year->allocated_days - $year->used_days);
 
-        if ($userId) {
-            $employeeQuery->where('id', $userId);
-            $absenceQuery->where('user_id', $userId);
-            $vacationQuery->where('user_id', $userId);
-        }
+        $usedVacationDays = VacationYear::query()
+            ->where('user_id', $user->id)
+            ->whereYear('year', now()->year)
+            ->sum('used_days');
 
-        if ($areaId) {
-            $employeeQuery->where('area_id', $areaId);
-            $absenceQuery->whereHas('user', function ($q) use ($areaId) {
-                $q->where('area_id', $areaId);
-            });
-            $vacationQuery->whereHas('user', function ($q) use ($areaId) {
-                $q->where('area_id', $areaId);
-            });
-        }
+        $pendingAbsences = Absence::query()
+            ->where('user_id', $user->id)
+            ->where('status', AbsenceStatus::PENDING->value)
+            ->count();
 
-        $totalEmployees = $employeeQuery->count();
-
-        $pendingAbsences = $absenceQuery->where('status', AbsenceStatus::PENDING->value)->count();
-
-        $approvedThisMonth = $absenceQuery->clone()
+        $approvedThisMonth = Absence::query()
+            ->where('user_id', $user->id)
             ->where('status', AbsenceStatus::APPROVED->value)
             ->whereMonth('start_datetime', now()->month)
             ->whereYear('start_datetime', now()->year)
             ->count();
 
-        $totalVacationDays = $vacationQuery->clone()
+        $upcomingExpirations = VacationYear::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('expires_at', [now(), now()->addDays(30)])
+            ->whereColumn('used_days', '<', 'allocated_days')
+            ->count();
+
+        return [
+            'available_vacation_days' => round($availableVacationDays, 1),
+            'used_vacation_days' => round($usedVacationDays, 1),
+            'pending_absences' => $pendingAbsences,
+            'approved_this_month' => $approvedThisMonth,
+            'upcoming_expirations' => $upcomingExpirations,
+        ];
+    }
+
+    protected function getOrganizationMetrics(?int $selectedUserId, ?int $selectedAreaId): array
+    {
+        $employeeQuery = User::query()
+            ->where('role', UserRole::COLLABORATOR->value)
+            ->where('is_active', true);
+
+        $absenceQuery = Absence::query();
+        $vacationQuery = VacationYear::query();
+
+        if ($selectedUserId) {
+            $employeeQuery->where('id', $selectedUserId);
+            $absenceQuery->where('user_id', $selectedUserId);
+            $vacationQuery->where('user_id', $selectedUserId);
+        }
+
+        if ($selectedAreaId) {
+            $employeeQuery->where('area_id', $selectedAreaId);
+
+            $absenceQuery->whereHas('user', function ($query) use ($selectedAreaId) {
+                $query->where('area_id', $selectedAreaId);
+            });
+
+            $vacationQuery->whereHas('user', function ($query) use ($selectedAreaId) {
+                $query->where('area_id', $selectedAreaId);
+            });
+        }
+
+        $totalEmployees = (clone $employeeQuery)->count();
+
+        $pendingAbsences = (clone $absenceQuery)
+            ->where('status', AbsenceStatus::PENDING->value)
+            ->count();
+
+        $approvedThisMonth = (clone $absenceQuery)
+            ->where('status', AbsenceStatus::APPROVED->value)
+            ->whereMonth('start_datetime', now()->month)
+            ->whereYear('start_datetime', now()->year)
+            ->count();
+
+        $totalVacationDays = (clone $vacationQuery)
             ->where('expires_at', '>=', now())
             ->get()
-            ->sum(fn ($y) => $y->allocated_days - $y->used_days);
+            ->sum(fn (VacationYear $year) => $year->allocated_days - $year->used_days);
 
-        $usedVacationDays = $vacationQuery->clone()
-            ->whereYear('year', now()->year)
-            ->get()
-            ->sum('used_days');
-
-        $upcomingExpirations = $vacationQuery->clone()
+        $upcomingExpirations = (clone $vacationQuery)
             ->whereBetween('expires_at', [now(), now()->addDays(30)])
-            ->where('used_days', '<', 'allocated_days')
+            ->whereColumn('used_days', '<', 'allocated_days')
             ->count();
+
+        $employeeIds = (clone $employeeQuery)->pluck('id');
+
+        $unavailableNow = Absence::query()
+            ->whereIn('user_id', $employeeIds)
+            ->where('status', AbsenceStatus::APPROVED->value)
+            ->whereDate('start_datetime', '<=', now())
+            ->whereDate('end_datetime', '>=', now())
+            ->distinct('user_id')
+            ->count('user_id');
 
         return [
             'total_employees' => $totalEmployees,
             'pending_absences' => $pendingAbsences,
             'approved_this_month' => $approvedThisMonth,
             'total_vacation_days' => round($totalVacationDays, 1),
-            'used_vacation_days' => round($usedVacationDays, 1),
             'upcoming_expirations' => $upcomingExpirations,
+            'unavailable_now' => $unavailableNow,
         ];
     }
 
-    protected function getChartData(?int $userId = null): array
+    protected function getSuperAdminMetrics(): array
     {
-        $absenceQuery = Absence::query();
-        if ($userId) {
-            $absenceQuery->where('user_id', $userId);
+        $totalAdmins = User::query()
+            ->withoutGlobalScopes()
+            ->where('role', UserRole::ADMIN->value)
+            ->where('is_active', true)
+            ->count();
+
+        $totalSuperAdmins = User::query()
+            ->withoutGlobalScopes()
+            ->where('role', UserRole::SUPERADMIN->value)
+            ->where('is_active', true)
+            ->count();
+
+        $activeTenants = Tenant::query()
+            ->where('is_active', true)
+            ->count();
+
+        $activeSubscriptions = Subscription::query()
+            ->where('is_active', true)
+            ->where('expires_at', '>=', now())
+            ->count();
+
+        $subscriptionsExpiringSoon = Subscription::query()
+            ->where('is_active', true)
+            ->whereBetween('expires_at', [now(), now()->addDays(30)])
+            ->count();
+
+        return [
+            'total_admins' => $totalAdmins,
+            'total_superadmins' => $totalSuperAdmins,
+            'active_tenants' => $activeTenants,
+            'active_subscriptions' => $activeSubscriptions,
+            'subscriptions_expiring_30d' => $subscriptionsExpiringSoon,
+        ];
+    }
+
+    protected function getEmployeeStatuses(?int $selectedAreaId): array
+    {
+        $search = trim((string) request()->get('status_search', ''));
+
+        $employeesQuery = User::query()
+            ->where('role', UserRole::COLLABORATOR->value)
+            ->where('is_active', true)
+            ->orderBy('name');
+
+        if ($selectedAreaId) {
+            $employeesQuery->where('area_id', $selectedAreaId);
         }
 
-        // Ausencias por mes (últimos 12 meses)
-        $monthlyAbsences = $absenceQuery->clone()
-            ->select(
-                DB::raw('MONTH(start_datetime) as month'),
-                DB::raw('YEAR(start_datetime) as year'),
-                DB::raw('COUNT(*) as count')
-            )
-            ->where('start_datetime', '>=', now()->subMonths(12))
-            ->groupBy('year', 'month')
-            ->orderBy('year')
-            ->orderBy('month')
-            ->get();
+        if ($search !== '') {
+            $employeesQuery->where(function ($query) use ($search) {
+                $query->where('name', 'like', "%{$search}%")
+                    ->orWhere('identification', 'like', "%{$search}%")
+                    ->orWhere('email', 'like', "%{$search}%");
+            });
+        }
 
-        $monthlyData = collect(range(0, 11))->map(function ($i) use ($monthlyAbsences) {
-            $date = now()->subMonths(11 - $i);
-            $found = $monthlyAbsences->first(fn ($a) => $a->year == $date->year && $a->month == $date->month
-            );
+        $paginator = $employeesQuery->paginate(
+            $this->perPage('status_per_page', 5),
+            ['id', 'name'],
+            'status_page'
+        );
+
+        $employeeIds = collect($paginator->items())->pluck('id');
+
+        $relevantAbsences = Absence::query()
+            ->with('type:id,name')
+            ->whereIn('user_id', $employeeIds)
+            ->where('status', AbsenceStatus::APPROVED->value)
+            ->where(function ($query) {
+                $query
+                    ->where(function ($activeQuery) {
+                        $activeQuery
+                            ->whereDate('start_datetime', '<=', now())
+                            ->whereDate('end_datetime', '>=', now());
+                    })
+                    ->orWhere(function ($upcomingQuery) {
+                        $upcomingQuery
+                            ->whereMonth('start_datetime', now()->month)
+                            ->whereYear('start_datetime', now()->year)
+                            ->whereDate('start_datetime', '>', now());
+                    });
+            })
+            ->orderBy('start_datetime')
+            ->get()
+            ->groupBy('user_id');
+
+        $statuses = collect($paginator->items())->map(function (User $employee) use ($relevantAbsences) {
+            $employeeAbsences = $relevantAbsences->get($employee->id, collect());
+
+            $currentAbsence = $employeeAbsences->first(function (Absence $absence) {
+                return $absence->start_datetime->lte(now())
+                    && $absence->end_datetime->gte(now());
+            });
+
+            $upcomingAbsence = $employeeAbsences->first(function (Absence $absence) {
+                return $absence->start_datetime->gt(now())
+                    && $absence->start_datetime->month === now()->month
+                    && $absence->start_datetime->year === now()->year;
+            });
+
+            $status = 'green';
+            if ($currentAbsence) {
+                $status = 'red';
+            } elseif ($upcomingAbsence) {
+                $status = 'yellow';
+            }
 
             return [
-                'month' => $date->format('M'),
-                'count' => $found?->count ?? 0,
+                'id' => $employee->id,
+                'name' => $employee->name,
+                'status' => $status,
+                'current_absence' => $currentAbsence ? [
+                    'type' => $currentAbsence->type?->name,
+                    'end' => $currentAbsence->end_datetime->toDateString(),
+                ] : null,
+                'upcoming_absence' => $upcomingAbsence ? [
+                    'type' => $upcomingAbsence->type?->name,
+                    'start' => $upcomingAbsence->start_datetime->toDateString(),
+                ] : null,
             ];
         });
 
-        // Distribución por tipo
-        $byType = $absenceQuery->clone()
-            ->select('absence_types.name', DB::raw('COUNT(*) as count'))
-            ->join('absence_types', 'absences.absence_type_id', '=', 'absence_types.id')
-            ->where('absences.start_datetime', '>=', now()->subYear())
-            ->groupBy('absence_types.name')
-            ->get();
-
-        // Estado de ausencias
-        $byStatus = $absenceQuery->clone()
-            ->select('status', DB::raw('COUNT(*) as count'))
-            ->where('start_datetime', '>=', now()->subYear())
-            ->groupBy('status')
-            ->get();
+        $summary = [
+            'green' => $statuses->where('status', 'green')->count(),
+            'yellow' => $statuses->where('status', 'yellow')->count(),
+            'red' => $statuses->where('status', 'red')->count(),
+            'total' => $paginator->total(),
+        ];
 
         return [
-            'monthly' => $monthlyData,
-            'by_type' => $byType->map(fn ($i) => ['name' => $i->name, 'count' => $i->count]),
-            'by_status' => $byStatus->map(fn ($i) => ['status' => $i->status, 'count' => $i->count]),
+            'data' => $statuses->values(),
+            'meta' => $this->paginationMeta($paginator),
+            'summary' => $summary,
+            'search' => $search,
         ];
     }
 
-    protected function getRecentAbsences(?int $userId = null, ?string $search = null)
+    protected function getRecentAbsences(User $viewer, ?int $selectedUserId, ?int $selectedAreaId): array
     {
-        $query = Absence::with(['user', 'type'])
-            ->where('status', AbsenceStatus::APPROVED->value);
+        $search = trim((string) request()->get('recent_search', ''));
 
-        if ($userId) {
-            $query->where('user_id', $userId);
+        $query = Absence::query()
+            ->with(['user:id,name,area_id', 'type:id,name'])
+            ->where('status', AbsenceStatus::APPROVED->value)
+            ->orderByDesc('start_datetime');
+
+        if (! $viewer->isAdmin()) {
+            $query->where('user_id', $viewer->id);
+        } else {
+            if ($selectedUserId) {
+                $query->where('user_id', $selectedUserId);
+            }
+
+            if ($selectedAreaId) {
+                $query->whereHas('user', function ($builder) use ($selectedAreaId) {
+                    $builder->where('area_id', $selectedAreaId);
+                });
+            }
         }
 
-        if ($search) {
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('identification', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $builder
+                    ->whereHas('user', function ($userQuery) use ($search) {
+                        $userQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('identification', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('type', function ($typeQuery) use ($search) {
+                        $typeQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
-        return $query
-            ->orderByDesc('start_datetime')
-            ->limit(10)
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'user' => ['id' => $a->user->id, 'name' => $a->user->name],
-                'type' => ['name' => $a->type->name],
-                'start' => $a->start_datetime->toDateString(),
-                'end' => $a->end_datetime->toDateString(),
-                'days' => $a->total_days,
-            ]);
+        $paginator = $query->paginate(
+            $this->perPage('recent_per_page', 5),
+            ['*'],
+            'recent_page'
+        );
+
+        $data = collect($paginator->items())->map(function (Absence $absence) {
+            return [
+                'id' => $absence->id,
+                'user' => [
+                    'id' => $absence->user->id,
+                    'name' => $absence->user->name,
+                ],
+                'type' => [
+                    'name' => $absence->type?->name,
+                ],
+                'start' => $absence->start_datetime->toDateString(),
+                'end' => $absence->end_datetime->toDateString(),
+                'days' => $absence->total_days,
+            ];
+        })->values();
+
+        return [
+            'data' => $data,
+            'meta' => $this->paginationMeta($paginator),
+            'search' => $search,
+        ];
     }
 
-    protected function getPendingApprovals(?int $userId = null, ?string $search = null)
+    protected function getPendingApprovals(User $viewer, ?int $selectedUserId, ?int $selectedAreaId): array
     {
-        $query = Absence::with(['user', 'type'])
-            ->where('status', AbsenceStatus::PENDING->value);
+        $search = trim((string) request()->get('pending_search', ''));
 
-        if ($userId) {
-            $query->where('user_id', $userId);
+        $query = Absence::query()
+            ->with(['user:id,name,identification,email,area_id', 'type:id,name'])
+            ->where('status', AbsenceStatus::PENDING->value)
+            ->orderBy('start_datetime');
+
+        if (! $viewer->isAdmin()) {
+            $query->where('user_id', $viewer->id);
+        } else {
+            if ($selectedUserId) {
+                $query->where('user_id', $selectedUserId);
+            }
+
+            if ($selectedAreaId) {
+                $query->whereHas('user', function ($builder) use ($selectedAreaId) {
+                    $builder->where('area_id', $selectedAreaId);
+                });
+            }
         }
 
-        if ($search) {
-            $query->whereHas('user', function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
-                    ->orWhere('identification', 'like', "%{$search}%")
-                    ->orWhere('email', 'like', "%{$search}%");
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $builder
+                    ->whereHas('user', function ($userQuery) use ($search) {
+                        $userQuery
+                            ->where('name', 'like', "%{$search}%")
+                            ->orWhere('identification', 'like', "%{$search}%")
+                            ->orWhere('email', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('type', function ($typeQuery) use ($search) {
+                        $typeQuery->where('name', 'like', "%{$search}%");
+                    });
             });
         }
 
-        return $query
-            ->orderBy('start_datetime')
-            ->limit(10)
-            ->get()
-            ->map(fn ($a) => [
-                'id' => $a->id,
-                'user' => ['id' => $a->user->id, 'name' => $a->user->name],
-                'type' => ['name' => $a->type->name],
-                'start' => $a->start_datetime->toDateString(),
-                'end' => $a->end_datetime->toDateString(),
-                'days' => $a->total_days,
-                'requested_at' => $a->created_at->diffForHumans(),
-            ]);
+        $paginator = $query->paginate(
+            $this->perPage('pending_per_page', 5),
+            ['*'],
+            'pending_page'
+        );
+
+        $data = collect($paginator->items())->map(function (Absence $absence) {
+            return [
+                'id' => $absence->id,
+                'user' => [
+                    'id' => $absence->user->id,
+                    'name' => $absence->user->name,
+                ],
+                'type' => [
+                    'name' => $absence->type?->name,
+                ],
+                'start' => $absence->start_datetime->toDateString(),
+                'end' => $absence->end_datetime->toDateString(),
+                'days' => $absence->total_days,
+                'requested_at' => $absence->created_at->diffForHumans(),
+            ];
+        })->values();
+
+        return [
+            'data' => $data,
+            'meta' => $this->paginationMeta($paginator),
+            'search' => $search,
+        ];
     }
 
-    protected function getVacationBalance(?int $userId = null, ?string $search = null)
+    protected function getVacationBalances(?int $selectedUserId, ?int $selectedAreaId): array
     {
-        $query = User::whereNotIn('role', ['admin', 'superadmin'])
-            ->with(['vacationYears' => fn ($q) => $q->where('expires_at', '>=', now())]);
+        $search = trim((string) request()->get('vacation_search', ''));
 
-        if ($userId) {
-            $query->where('id', $userId);
+        $query = User::query()
+            ->where('role', UserRole::COLLABORATOR->value)
+            ->where('is_active', true)
+            ->with([
+                'vacationYears' => function ($vacationQuery) {
+                    $vacationQuery->where('expires_at', '>=', now());
+                },
+            ])
+            ->orderBy('name');
+
+        if ($selectedUserId) {
+            $query->where('id', $selectedUserId);
         }
 
-        if ($search) {
-            $query->where(function ($q) use ($search) {
-                $q->where('name', 'like', "%{$search}%")
+        if ($selectedAreaId) {
+            $query->where('area_id', $selectedAreaId);
+        }
+
+        if ($search !== '') {
+            $query->where(function ($builder) use ($search) {
+                $builder
+                    ->where('name', 'like', "%{$search}%")
                     ->orWhere('identification', 'like', "%{$search}%")
                     ->orWhere('email', 'like', "%{$search}%");
             });
         }
 
-        return $query
-            ->get()
-            ->map(fn ($user) => [
+        $paginator = $query->paginate(
+            $this->perPage('vacation_per_page', 5),
+            ['id', 'name', 'identification', 'email'],
+            'vacation_page'
+        );
+
+        $data = collect($paginator->items())->map(function (User $user) {
+            return [
                 'id' => $user->id,
                 'name' => $user->name,
-                'available' => $user->availableVacationDays(),
+                'available' => round($user->availableVacationDays(), 1),
                 'expiring_soon' => $user->vacationYears
-                    ->filter(fn ($y) => $y->expires_at->diffInDays(now()) <= 30)
-                    ->map(fn ($y) => [
-                        'year' => $y->year,
-                        'days' => $y->availableDays(),
-                        'expires' => $y->expires_at->toDateString(),
+                    ->filter(fn (VacationYear $year) => $year->expires_at->diffInDays(now()) <= 30)
+                    ->map(fn (VacationYear $year) => [
+                        'year' => $year->year,
+                        'days' => round($year->availableDays(), 1),
+                        'expires' => $year->expires_at->toDateString(),
                     ])
                     ->values(),
+            ];
+        })->values();
+
+        return [
+            'data' => $data,
+            'meta' => $this->paginationMeta($paginator),
+            'search' => $search,
+        ];
+    }
+
+    protected function getMyExpiringVacations(User $user): array
+    {
+        return VacationYear::query()
+            ->where('user_id', $user->id)
+            ->whereBetween('expires_at', [now(), now()->addDays(90)])
+            ->whereColumn('used_days', '<', 'allocated_days')
+            ->orderBy('expires_at')
+            ->get()
+            ->map(fn (VacationYear $year) => [
+                'id' => $year->id,
+                'year' => $year->year,
+                'available_days' => round($year->availableDays(), 1),
+                'expires_at' => $year->expires_at->toDateString(),
             ])
-            ->sortByDesc('available')
-            ->take(10)
-            ->values();
+            ->values()
+            ->all();
     }
 
     protected function getSubscriptionInfo(User $user): ?array
@@ -369,6 +567,41 @@ class DashboardController extends Controller
             'expires_at' => $subscription->expires_at->toDateString(),
             'days_remaining' => $daysRemaining,
             'show_ad' => $daysRemaining <= $daysThreshold,
+        ];
+    }
+
+    protected function roleValue(User $user): string
+    {
+        return $user->role instanceof UserRole
+            ? $user->role->value
+            : (string) $user->role;
+    }
+
+    protected function nullableInt(string $key): ?int
+    {
+        $value = request()->get($key);
+
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        return (int) $value;
+    }
+
+    protected function perPage(string $key, int $default = 5): int
+    {
+        $value = (int) request()->get($key, $default);
+
+        return max(5, min(10, $value));
+    }
+
+    protected function paginationMeta(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'current_page' => $paginator->currentPage(),
+            'last_page' => $paginator->lastPage(),
+            'per_page' => $paginator->perPage(),
+            'total' => $paginator->total(),
         ];
     }
 }
