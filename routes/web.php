@@ -88,9 +88,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Reportes
     Route::inertia('/reportes', 'Reportes')->name('reportes');
-    Route::inertia('/documentos', 'Documents')
-        ->middleware('can:admin')
-        ->name('documents');
+    Route::inertia('/documentos', 'Documents')->name('documents');
 
     // Áreas organizacionales
     Route::inertia('/areas', 'Areas')->name('areas');
@@ -108,6 +106,8 @@ Route::middleware(['auth'])->group(function () {
 
     // Users Admin CRUD
     Route::middleware('can:admin')->group(function () {
+        Route::get('/admin/users/import/template', [UserController::class, 'downloadImportTemplate'])->name('admin.users.import.template');
+        Route::post('/admin/users/import', [UserController::class, 'importUsers'])->name('admin.users.import');
         Route::get('/admin/users', [UserController::class, 'index'])->name('admin.users.index');
         Route::post('/admin/users', [UserController::class, 'store'])->name('admin.users.store');
         Route::get('/admin/users/{user}', [UserController::class, 'show'])->name('admin.users.show');
@@ -228,16 +228,17 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/export', [ReportController::class, 'export'])->name('reports.export');
     });
 
-    Route::prefix('documents')
-        ->middleware('can:admin')
-        ->group(function () {
-            Route::get('/', [HrDocumentController::class, 'index'])->name('documents.index');
-            Route::post('/', [HrDocumentController::class, 'store'])->name('documents.store');
-            Route::post('/{document}', [HrDocumentController::class, 'update'])->name('documents.update');
-            Route::delete('/{document}', [HrDocumentController::class, 'destroy'])->name('documents.destroy');
-            Route::get('/{document}/audits', [HrDocumentController::class, 'audits'])->name('documents.audits');
-            Route::get('/{document}/download', [HrDocumentController::class, 'download'])->name('documents.download');
-        });
+    Route::prefix('documents')->group(function () {
+        Route::get('/', [HrDocumentController::class, 'index'])->name('documents.index');
+        Route::post('/', [HrDocumentController::class, 'store'])->name('documents.store');
+        Route::post('/{document}', [HrDocumentController::class, 'update'])->name('documents.update');
+        Route::delete('/{document}', [HrDocumentController::class, 'destroy'])->name('documents.destroy');
+        Route::post('/{document}/request-signature', [HrDocumentController::class, 'requestSignature'])->name('documents.request-signature');
+        Route::post('/{document}/sign', [HrDocumentController::class, 'sign'])->name('documents.sign');
+        Route::post('/{document}/reject', [HrDocumentController::class, 'reject'])->name('documents.reject');
+        Route::get('/{document}/audits', [HrDocumentController::class, 'audits'])->name('documents.audits');
+        Route::get('/{document}/download', [HrDocumentController::class, 'download'])->name('documents.download');
+    });
 
     /*
     |--------------------------------------------------------------------------

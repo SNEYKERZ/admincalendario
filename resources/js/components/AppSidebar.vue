@@ -69,15 +69,11 @@ const mainNavItems: NavItem[] = [
               },
           ]
         : []),
-    ...(isAdmin
-        ? [
-              {
-                  title: 'Documentos',
-                  href: '/documentos',
-                  icon: FileText,
-              },
-          ]
-        : []),
+    {
+        title: 'Documentos',
+        href: '/documentos',
+        icon: FileText,
+    },
     ...(isAdmin
         ? [
               {

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
@@ -8,6 +8,7 @@ interface CompanySettings {
     id: number;
     company_name: string;
     company_logo: string | null;
+    company_logo_url?: string | null;
     company_address: string;
     company_phone: string;
     company_email: string;
@@ -27,6 +28,7 @@ const toast = useToast();
 const loading = ref(false);
 const saving = ref(false);
 const settings = ref<CompanySettings | null>(null);
+const selectedLogoPreview = ref<string | null>(null);
 
 const form = ref({
     company_name: '',
@@ -46,12 +48,10 @@ const form = ref({
 });
 
 const logoPreview = computed(() => {
-    if (form.value.company_logo && form.value.company_logo instanceof File) {
-        return URL.createObjectURL(form.value.company_logo);
+    if (selectedLogoPreview.value) {
+        return selectedLogoPreview.value;
     }
-    return settings.value?.company_logo
-        ? `/storage/${settings.value.company_logo}`
-        : null;
+    return settings.value?.company_logo_url || null;
 });
 
 const loadSettings = async () => {
@@ -76,6 +76,11 @@ const loadSettings = async () => {
                 res.data.notification_email_enabled ?? true,
             company_logo: null,
         };
+
+        if (selectedLogoPreview.value) {
+            URL.revokeObjectURL(selectedLogoPreview.value);
+            selectedLogoPreview.value = null;
+        }
     } catch (e) {
         toast.error('Error cargando configuración');
     } finally {
@@ -117,10 +122,25 @@ const saveSettings = async () => {
 
 const handleLogoChange = (e: Event) => {
     const target = e.target as HTMLInputElement;
-    form.value.company_logo = target.files?.[0] || null;
+    const file = target.files?.[0] || null;
+    form.value.company_logo = file;
+
+    if (selectedLogoPreview.value) {
+        URL.revokeObjectURL(selectedLogoPreview.value);
+        selectedLogoPreview.value = null;
+    }
+
+    if (file) {
+        selectedLogoPreview.value = URL.createObjectURL(file);
+    }
 };
 
 onMounted(loadSettings);
+onBeforeUnmount(() => {
+    if (selectedLogoPreview.value) {
+        URL.revokeObjectURL(selectedLogoPreview.value);
+    }
+});
 </script>
 
 <template>
@@ -196,14 +216,26 @@ onMounted(loadSettings);
                         </div>
                         <div class="md:col-span-2">
                             <label class="label">Logo</label>
-                            <div class="flex items-center gap-4">
+                            <div class="grid gap-4 md:grid-cols-[1fr_auto] md:items-center">
+                                <div>
+                                    <input
+                                        type="file"
+                                        accept="image/*"
+                                        @change="handleLogoChange"
+                                        class="input w-full"
+                                    />
+                                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                        La imagen se previsualiza en tiempo real.
+                                    </p>
+                                </div>
                                 <div
                                     class="flex h-20 w-20 items-center justify-center overflow-hidden rounded-lg border bg-gray-100"
                                 >
                                     <img
                                         v-if="logoPreview"
                                         :src="logoPreview"
-                                        class="h-full w-full object-cover"
+                                        alt="Vista previa del logo"
+                                        class="h-full w-full object-contain"
                                     />
                                     <svg
                                         v-else
@@ -220,12 +252,6 @@ onMounted(loadSettings);
                                         />
                                     </svg>
                                 </div>
-                                <input
-                                    type="file"
-                                    accept="image/*"
-                                    @change="handleLogoChange"
-                                    class="input w-auto"
-                                />
                             </div>
                         </div>
                     </div>

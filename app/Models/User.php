@@ -20,10 +20,12 @@ class User extends Authenticatable
         'first_name',
         'last_name',
         'identification',
+        'gender',
         'phone',
         'email',
         'password',
         'role',
+        'is_active',
         'birth_date',
         'hire_date',
         'photo_path',
@@ -45,6 +47,7 @@ class User extends Authenticatable
         'birth_date' => 'date',
         'hire_date' => 'date',
         'email_verified_at' => 'datetime',
+        'is_active' => 'boolean',
         'role' => UserRole::class,
     ];
 

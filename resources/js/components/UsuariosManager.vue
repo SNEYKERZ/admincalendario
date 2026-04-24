@@ -12,9 +12,11 @@ interface User {
     first_name: string;
     last_name: string;
     identification: string | null;
+    gender: string | null;
     phone: string | null;
     email: string;
     role: string;
+    is_active: boolean;
     birth_date: string | null;
     hire_date: string | null;
     photo_path: string | null;
@@ -62,6 +64,7 @@ const users = ref<User[]>([]);
 const areas = ref<Area[]>([]);
 const roles = ref<Role[]>([]);
 const loading = ref(false);
+const importing = ref(false);
 const showModal = ref(false);
 const showRolesModal = ref(false);
 const modalMode = ref<'create' | 'edit' | 'view'>('create');
@@ -95,6 +98,7 @@ const editingRole = ref<Role | null>(null);
 
 const search = ref('');
 const filterRole = ref('');
+const importInput = ref<HTMLInputElement | null>(null);
 
 const filteredUsers = computed(() => {
     return users.value.filter((u) => {
@@ -220,6 +224,7 @@ const openCreate = () => {
         first_name: '',
         last_name: '',
         identification: '',
+        gender: '',
         phone: '',
         email: '',
         password: '',
@@ -239,6 +244,7 @@ const openEdit = (user: User) => {
         first_name: user.first_name,
         last_name: user.last_name,
         identification: user.identification || '',
+        gender: user.gender || '',
         phone: user.phone || '',
         email: user.email,
         password: '',
@@ -255,6 +261,55 @@ const openView = (user: User) => {
     modalMode.value = 'view';
     selectedUser.value = user;
     showModal.value = true;
+};
+
+const downloadImportTemplate = () => {
+    window.location.href = '/admin/users/import/template';
+};
+
+const triggerImportDialog = () => {
+    importInput.value?.click();
+};
+
+const handleImportUsers = async (event: Event) => {
+    const target = event.target as HTMLInputElement;
+    const file = target.files?.[0] ?? null;
+    if (!file) return;
+
+    importing.value = true;
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await axios.post('/admin/users/import', formData, {
+            headers: { 'Content-Type': 'multipart/form-data' },
+        });
+
+        const result = response.data;
+        toast.success(
+            `Importación completada. Creados: ${result.created}, actualizados: ${result.updated}, omitidos: ${result.skipped}`,
+        );
+
+        if (Array.isArray(result.errors) && result.errors.length > 0) {
+            result.errors.slice(0, 5).forEach((error: string) => toast.warning(error));
+            if (result.errors.length > 5) {
+                toast.warning(`Y ${result.errors.length - 5} errores más en la importación.`);
+            }
+        }
+
+        await loadUsers();
+    } catch (e: any) {
+        if (e.response?.data?.errors) {
+            Object.values(e.response.data.errors)
+                .flat()
+                .forEach((msg) => toast.error(String(msg)));
+        } else {
+            toast.error('Error en el cargue masivo de usuarios');
+        }
+    } finally {
+        importing.value = false;
+        target.value = '';
+    }
 };
 
 const saveUser = async () => {
@@ -329,6 +384,14 @@ const getRoleBadge = (role: string) => {
 
 <template>
     <div class="space-y-4">
+        <input
+            ref="importInput"
+            type="file"
+            class="hidden"
+            accept=".xlsx,.xls,.csv"
+            @change="handleImportUsers"
+        />
+
         <!-- Header -->
         <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
@@ -356,6 +419,28 @@ const getRoleBadge = (role: string) => {
                 </svg>
                 Gestionar Roles
             </button>
+        </div>
+
+        <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-gray-100">
+                        Cargue masivo de usuarios
+                    </h3>
+                    <p class="text-xs text-gray-500 dark:text-gray-400">
+                        El archivo debe incluir: nombre, apellidos, identificación, género, correo,
+                        número de celular, área, rol, fecha de nacimiento y fecha de contratación.
+                    </p>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <button class="btn-secondary" @click="downloadImportTemplate">
+                        Descargar archivo de ejemplo
+                    </button>
+                    <button class="btn-primary" :disabled="importing" @click="triggerImportDialog">
+                        {{ importing ? 'Importando...' : 'Subir cargue masivo' }}
+                    </button>
+                </div>
+            </div>
         </div>
 
         <div class="flex flex-col gap-3 sm:flex-row">
@@ -402,6 +487,10 @@ const getRoleBadge = (role: string) => {
                             </th>
                             <th
                                 class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
+                                Activo
+                            </th>
+                            <th
+                                class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400">
                                 Área
                             </th>
                             <th
@@ -424,12 +513,12 @@ const getRoleBadge = (role: string) => {
                     </thead>
                     <tbody class="divide-y divide-gray-100 dark:divide-gray-700">
                         <tr v-if="loading" class="text-center">
-                            <td colspan="9" class="py-8 text-gray-500">
+                            <td colspan="10" class="py-8 text-gray-500">
                                 Cargando...
                             </td>
                         </tr>
                         <tr v-else-if="filteredUsers.length === 0" class="text-center">
-                            <td colspan="9" class="py-8 text-gray-500">
+                            <td colspan="10" class="py-8 text-gray-500">
                                 No hay usuarios
                             </td>
                         </tr>
@@ -473,6 +562,20 @@ const getRoleBadge = (role: string) => {
                                             ? 'Admin'
                                             : 'Colaborador'
                                     }}
+                                </span>
+                            </td>
+                            <td class="px-4 py-3">
+                                <span
+                                    v-if="user.is_active"
+                                    class="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-300"
+                                >
+                                    Sí
+                                </span>
+                                <span
+                                    v-else
+                                    class="rounded-full bg-rose-100 px-2.5 py-0.5 text-xs font-medium text-rose-700 dark:bg-rose-900/30 dark:text-rose-300"
+                                >
+                                    No
                                 </span>
                             </td>
                             <td class="px-4 py-3">

@@ -12,7 +12,7 @@ class SettingsController extends Controller
     {
         $settings = CompanySettings::getSettings();
 
-        return response()->json($settings);
+        return response()->json($this->withLogoUrl($settings));
     }
 
     public function update(Request $request)
@@ -45,6 +45,16 @@ class SettingsController extends Controller
 
         $settings->update($data);
 
-        return response()->json($settings);
+        return response()->json($this->withLogoUrl($settings->fresh()));
+    }
+
+    protected function withLogoUrl(CompanySettings $settings): array
+    {
+        $payload = $settings->toArray();
+        $payload['company_logo_url'] = $settings->company_logo
+            ? Storage::disk('public')->url($settings->company_logo)
+            : null;
+
+        return $payload;
     }
 }
