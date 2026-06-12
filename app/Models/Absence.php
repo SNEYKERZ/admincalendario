@@ -27,6 +27,8 @@ class Absence extends Model
         'approved_by',
         'approved_at',
         'notes',
+        'rejection_reason',
+        'internal_notes',
     ];
 
     protected $casts = [
@@ -60,6 +62,16 @@ class Absence extends Model
     public function approver(): BelongsTo
     {
         return $this->belongsTo(User::class, 'approved_by')->withoutGlobalScopes();
+    }
+
+    public function approvalChains(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AbsenceApprovalChain::class);
+    }
+
+    public function audits(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(AbsenceAudit::class);
     }
 
     /*
@@ -108,5 +120,13 @@ class Absence extends Model
         return $this->status instanceof AbsenceStatus
             ? $this->status === AbsenceStatus::REJECTED
             : $this->status === AbsenceStatus::REJECTED->value;
+    }
+
+    public function getApprovalChainStatus(): ?AbsenceApprovalChain
+    {
+        return $this->approvalChains()
+            ->where('status', 'pendiente')
+            ->orderBy('approval_level')
+            ->first();
     }
 }

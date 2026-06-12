@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(php artisan *)",
+      "Bash(git add *)",
+      "Bash(git commit -m 'feat: add approval chain infrastructure \\(week 1-2\\) *)"
+    ]
+  }
+}

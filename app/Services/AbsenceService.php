@@ -22,6 +22,8 @@ class AbsenceService
     public function __construct(
         protected VacationService $vacationService,
         protected AbsenceCalculationService $absenceCalculationService,
+        protected ApprovalChainService $approvalChainService,
+        protected AuditService $auditService,
         protected TenantManager $tenantManager
     ) {}
 
@@ -73,8 +75,8 @@ class AbsenceService
                 $this->ensureVacationBalance($user, $calculation['total_days']);
             }
 
-            $isApproved = auth()->user()->isAdmin();
-            $status = $isApproved ? AbsenceStatus::APPROVED : AbsenceStatus::PENDING;
+            // SIEMPRE crear como PENDIENTE (NEW: No auto-approve for admins)
+            $status = AbsenceStatus::PENDING;
 
             $absence = Absence::create([
                 ...$data,
@@ -86,20 +88,28 @@ class AbsenceService
                 'total_days' => $calculation['total_days'],
                 'total_hours' => $calculation['total_hours'],
                 'status' => $status->value,
-                'approved_by' => $isApproved ? auth()->id() : null,
-                'approved_at' => $isApproved ? now() : null,
             ]);
 
-            if ($isApproved && $type->deducts_vacation) {
-                $this->vacationService->deductDays($user, $calculation['total_days']);
+            // NEW: Crear cadena de aprobación automática
+            $this->approvalChainService->createApprovalChain($absence);
+
+            // NEW: Log de auditoría
+            $this->auditService->logAction(
+                $absence,
+                'created',
+                ['total_days' => $absence->total_days],
+                null
+            );
+
+            // NEW: Notificar al primer aprobador en lugar de a todos los admins
+            $firstChain = $absence->approvalChains()->first();
+            if ($firstChain) {
+                $firstChain->assignedTo->notify(
+                    new \App\Notifications\AbsencePendingApproval($absence, $firstChain)
+                );
             }
 
-            // Notificar a administradores si es ausencia pendiente
-            if ($status === AbsenceStatus::PENDING) {
-                $this->sendNotificationToAdmins(new AbsenceCreated($absence));
-            }
-
-            return $absence->fresh(['user', 'type', 'approver']);
+            return $absence->fresh(['user', 'type', 'approvalChains']);
         });
     }
 
@@ -227,14 +237,70 @@ class AbsenceService
         });
     }
 
-    public function approve(Absence $absence, User $admin): Absence
+    public function approve(Absence $absence, User $approver): Absence
     {
-        return $this->setStatus($absence, AbsenceStatus::APPROVED, $admin);
+        return DB::transaction(function () use ($absence, $approver) {
+            $absence->loadMissing(['user', 'type']);
+
+            // NEW: Use approval chain service
+            $chain = $absence->getApprovalChainStatus();
+            if ($chain) {
+                $this->approvalChainService->approve($chain, $approver);
+            }
+
+            $absence->refresh();
+
+            // NEW: Log de auditoría
+            $this->auditService->logAction(
+                $absence,
+                'approved',
+                ['status' => 'aprobado'],
+                null
+            );
+
+            // Notificar al usuario
+            $absence->user->notify(new AbsenceApproved($absence));
+
+            return $absence;
+        });
     }
 
-    public function reject(Absence $absence, User $admin): Absence
+    public function reject(Absence $absence, User $rejector, string $reason = ''): Absence
     {
-        return $this->setStatus($absence, AbsenceStatus::REJECTED, $admin);
+        return DB::transaction(function () use ($absence, $rejector, $reason) {
+            $absence->loadMissing(['user', 'type']);
+
+            // NEW: Use approval chain service
+            $chain = $absence->getApprovalChainStatus();
+            if ($chain) {
+                $this->approvalChainService->reject($chain, $rejector, $reason);
+            }
+
+            $absence->refresh();
+
+            // NEW: Restaurar vacaciones si corresponde
+            if ($absence->type->deducts_vacation && $absence->isApproved()) {
+                $this->vacationService->restoreDays(
+                    $absence->user,
+                    $absence->total_days
+                );
+            }
+
+            // NEW: Log de auditoría
+            $this->auditService->logAction(
+                $absence,
+                'rejected',
+                ['status' => 'rechazado'],
+                $reason
+            );
+
+            // Notificar al usuario
+            $absence->user->notify(
+                new AbsenceRejected($absence, $reason)
+            );
+
+            return $absence;
+        });
     }
 
     public function pending(Absence $absence, User $admin): Absence

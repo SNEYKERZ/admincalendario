@@ -30,6 +30,8 @@ class User extends Authenticatable
         'hire_date',
         'photo_path',
         'area_id',
+        'is_area_manager',
+        'managed_area_id',
     ];
 
     protected $appends = [
@@ -48,6 +50,7 @@ class User extends Authenticatable
         'hire_date' => 'date',
         'email_verified_at' => 'datetime',
         'is_active' => 'boolean',
+        'is_area_manager' => 'boolean',
         'role' => UserRole::class,
     ];
 
@@ -90,6 +93,21 @@ class User extends Authenticatable
     public function documents(): HasMany
     {
         return $this->hasMany(HrDocument::class);
+    }
+
+    public function managedArea(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(Area::class, 'managed_area_id');
+    }
+
+    public function approvalChains(): HasMany
+    {
+        return $this->hasMany(AbsenceApprovalChain::class, 'assigned_to');
+    }
+
+    public function audits(): HasMany
+    {
+        return $this->hasMany(AbsenceAudit::class);
     }
 
     /*
@@ -138,6 +156,11 @@ class User extends Authenticatable
         return $this->role instanceof UserRole
             ? $this->role === UserRole::COLLABORATOR
             : $this->role === UserRole::COLLABORATOR->value;
+    }
+
+    public function isAreaManager(): bool
+    {
+        return (bool) $this->is_area_manager;
     }
 
     /*

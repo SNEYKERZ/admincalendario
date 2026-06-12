@@ -20,6 +20,7 @@ class Area extends Model
         'display_order',
         'is_active',
         'created_by',
+        'area_manager_id',
     ];
 
     protected $casts = [
@@ -41,6 +42,11 @@ class Area extends Model
     public function users(): HasMany
     {
         return $this->hasMany(User::class, 'area_id');
+    }
+
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'area_manager_id');
     }
 
     /*
@@ -84,5 +90,15 @@ class Area extends Model
     public function activeUsers()
     {
         return $this->users()->where('is_active', true);
+    }
+
+    public function hasManager(): bool
+    {
+        return $this->area_manager_id !== null;
+    }
+
+    public function getManagerName(): string
+    {
+        return $this->manager?->name ?? 'Sin asignar';
     }
 }
