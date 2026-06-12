@@ -34,6 +34,9 @@ class DatabaseSeeder extends Seeder
 
             // 4. Ausencias (crear después de usuarios y tipos)
             AbsenceSeeder::class,
+
+            // 5. Demo data para cadena de aprobación
+            ApprovalChainDemoSeeder::class,
         ]);
     }
 }
