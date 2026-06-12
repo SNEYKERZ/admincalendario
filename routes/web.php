@@ -2,7 +2,9 @@
 
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AreaController;
+use App\Http\Controllers\AreaManagerController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\HolidayController;
@@ -159,7 +161,27 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/{absence}/reject', [AbsenceController::class, 'reject'])->name('absences.reject');
         Route::post('/{absence}/pending', [AbsenceController::class, 'pending'])->name('absences.pending');
         Route::delete('/{absence}', [AbsenceController::class, 'destroy'])->name('absences.destroy');
+        Route::get('/{absence}/history', [ApprovalController::class, 'history'])->name('absences.history');
     });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Approvals (Cadena de Aprobación)
+    |--------------------------------------------------------------------------
+    */
+    Route::prefix('approvals')->group(function () {
+        Route::get('/pending', [ApprovalController::class, 'pending'])->name('approvals.pending');
+        Route::post('/{chain}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
+        Route::post('/{chain}/reject', [ApprovalController::class, 'reject'])->name('approvals.reject');
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | Area Managers (Jefes de Área)
+    |--------------------------------------------------------------------------
+    */
+    Route::put('/api/areas/{area}/manager', [AreaManagerController::class, 'setManager'])->name('area-managers.set');
+    Route::delete('/api/areas/{area}/manager', [AreaManagerController::class, 'removeManager'])->name('area-managers.remove');
 
     /*
     |--------------------------------------------------------------------------
