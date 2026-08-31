@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Enums\AbsenceStatus;
 use App\Enums\UserRole;
+use App\Models\Area;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 
@@ -58,11 +59,18 @@ class CommunityController extends Controller
                     'role' => $user->role instanceof UserRole ? $user->role->value : $user->role,
                     'role_label' => $user->role_name,
                     'area' => $user->area?->name,
+                    'area_id' => $user->area_id,
                     'age' => $user->birth_date ? $user->birth_date->age : null,
                     'status' => $status,
                 ];
             })
             ->values();
+
+        // Obtener áreas únicas ordenadas
+        $areas = Area::query()
+            ->orderBy('name')
+            ->get(['id', 'name'])
+            ->toArray();
 
         return response()->json([
             'viewer' => [
@@ -71,6 +79,7 @@ class CommunityController extends Controller
                 'role' => $viewer->role instanceof UserRole ? $viewer->role->value : $viewer->role,
             ],
             'users' => $users,
+            'areas' => $areas,
         ]);
     }
 }

@@ -13,19 +13,28 @@ interface CommunityUser {
     role: string;
     role_label: string;
     area: string | null;
+    area_id: number | null;
     age: number | null;
     status: 'pendiente' | 'Ausente' | 'disponible';
 }
 
+interface Area {
+    id: number;
+    name: string;
+}
+
 const loading = ref(false);
 const users = ref<CommunityUser[]>([]);
+const areas = ref<Area[]>([]);
 const search = ref('');
+const selectedArea = ref<number | null>(null);
 
 const loadCommunity = async () => {
     loading.value = true;
     try {
         const response = await axios.get('/comunidad/data');
         users.value = response.data.users ?? [];
+        areas.value = response.data.areas ?? [];
     } catch (error) {
         console.error('Error loading community data:', error);
     } finally {
@@ -35,13 +44,17 @@ const loadCommunity = async () => {
 
 const filteredUsers = computed(() => {
     return users.value.filter((user) => {
-        return (
+        const matchesSearch =
             includesNormalized(user.name, search.value) ||
             includesNormalized(user.email, search.value) ||
             includesNormalized(user.phone, search.value) ||
             includesNormalized(user.role_label, search.value) ||
-            includesNormalized(user.area, search.value)
-        );
+            includesNormalized(user.area, search.value);
+
+        const matchesArea =
+            !selectedArea.value || user.area_id === selectedArea.value;
+
+        return matchesSearch && matchesArea;
     });
 });
 
@@ -87,7 +100,20 @@ onMounted(loadCommunity);
                     </p>
                 </div>
 
-                <div class="w-full sm:max-w-sm">
+                <div class="flex w-full flex-col gap-2 sm:max-w-sm sm:flex-row sm:gap-3">
+                    <!-- Filtro por área (solo si hay más de 1) -->
+                    <select
+                        v-if="areas.length > 1"
+                        v-model.number="selectedArea"
+                        class="rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
+                    >
+                        <option :value="null">Todas las áreas</option>
+                        <option v-for="area in areas" :key="area.id" :value="area.id">
+                            {{ area.name }}
+                        </option>
+                    </select>
+
+                    <!-- Buscador -->
                     <input
                         v-model="search"
                         type="text"
