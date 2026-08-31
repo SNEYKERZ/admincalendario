@@ -69,6 +69,17 @@ const reject = async () => {
         loading.value = false
     }
 };
+
+const formatDate = (date: string | null) => {
+    if (!date) return '-';
+    return new Date(date).toLocaleDateString('es-CO', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+    });
+};
 </script>
 
 <template>
@@ -110,6 +121,13 @@ const reject = async () => {
                 <span class="rounded px-3 py-1 text-white" :class="statusColor">
                     {{ statusLabel }}
                 </span>
+            </div>
+
+            <!-- Info de rechazo -->
+            <div v-if="absence.status === 'rechazado'" class="mb-4 rounded bg-red-50 p-3 border border-red-200">
+                <p class="text-sm text-red-800">
+                    <strong>Rechazada el:</strong> {{ formatDate(absence.rejected_at) }}
+                </p>
             </div>
 
             <!-- Motivo -->

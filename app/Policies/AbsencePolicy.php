@@ -62,10 +62,6 @@ class AbsencePolicy
 
     public function update(User $user, Absence $absence): bool
     {
-        if ($user->isAdmin()) {
-            return true;
-        }
-
         return $user->id === $absence->user_id
             && $absence->status === AbsenceStatus::PENDING;
     }

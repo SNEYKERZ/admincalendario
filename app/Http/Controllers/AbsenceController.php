@@ -68,6 +68,8 @@ class AbsenceController extends Controller
                            ->where('end_datetime', '>=', $end);
                     });
             });
+
+            $query->visibleOnCalendar();
         }
 
         return response()->json($query->get());

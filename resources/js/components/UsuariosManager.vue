@@ -257,9 +257,19 @@ const openEdit = (user: User) => {
     showModal.value = true;
 };
 
-const openView = (user: User) => {
+const openView = async (user: User) => {
     modalMode.value = 'view';
-    selectedUser.value = user;
+    loading.value = true;
+    try {
+        const res = await axios.get(`/admin/users/${user.id}`);
+        selectedUser.value = res.data;
+    } catch (e) {
+        console.error(e);
+        toast.error('Error cargando información del usuario');
+        return;
+    } finally {
+        loading.value = false;
+    }
     showModal.value = true;
 };
 

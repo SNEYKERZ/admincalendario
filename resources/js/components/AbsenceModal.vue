@@ -109,7 +109,9 @@ const showBusinessRules = computed(
 
 const canEdit = computed(() => {
     if (!props.absence) return true;
-    return props.isAdmin || props.absence.status === 'pendiente';
+    const isOwner = props.absence.user?.id === parseInt(currentUserId.value);
+    const isPending = props.absence.status === 'pendiente';
+    return isOwner && isPending;
 });
 
 const loadTypes = async () => {

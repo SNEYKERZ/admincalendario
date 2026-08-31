@@ -278,6 +278,11 @@ class AbsenceService
 
             $absence->refresh();
 
+            // Guardar timestamp de rechazo
+            $absence->update([
+                'rejected_at' => now(),
+            ]);
+
             // NEW: Restaurar vacaciones si corresponde
             if ($absence->type->deducts_vacation && $absence->isApproved()) {
                 $this->vacationService->restoreDays(

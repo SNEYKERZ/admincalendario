@@ -35,6 +35,7 @@ class Absence extends Model
         'start_datetime' => 'datetime',
         'end_datetime' => 'datetime',
         'approved_at' => 'datetime',
+        'rejected_at' => 'datetime',
         'include_saturday' => 'boolean',
         'include_sunday' => 'boolean',
         'include_holidays' => 'boolean',
@@ -93,6 +94,16 @@ class Absence extends Model
     public function scopeForCalendar($query)
     {
         return $query->where('status', AbsenceStatus::APPROVED->value);
+    }
+
+    public function scopeVisibleOnCalendar($query)
+    {
+        $visibilityDays = 3;
+        return $query->where('status', AbsenceStatus::APPROVED->value)
+            ->orWhere(function ($q) use ($visibilityDays) {
+                $q->where('status', AbsenceStatus::REJECTED->value)
+                  ->where('rejected_at', '>', now()->subDays($visibilityDays));
+            });
     }
 
     /*
