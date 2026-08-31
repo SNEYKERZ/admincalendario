@@ -263,6 +263,22 @@ const openView = async (user: User) => {
     try {
         const res = await axios.get(`/admin/users/${user.id}`);
         selectedUser.value = res.data;
+
+        // Llenar el formulario con los datos del usuario
+        form.value = {
+            first_name: res.data.first_name || '',
+            last_name: res.data.last_name || '',
+            identification: res.data.identification || '',
+            gender: res.data.gender || '',
+            phone: res.data.phone || '',
+            email: res.data.email,
+            password: '',
+            role: res.data.role,
+            birth_date: res.data.birth_date || '',
+            hire_date: res.data.hire_date || '',
+            photo: null,
+            area_id: res.data.area_id || null,
+        };
     } catch (e) {
         console.error(e);
         toast.error('Error cargando información del usuario');
@@ -777,17 +793,37 @@ const getRoleBadge = (role: string) => {
                     </div>
 
                     <div v-if="modalMode === 'view' && selectedUser" class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
-                        <h3 class="mb-2 font-medium text-gray-900 dark:text-gray-100">
+                        <h3 class="mb-3 font-medium text-gray-900 dark:text-gray-100">
                             Información adicional
                         </h3>
-                        <div class="grid grid-cols-2 gap-2 text-sm">
+                        <div class="grid grid-cols-2 gap-3 text-sm">
                             <div>
-                                <span class="text-gray-500">Fecha de nacimiento:</span>
-                                {{ formatDate(selectedUser.birth_date) }}
+                                <span class="text-xs font-medium text-gray-500 uppercase">Fecha de nacimiento:</span>
+                                <p class="text-gray-900 dark:text-gray-100">{{ formatDate(selectedUser.birth_date) }}</p>
                             </div>
                             <div>
-                                <span class="text-gray-500">Fecha de contratación:</span>
-                                {{ formatDate(selectedUser.hire_date) }}
+                                <span class="text-xs font-medium text-gray-500 uppercase">Fecha de contratación:</span>
+                                <p class="text-gray-900 dark:text-gray-100">{{ formatDate(selectedUser.hire_date) }}</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 uppercase">Vacaciones asignadas:</span>
+                                <p class="text-gray-900 dark:text-gray-100">{{ selectedUser.allocated }} días</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 uppercase">Vacaciones usadas:</span>
+                                <p class="text-gray-900 dark:text-gray-100">{{ selectedUser.used }} días</p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 uppercase">Vacaciones disponibles:</span>
+                                <p class="font-bold text-emerald-600 dark:text-emerald-400">
+                                    {{ selectedUser.available }} días
+                                </p>
+                            </div>
+                            <div>
+                                <span class="text-xs font-medium text-gray-500 uppercase">Género:</span>
+                                <p class="text-gray-900 dark:text-gray-100">
+                                    {{ selectedUser.gender || '-' }}
+                                </p>
                             </div>
                         </div>
                     </div>
