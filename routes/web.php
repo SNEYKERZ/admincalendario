@@ -13,6 +13,10 @@ use App\Http\Controllers\PublicApiController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\SystemManagementController;
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
+use App\Http\Controllers\SuperAdmin\TenantController;
+use App\Http\Controllers\SuperAdmin\ImpersonationController;
+use App\Http\Controllers\SuperAdmin\AuditController;
 use App\Http\Controllers\VacationController;
 use App\Http\Controllers\VacationYearController;
 use App\Managers\TenantManager;
@@ -309,5 +313,29 @@ Route::middleware(['auth'])->group(function () {
         Route::delete('/gestion-sistema/api/licenses/{id}', [PublicApiController::class, 'deleteLicense'])->name('system-management.licenses.destroy');
         Route::post('/gestion-sistema/api/licenses/{id}/renew', [PublicApiController::class, 'renewLicense'])->name('system-management.licenses.renew');
         Route::post('/gestion-sistema/api/licenses/{id}/toggle', [PublicApiController::class, 'toggleLicense'])->name('system-management.licenses.toggle');
+
+        /*
+        |--------------------------------------------------------------------------
+        | SuperAdmin Dashboard & Tenants Management
+        |--------------------------------------------------------------------------
+        */
+        Route::prefix('superadmin')->group(function () {
+            // Dashboard global
+            Route::get('/dashboard', [SuperAdminDashboardController::class, 'index'])->name('superadmin.dashboard');
+
+            // Gestión de tenants
+            Route::get('/tenants', [TenantController::class, 'index'])->name('superadmin.tenants.index');
+            Route::get('/tenants/{tenant}', [TenantController::class, 'show'])->name('superadmin.tenants.show');
+            Route::post('/tenants/{tenant}/activate', [TenantController::class, 'activate'])->name('superadmin.tenants.activate');
+            Route::post('/tenants/{tenant}/deactivate', [TenantController::class, 'deactivate'])->name('superadmin.tenants.deactivate');
+            Route::post('/tenants/{tenant}/suspend', [TenantController::class, 'suspend'])->name('superadmin.tenants.suspend');
+
+            // Impersonation
+            Route::post('/impersonate/stop', [ImpersonationController::class, 'stop'])->name('superadmin.impersonate.stop');
+            Route::post('/impersonate/{user}', [ImpersonationController::class, 'start'])->name('superadmin.impersonate.start');
+
+            // Auditoría
+            Route::get('/audit', [AuditController::class, 'index'])->name('superadmin.audit.index');
+        });
     });
 });

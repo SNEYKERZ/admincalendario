@@ -63,6 +63,11 @@ class HandleInertiaRequests extends Middleware
             }
         }
 
+        $superAdminContext = null;
+        if ($request->user()?->isSuperAdmin()) {
+            $superAdminContext = session('super_admin_context');
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -71,6 +76,7 @@ class HandleInertiaRequests extends Middleware
             ],
             'company' => $company,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+            'super_admin_context' => $superAdminContext,
         ];
     }
 }

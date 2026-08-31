@@ -25,6 +25,7 @@ class User extends Authenticatable
         'email',
         'password',
         'role',
+        'is_superadmin_only',
         'is_active',
         'birth_date',
         'hire_date',
@@ -51,6 +52,7 @@ class User extends Authenticatable
         'email_verified_at' => 'datetime',
         'is_active' => 'boolean',
         'is_area_manager' => 'boolean',
+        'is_superadmin_only' => 'boolean',
         'role' => UserRole::class,
     ];
 
@@ -161,6 +163,16 @@ class User extends Authenticatable
     public function isAreaManager(): bool
     {
         return (bool) $this->is_area_manager;
+    }
+
+    public function isSuperAdminOnly(): bool
+    {
+        return $this->is_superadmin_only === true;
+    }
+
+    public function belongsToTenant(): bool
+    {
+        return $this->tenant_id !== null && !$this->is_superadmin_only;
     }
 
     /*

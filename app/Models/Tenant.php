@@ -97,6 +97,11 @@ class Tenant extends Model
         return $this->hasMany(Subscription::class);
     }
 
+    public function superAdminAudits(): HasMany
+    {
+        return $this->hasMany(SuperAdminAudit::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES

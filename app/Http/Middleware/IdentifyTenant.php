@@ -27,7 +27,25 @@ class IdentifyTenant
             return $next($request);
         }
 
-        // Resolver el tenant
+        // Manejo especial para SuperAdmin
+        if (auth()->check() && auth()->user()->isSuperAdmin()) {
+            $context = session('super_admin_context');
+
+            // Si está en contexto global (no impersonando), NO establecer tenant
+            if (!$context || !$context['impersonated_user_id']) {
+                // SuperAdmin en contexto global - permitir que continúe sin tenant
+                return $next($request);
+            }
+
+            // Si está impersonando, establecer el tenant del impersonation
+            if ($context['tenant_id']) {
+                $tenantManager->setTenant($context['tenant_id']);
+            }
+
+            return $next($request);
+        }
+
+        // Lógica normal para Admin/Colaborador
         $tenantManager->resolveFromRequest();
 
         // Si no hay tenant y no es ruta pública, redirigir o mostrar error

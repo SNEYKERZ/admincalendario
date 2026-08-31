@@ -16,11 +16,21 @@ use Illuminate\Support\Collection;
 
 class DashboardController extends Controller
 {
-    public function index(): JsonResponse
+    public function index()
     {
         /** @var User $user */
         $user = auth()->user();
 
+        // Si es SuperAdmin en contexto global, redirigir al dashboard de SuperAdmin
+        if ($user->isSuperAdmin() && !session('super_admin_context.impersonated_user_id')) {
+            return redirect('/superadmin/dashboard');
+        }
+
+        return $this->getDashboardData($user);
+    }
+
+    private function getDashboardData(User $user): JsonResponse
+    {
         $isAdmin = $user->isAdmin();
         $isSuperAdmin = $user->isSuperAdmin();
 
