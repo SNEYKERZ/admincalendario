@@ -14,13 +14,9 @@ class AreaController extends Controller
      */
     public function list(Request $request): JsonResponse
     {
-        $query = Area::query();
-
-        if (! $request->user()->isSuperAdmin()) {
-            $query->byCreator($request->user()->id);
-        }
-
-        $areas = $query->ordered()->get(['id', 'name', 'color']);
+        $areas = Area::query()
+            ->ordered()
+            ->get(['id', 'name', 'color']);
 
         return response()->json($areas);
     }

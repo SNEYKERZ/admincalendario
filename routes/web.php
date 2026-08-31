@@ -248,6 +248,15 @@ Route::middleware(['auth'])->group(function () {
     Route::prefix('reports')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/export', [ReportController::class, 'export'])->name('reports.export');
+        Route::get('/filters-data', function () {
+            return response()->json([
+                'users' => User::where('is_active', true)
+                    ->orderBy('name')
+                    ->get(['id', 'name']),
+                'areas' => \App\Models\Area::orderBy('name')
+                    ->get(['id', 'name']),
+            ]);
+        })->name('reports.filters-data');
     });
 
     Route::prefix('documents')->group(function () {

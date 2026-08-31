@@ -67,21 +67,14 @@ const absencesData = ref<AbsenceReport[]>([]);
 const vacationsData = ref<VacationReport[]>([]);
 const summaryData = ref<SummaryData | null>(null);
 
-const loadUsers = async () => {
+const loadFiltersData = async () => {
     try {
-        const res = await axios.get('/users-list');
-        users.value = res.data.map((u: any) => ({ id: u.id, name: u.name }));
+        const res = await axios.get('/reports/filters-data');
+        users.value = res.data.users;
+        areas.value = res.data.areas;
     } catch (e) {
-        console.error(e);
-    }
-};
-
-const loadAreas = async () => {
-    try {
-        const res = await axios.get('/areas-list');
-        areas.value = res.data;
-    } catch (e) {
-        console.error(e);
+        console.error('Error cargando datos de filtros:', e);
+        toast.error('Error al cargar usuarios y áreas');
     }
 };
 
@@ -170,10 +163,8 @@ const exportReport = async () => {
 
 onMounted(() => {
     generateAvailableYears();
-    loadUsers();
-    loadAreas();
+    loadFiltersData();
     updateDateRange(selectedYear.value);
-    loadReport();
 });
 
 watch(selectedYear, (newYear) => {
