@@ -2,7 +2,10 @@
 import { ref, onMounted, computed, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
-import { useToast } from 'vue-toastification';
+import { useNotification } from '@/composables/useNotification';
+import { useReportValidation } from '@/composables/useReportValidation';
+import { useReportFilters } from '@/composables/useReportFilters';
+import { useApiResponse } from '@/composables/useApiResponse';
 
 interface AbsenceReport {
     id: number;
@@ -50,7 +53,7 @@ interface SummaryData {
     };
 }
 
-const toast = useToast();
+const { error: notifyError, success: notifySuccess, warning: notifyWarning } = useNotification();
 
 const reportType = ref<'personal' | 'area'>('personal');
 const selectedYear = ref<number>(new Date().getFullYear());
@@ -59,24 +62,27 @@ const endDate = ref(new Date().getFullYear() + '-12-31');
 const selectedUser = ref('');
 const selectedArea = ref('');
 const loading = ref(false);
-const users = ref<{ id: number; name: string }[]>([]);
-const areas = ref<{ id: number; name: string }[]>([]);
 const availableYears = ref<number[]>([]);
+
+// Usar composable para filtros
+const { users, areas, loading: filtersLoading, load: loadFilters } = useReportFilters();
+
+// Validación
+const validation = useReportValidation({
+    reportType,
+    selectedUser,
+    selectedArea,
+    selectedYear,
+});
+
+// API Response
+const { validateArray } = useApiResponse();
 
 const absencesData = ref<AbsenceReport[]>([]);
 const vacationsData = ref<VacationReport[]>([]);
 const summaryData = ref<SummaryData | null>(null);
 
-const loadFiltersData = async () => {
-    try {
-        const res = await axios.get('/reports/filters-data');
-        users.value = res.data.users;
-        areas.value = res.data.areas;
-    } catch (e) {
-        console.error('Error cargando datos de filtros:', e);
-        toast.error('Error al cargar usuarios y áreas');
-    }
-};
+// Ya no necesita implementación - usar composable directamente
 
 const generateAvailableYears = () => {
     const currentYear = new Date().getFullYear();
@@ -91,12 +97,9 @@ const updateDateRange = (year: number) => {
 };
 
 const loadReport = async () => {
-    if (reportType.value === 'personal' && !selectedUser.value) {
-        toast.warning('Por favor selecciona una persona');
-        return;
-    }
-    if (reportType.value === 'area' && !selectedArea.value) {
-        toast.warning('Por favor selecciona un área');
+    // Usar validación centralizada
+    if (!validation.isValid.value) {
+        notifyWarning(validation.getFirstError.value || 'Completa los campos requeridos');
         return;
     }
 
@@ -115,9 +118,17 @@ const loadReport = async () => {
         }
 
         const res = await axios.get(`/reports?${params}`);
+
+        // Validar respuesta
+        if (!validateArray(res.data.data)) {
+            throw new Error('Estructura de datos inválida en respuesta');
+        }
+
         absencesData.value = res.data.data || [];
+        notifySuccess('Reporte generado correctamente');
     } catch (e) {
-        toast.error('Error cargando reporte');
+        console.error('Error cargando reporte:', e);
+        notifyError('Error al generar el reporte');
         absencesData.value = [];
     } finally {
         loading.value = false;
@@ -161,10 +172,12 @@ const exportReport = async () => {
     }
 };
 
-onMounted(() => {
+onMounted(async () => {
     generateAvailableYears();
-    loadFiltersData();
     updateDateRange(selectedYear.value);
+
+    // Cargar filtros (usa cache si está disponible)
+    await loadFilters();
 });
 
 watch(selectedYear, (newYear) => {
