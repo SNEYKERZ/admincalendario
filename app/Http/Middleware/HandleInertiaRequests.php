@@ -75,7 +75,7 @@ class HandleInertiaRequests extends Middleware
         // Si hay impersonación de SuperAdmin, usar tenant del usuario impersonado
         $superAdminContextCheck = session('super_admin_context');
         if ($superAdminContextCheck && $superAdminContextCheck['impersonated_user_id']) {
-            $impersonatedUser = \App\Models\User::find($superAdminContextCheck['impersonated_user_id']);
+            $impersonatedUser = \App\Models\User::withoutGlobalScopes()->find($superAdminContextCheck['impersonated_user_id']);
             if ($impersonatedUser && $impersonatedUser->tenant_id) {
                 $moduleAccessService = app(ModuleAccessService::class);
                 $enabledModules = $moduleAccessService->getTenantEnabledModuleSlugs($impersonatedUser->tenant);

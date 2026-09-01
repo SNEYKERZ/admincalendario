@@ -21,7 +21,7 @@ class ValidateModuleAccess
         // Si hay impersonación de SuperAdmin, validar contra el usuario impersonado
         $superAdminContext = session('super_admin_context');
         if ($superAdminContext && $superAdminContext['impersonated_user_id']) {
-            $impersonatedUser = User::find($superAdminContext['impersonated_user_id']);
+            $impersonatedUser = User::withoutGlobalScopes()->find($superAdminContext['impersonated_user_id']);
             $user = $impersonatedUser ?: $user;
         }
 
