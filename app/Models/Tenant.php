@@ -102,6 +102,51 @@ class Tenant extends Model
         return $this->hasMany(SuperAdminAudit::class);
     }
 
+    public function employeeRequests(): HasMany
+    {
+        return $this->hasMany(EmployeeRequest::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MODULE & PLAN METHODS
+    |--------------------------------------------------------------------------
+    */
+
+    public function getCurrentSubscription(): ?Subscription
+    {
+        return $this->subscriptions()
+            ->where('is_active', true)
+            ->whereDate('expires_at', '>', now())
+            ->latest('created_at')
+            ->first();
+    }
+
+    public function getCurrentPlanModules(): \Illuminate\Support\Collection
+    {
+        $subscription = $this->getCurrentSubscription();
+
+        if (!$subscription) {
+            return collect();
+        }
+
+        return $subscription->plan->modules;
+    }
+
+    public function hasModule(string $moduleSlug): bool
+    {
+        return $this->getCurrentPlanModules()
+            ->where('slug', $moduleSlug)
+            ->isNotEmpty();
+    }
+
+    public function getEnabledModules(): array
+    {
+        return $this->getCurrentPlanModules()
+            ->pluck('slug')
+            ->toArray();
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES

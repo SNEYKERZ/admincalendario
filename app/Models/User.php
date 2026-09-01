@@ -112,6 +112,11 @@ class User extends Authenticatable
         return $this->hasMany(AbsenceAudit::class);
     }
 
+    public function employeeRequests(): HasMany
+    {
+        return $this->hasMany(EmployeeRequest::class);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | SCOPES
@@ -173,6 +178,29 @@ class User extends Authenticatable
     public function belongsToTenant(): bool
     {
         return $this->tenant_id !== null && !$this->is_superadmin_only;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | MODULE ACCESS
+    |--------------------------------------------------------------------------
+    */
+
+    public function canAccessModule(string $moduleSlug): bool
+    {
+        // SuperAdmin global (sin tenant) tiene acceso a todo excepto módulos de tenant
+        if ($this->isSuperAdmin() && !$this->tenant_id) {
+            return false; // SuperAdmin global no accede a módulos normales
+        }
+
+        // User debe ser admin y tener tenant
+        if (!$this->isAdmin() || !$this->tenant_id) {
+            return false;
+        }
+
+        // Verificar módulo
+        $tenant = $this->tenant;
+        return $tenant && $tenant->hasModule($moduleSlug);
     }
 
     /*

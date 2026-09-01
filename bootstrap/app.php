@@ -4,6 +4,7 @@ use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IdentifyTenant;
 use App\Http\Middleware\SuperAdminContextMiddleware;
+use App\Http\Middleware\ValidateModuleAccess;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -30,10 +31,9 @@ return Application::configure(basePath: dirname(__DIR__))
             SuperAdminContextMiddleware::class, // <-- SuperAdmin context handling
         ]);
 
-        //  AQUÍ VA EL AUTH (FORMA CORRECTA)
         $middleware->alias([
             'auth' => \Illuminate\Auth\Middleware\Authenticate::class,
-
+            'module' => ValidateModuleAccess::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

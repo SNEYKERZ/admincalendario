@@ -23,10 +23,15 @@ const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
 const isSuperAdmin = user?.role === 'superadmin';
 const superAdminContext = computed(() => (page.props as any).super_admin_context);
 const isGlobalContext = computed(() => isSuperAdmin && !superAdminContext.value?.impersonated_user_id);
+const enabledModules = computed(() => (page.props as any).enabled_modules ?? []);
 
 const company = computed(() => (page.props as any).company ?? {});
 const companyName = computed(() => company.value?.name || 'Empresa');
 const companyLogoUrl = computed(() => company.value?.logo_url || '/logo.png');
+
+const canAccessModule = (moduleSlug: string): boolean => {
+    return enabledModules.value.includes(moduleSlug);
+};
 
 const mainNavItems = computed<NavItem[]>(() => {
     // Si es SuperAdmin en contexto global, mostrar opciones de SuperAdmin
@@ -57,22 +62,34 @@ const mainNavItems = computed<NavItem[]>(() => {
 
     // Opciones normales para Admin/Colaborador
     return [
-        {
-            title: 'Dashboard',
-            href: '/dashboard',
-            icon: LayoutDashboard,
-        },
-        {
-            title: 'Calendario',
-            href: '/calendario',
-            icon: LayoutGrid,
-        },
-        {
-            title: 'Comunidad',
-            href: '/comunidad',
-            icon: Users,
-        },
-        ...(isAdmin
+        ...(canAccessModule('dashboard')
+            ? [
+                  {
+                      title: 'Dashboard',
+                      href: '/dashboard',
+                      icon: LayoutDashboard,
+                  },
+              ]
+            : []),
+        ...(canAccessModule('calendario')
+            ? [
+                  {
+                      title: 'Calendario',
+                      href: '/calendario',
+                      icon: LayoutGrid,
+                  },
+              ]
+            : []),
+        ...(canAccessModule('comunidad')
+            ? [
+                  {
+                      title: 'Comunidad',
+                      href: '/comunidad',
+                      icon: Users,
+                  },
+              ]
+            : []),
+        ...(isAdmin && canAccessModule('gestion-usuarios')
             ? [
                   {
                       title: 'Gestión usuarios',
@@ -81,7 +98,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                   },
               ]
             : []),
-        ...(isAdmin
+        ...(isAdmin && canAccessModule('areas')
             ? [
                   {
                       title: 'Áreas',
@@ -90,7 +107,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                   },
               ]
             : []),
-        ...(isAdmin
+        ...(isAdmin && canAccessModule('reportes')
             ? [
                   {
                       title: 'Reportes',
@@ -99,12 +116,16 @@ const mainNavItems = computed<NavItem[]>(() => {
                   },
               ]
             : []),
-        {
-            title: 'Documentos',
-            href: '/documentos',
-            icon: FileText,
-        },
-        ...(isAdmin
+        ...(canAccessModule('documentos')
+            ? [
+                  {
+                      title: 'Documentos',
+                      href: '/documentos',
+                      icon: FileText,
+                  },
+              ]
+            : []),
+        ...(isAdmin && canAccessModule('configuracion-empresa')
             ? [
                   {
                       title: 'Configuración de la Empresa',

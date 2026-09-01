@@ -16,6 +16,7 @@ class AuthServiceProvider extends ServiceProvider
         \App\Models\User::class => \App\Policies\UserPolicy::class,
         \App\Models\VacationYear::class => \App\Policies\VacationYearPolicy::class,
         \App\Models\AbsenceApprovalChain::class => \App\Policies\AbsenceApprovalChainPolicy::class,
+        \App\Models\EmployeeRequest::class => \App\Policies\EmployeeRequestPolicy::class,
     ];
 
     public function boot(): void

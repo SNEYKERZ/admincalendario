@@ -2,11 +2,13 @@
 
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\AdminRequestController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AreaController;
 use App\Http\Controllers\AreaManagerController;
 use App\Http\Controllers\CommunityController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\EmployeeRequestController;
 use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\HrDocumentController;
 use App\Http\Controllers\PublicApiController;
@@ -88,23 +90,49 @@ Route::middleware(['auth'])->group(function () {
     // Calendario
     Route::inertia('/calendario', 'Calendar')->name('calendario');
 
-    Route::inertia('/gestion-usuarios', 'GestionUsuarios')->name('gestion-usuarios');
-    Route::get('/gestion-usuarios/data', [VacationController::class, 'index'])->name('gestion-usuarios.data');
-    Route::post('/gestion-usuarios/{user}/adjust', [VacationController::class, 'adjust'])->name('gestion-usuarios.adjust');
+    Route::middleware('module:gestion-usuarios')->group(function () {
+        Route::inertia('/gestion-usuarios', 'GestionUsuarios')->name('gestion-usuarios');
+        Route::get('/gestion-usuarios/data', [VacationController::class, 'index'])->name('gestion-usuarios.data');
+        Route::post('/gestion-usuarios/{user}/adjust', [VacationController::class, 'adjust'])->name('gestion-usuarios.adjust');
+    });
 
     // Reportes
-    Route::inertia('/reportes', 'Reportes')->name('reportes');
-    Route::inertia('/documentos', 'Documents')->name('documents');
+    Route::middleware('module:reportes')->group(function () {
+        Route::inertia('/reportes', 'Reportes')->name('reportes');
+    });
+
+    // Documentos
+    Route::middleware('module:documentos')->group(function () {
+        Route::inertia('/documentos', 'Documents')->name('documents');
+    });
+
+    // Solicitudes de Empleados
+    Route::middleware('module:solicitudes')->group(function () {
+        Route::get('/solicitudes', [EmployeeRequestController::class, 'index'])->name('solicitudes.index');
+        Route::get('/solicitudes/crear', [EmployeeRequestController::class, 'create'])->name('solicitudes.create');
+        Route::post('/solicitudes', [EmployeeRequestController::class, 'store'])->name('solicitudes.store');
+        Route::get('/solicitudes/{employeeRequest}', [EmployeeRequestController::class, 'show'])->name('solicitudes.show');
+        Route::delete('/solicitudes/{employeeRequest}', [EmployeeRequestController::class, 'destroy'])->name('solicitudes.destroy');
+
+        // Admin routes
+        Route::middleware('can:admin')->prefix('admin/solicitudes')->group(function () {
+            Route::get('/', [AdminRequestController::class, 'index'])->name('admin.solicitudes.index');
+            Route::post('/{employeeRequest}/aprobar', [AdminRequestController::class, 'approve'])->name('admin.solicitudes.approve');
+            Route::post('/{employeeRequest}/rechazar', [AdminRequestController::class, 'reject'])->name('admin.solicitudes.reject');
+        });
+    });
 
     // Áreas organizacionales
-    Route::inertia('/areas', 'Areas')->name('areas');
-    Route::get('/areas-list', [AreaController::class, 'list'])->name('areas.list');
-    Route::get('/api/areas', [AreaController::class, 'index'])->name('areas.index');
-    Route::post('/api/areas', [AreaController::class, 'store'])->name('areas.store');
-    Route::get('/api/areas/{area}', [AreaController::class, 'show'])->name('areas.show');
-    Route::put('/api/areas/{area}', [AreaController::class, 'update'])->name('areas.update');
-    Route::delete('/api/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
-    Route::get('/api/areas/metrics', [AreaController::class, 'metrics'])->name('areas.metrics');
+    Route::middleware('module:areas')->group(function () {
+        Route::inertia('/areas', 'Areas')->name('areas');
+        Route::get('/areas-list', [AreaController::class, 'list'])->name('areas.list');
+        Route::get('/api/areas', [AreaController::class, 'index'])->name('areas.index');
+        Route::post('/api/areas', [AreaController::class, 'store'])->name('areas.store');
+        Route::get('/api/areas/{area}', [AreaController::class, 'show'])->name('areas.show');
+        Route::put('/api/areas/{area}', [AreaController::class, 'update'])->name('areas.update');
+        Route::delete('/api/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+        Route::get('/api/areas/metrics', [AreaController::class, 'metrics'])->name('areas.metrics');
+    });
 
     // Settings (handled by inertia inside auth group)
     Route::inertia('/legal/terms', 'LegalTerms')->name('legal.terms');

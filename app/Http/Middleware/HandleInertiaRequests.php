@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Managers\TenantManager;
 use App\Models\CompanySettings;
+use App\Services\ModuleAccessService;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -68,6 +69,12 @@ class HandleInertiaRequests extends Middleware
             $superAdminContext = session('super_admin_context');
         }
 
+        $enabledModules = [];
+        if ($request->user()?->tenant_id) {
+            $moduleAccessService = app(ModuleAccessService::class);
+            $enabledModules = $moduleAccessService->getTenantEnabledModuleSlugs($request->user()->tenant);
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
@@ -77,6 +84,7 @@ class HandleInertiaRequests extends Middleware
             'company' => $company,
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
             'super_admin_context' => $superAdminContext,
+            'enabled_modules' => $enabledModules,
         ];
     }
 }

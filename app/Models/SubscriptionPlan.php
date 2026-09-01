@@ -45,6 +45,11 @@ class SubscriptionPlan extends Model
         return $this->hasMany(Subscription::class, 'plan_id');
     }
 
+    public function modules(): \Illuminate\Database\Eloquent\Relations\BelongsToMany
+    {
+        return $this->belongsToMany(Module::class, 'plan_modules', 'plan_id', 'module_id');
+    }
+
     /*
     |--------------------------------------------------------------------------
     | HELPERS
