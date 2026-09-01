@@ -115,9 +115,20 @@ class Tenant extends Model
 
     public function getCurrentSubscription(): ?Subscription
     {
+        // Primero intentar obtener suscripción activa y no expirada
+        $subscription = $this->subscriptions()
+            ->where('is_active', true)
+            ->where('expires_at', '>', now())
+            ->latest('created_at')
+            ->first();
+
+        if ($subscription) {
+            return $subscription;
+        }
+
+        // Si no hay suscripción activa, retornar la más reciente (para debugging/fallback)
         return $this->subscriptions()
             ->where('is_active', true)
-            ->whereDate('expires_at', '>', now())
             ->latest('created_at')
             ->first();
     }

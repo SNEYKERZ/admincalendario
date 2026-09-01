@@ -48,7 +48,7 @@ class ModuleSeeder extends Seeder
 
         $configuracion = Module::firstOrCreate(
             ['slug' => 'configuracion-empresa'],
-            ['name' => 'Configuración de Empresa', 'icon' => 'Settings', 'is_core' => true, 'display_order' => 8]
+            ['name' => 'Configuración de Empresa', 'icon' => 'Settings', 'is_core' => false, 'display_order' => 8]
         );
 
         // Agregar módulo de Solicitudes (para Plan Enterprise)
