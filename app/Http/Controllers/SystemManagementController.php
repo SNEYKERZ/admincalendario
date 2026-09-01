@@ -261,6 +261,7 @@ class SystemManagementController extends Controller
         $subscription = Subscription::create([
             'user_id' => $user->id,
             'plan_id' => $plan->id,
+            'tenant_id' => $user->tenant_id,
             'starts_at' => $startsAt,
             'expires_at' => $expiresAt,
             'is_active' => true,

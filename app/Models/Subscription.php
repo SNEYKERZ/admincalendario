@@ -13,6 +13,7 @@ class Subscription extends Model
     protected $fillable = [
         'user_id',
         'plan_id',
+        'tenant_id',
         'starts_at',
         'expires_at',
         'is_active',
