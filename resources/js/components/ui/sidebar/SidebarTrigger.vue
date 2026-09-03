@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import { PanelLeftClose, PanelLeftOpen } from "lucide-vue-next"
 import { cn } from "@/lib/utils"
@@ -26,3 +26,4 @@ const { isMobile, state, toggleSidebar } = useSidebar()
     <span class="sr-only">Toggle sidebar</span>
   </Button>
 </template>
+

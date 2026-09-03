@@ -1,4 +1,4 @@
-<script lang="ts" setup>
+﻿<script lang="ts" setup>
 import type { HTMLAttributes } from "vue"
 
 const props = defineProps<{
@@ -15,3 +15,4 @@ const props = defineProps<{
     <slot />
   </nav>
 </template>
+

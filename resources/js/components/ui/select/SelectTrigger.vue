@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { SelectTriggerProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -31,3 +31,4 @@ const forwardedProps = useForwardProps(delegatedProps)
     </SelectIcon>
   </SelectTrigger>
 </template>
+

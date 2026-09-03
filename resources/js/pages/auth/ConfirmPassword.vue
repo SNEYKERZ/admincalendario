@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import { Button } from '@/components/ui/button';
@@ -51,3 +51,4 @@ import { store } from '@/routes/password/confirm';
         </Form>
     </AuthLayout>
 </template>
+

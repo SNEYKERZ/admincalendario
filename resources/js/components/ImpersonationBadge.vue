@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div v-if="isImpersonating" class="bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg px-4 py-3 mb-4">
         <div class="flex items-center justify-between">
             <div class="flex items-center space-x-2">
@@ -55,3 +55,4 @@ const stopImpersonation = async () => {
     }
 };
 </script>
+

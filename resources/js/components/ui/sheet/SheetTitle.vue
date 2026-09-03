@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { DialogTitleProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -19,3 +19,4 @@ const delegatedProps = reactiveOmit(props, "class")
     <slot />
   </DialogTitle>
 </template>
+

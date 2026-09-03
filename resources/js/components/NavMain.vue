@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import {
     SidebarGroup,
@@ -36,3 +36,4 @@ const { isCurrentUrl } = useCurrentUrl();
         </SidebarMenu>
     </SidebarGroup>
 </template>
+

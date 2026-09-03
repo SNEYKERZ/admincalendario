@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 defineProps<{
     message?: string;
 }>();
@@ -11,3 +11,4 @@ defineProps<{
         </p>
     </div>
 </template>
+

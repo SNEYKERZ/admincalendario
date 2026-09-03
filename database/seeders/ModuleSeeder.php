@@ -57,6 +57,12 @@ class ModuleSeeder extends Seeder
             ['name' => 'Solicitudes de Empleados', 'icon' => 'FileText', 'is_core' => false, 'display_order' => 9]
         );
 
+        // Agregar módulo de Horas Extra (para Plan Business y Enterprise)
+        $horasExtra = Module::firstOrCreate(
+            ['slug' => 'horas-extra'],
+            ['name' => 'Horas Extra', 'icon' => 'Clock', 'is_core' => false, 'display_order' => 10]
+        );
+
         // Asociar módulos a planes
         $planStarter = SubscriptionPlan::where('name', 'Plan Starter')->first();
         $planBusiness = SubscriptionPlan::where('name', 'Plan Business')->first();
@@ -80,6 +86,7 @@ class ModuleSeeder extends Seeder
                 $gestionUsuarios->id,
                 $areas->id,
                 $reportes->id,
+                $horasExtra->id,
                 $configuracion->id,
             ]);
         }
@@ -94,6 +101,7 @@ class ModuleSeeder extends Seeder
                 $reportes->id,
                 $documentos->id,
                 $solicitudes->id,
+                $horasExtra->id,
                 $configuracion->id,
             ]);
         }

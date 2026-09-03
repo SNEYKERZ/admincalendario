@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, onMounted } from 'vue'
 import FullCalendar from '@fullcalendar/vue3'
 import dayGridPlugin from '@fullcalendar/daygrid'
@@ -217,3 +217,4 @@ const calendarOptions = {
             :users="users" :isAdmin="isAdmin" @close="showModal = false" @saved="refreshCalendar" />
     </div>
 </template>
+

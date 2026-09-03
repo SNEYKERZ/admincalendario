@@ -1,9 +1,9 @@
-<template>
+﻿<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center gap-4">
                 <Link href="/solicitudes" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium">
-                    ← Volver
+                    â† Volver
                 </Link>
                 <div>
                     <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Nueva Solicitud</h2>
@@ -55,7 +55,7 @@
                     </label>
                     <textarea
                         v-model="form.description"
-                        placeholder="Proporciona más detalles sobre tu solicitud (opcional)"
+                        placeholder="Proporciona Más detalles sobre tu solicitud (opcional)"
                         rows="5"
                         class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                         maxlength="1000"
@@ -87,7 +87,7 @@
             <!-- Información -->
             <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p class="text-sm text-blue-900 dark:text-blue-100">
-                    ℹ️ Tu solicitud será revisada por el equipo de Recursos Humanos. Recibirás una notificación cuando sea procesada.
+                    â„¹ï¸ Tu solicitud serÃ¡ revisada por el equipo de Recursos Humanos. RecibirÃ¡s una notificación cuando sea procesada.
                 </p>
             </div>
         </div>
@@ -141,3 +141,4 @@ const submit = async () => {
     });
 };
 </script>
+

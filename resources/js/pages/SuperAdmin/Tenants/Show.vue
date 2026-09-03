@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -14,7 +14,7 @@
                     href="/superadmin/tenants"
                     class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                    ← Volver a Tenants
+                    â† Volver a Tenants
                 </Link>
             </div>
         </template>
@@ -46,7 +46,7 @@
                             <dt class="text-gray-600 dark:text-gray-400 font-medium">Estado</dt>
                             <dd>
                                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                    ✓ Activo
+                                    âœ“ Activo
                                 </span>
                             </dd>
                         </div>
@@ -72,15 +72,15 @@
                             :disabled="loading"
                             class="px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium disabled:opacity-50 transition-colors"
                         >
-                            {{ loading ? 'Impersonando...' : '👤 Impersonar' }}
+                            {{ loading ? 'Impersonando...' : 'ðŸ‘¤ Impersonar' }}
                         </button>
                     </div>
                 </div>
 
-                <!-- Estadísticas -->
+                <!-- Estadí­sticas -->
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        Estadísticas
+                        Estadí­sticas
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">
@@ -194,8 +194,9 @@ const impersonate = () => {
         return;
     }
 
-    if (confirm(`¿Impersonar a ${props.tenant.admin_name}?`)) {
+    if (confirm(`Â¿Impersonar a ${props.tenant.admin_name}?`)) {
         startImpersonation(props.tenant.admin_id);
     }
 };
 </script>
+

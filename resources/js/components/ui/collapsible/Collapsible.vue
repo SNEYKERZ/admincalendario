@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { CollapsibleRootEmits, CollapsibleRootProps } from "reka-ui"
 import { CollapsibleRoot, useForwardPropsEmits } from "reka-ui"
 
@@ -17,3 +17,4 @@ const forwarded = useForwardPropsEmits(props, emits)
     <slot v-bind="slotProps" />
   </CollapsibleRoot>
 </template>
+

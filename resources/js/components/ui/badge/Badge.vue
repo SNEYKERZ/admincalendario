@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { PrimitiveProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import type { BadgeVariants } from "."
@@ -24,3 +24,4 @@ const delegatedProps = reactiveOmit(props, "class")
     <slot />
   </Primitive>
 </template>
+

@@ -57,6 +57,12 @@ class AbsenceService
                 ]);
             }
 
+            if ($type->max_days_limit && $calculation['total_days'] > $type->max_days_limit) {
+                throw ValidationException::withMessages([
+                    'dates' => "El límite máximo permitido para {$type->name} es {$type->max_days_limit} días según la ley colombiana.",
+                ]);
+            }
+
             $overlap = Absence::where('user_id', $user->id)
                 ->whereIn('status', [AbsenceStatus::PENDING->value, AbsenceStatus::APPROVED->value])
                 ->where(function ($q) use ($start, $end) {
@@ -185,6 +191,12 @@ class AbsenceService
             if ($calculation['total_days'] <= 0) {
                 throw ValidationException::withMessages([
                     'dates' => 'Rango de fechas invalido',
+                ]);
+            }
+
+            if ($type->max_days_limit && $calculation['total_days'] > $type->max_days_limit) {
+                throw ValidationException::withMessages([
+                    'dates' => "El límite máximo permitido para {$type->name} es {$type->max_days_limit} días según la ley colombiana.",
                 ]);
             }
 

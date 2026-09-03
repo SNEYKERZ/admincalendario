@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { usePage } from '@inertiajs/vue3';
 import { ChevronsUpDown } from 'lucide-vue-next';
 import { computed } from 'vue';
@@ -53,3 +53,4 @@ const { isMobile, state } = useSidebar();
         </SidebarMenuItem>
     </SidebarMenu>
 </template>
+

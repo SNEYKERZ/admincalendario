@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 </script>
 
@@ -10,7 +10,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     Términos y Condiciones
                 </h1>
                 <p class="mt-2 text-gray-500 dark:text-gray-400">
-                    Última actualización:
+                    Ãšltima actualización:
                     {{ new Date().toLocaleDateString('es-CO') }}
                 </p>
             </div>
@@ -42,14 +42,14 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         Este sistema está destinado exclusivamente para la
-                        gestión de ausencias y vacaciones de empleados dentro
+                        Gestión de Ausencias/Novedades y vacaciones de empleados dentro
                         del ámbito laboral. El usuario se compromete a:
                     </p>
                     <ul
                         class="mt-4 list-disc space-y-2 pl-6 text-gray-600 dark:text-gray-400"
                     >
                         <li>
-                            Utilizar el sistema únicamente para fines legítimos
+                            Utilizar el sistema Ãºnicamente para fines legítimos
                         </li>
                         <li>
                             No intentar acceder a información de otros usuarios
@@ -71,11 +71,11 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     <h2
                         class="text-xl font-semibold text-gray-900 dark:text-gray-100"
                     >
-                        3. Políticas de Privacidad
+                        3. Plí­ticas de Privacidad
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         Recopilamos y almacenamos información personal necesaria
-                        para la gestión de ausencias y vacaciones. Esta
+                        para la Gestión de Ausencias/Novedades y vacaciones. Esta
                         información incluye:
                     </p>
                     <ul
@@ -132,7 +132,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         El sistema se proporciona "tal cual" sin garantías de
-                        ningún tipo. No garantizamos que el sistema esté libre
+                        ningÃºn tipo. No garantizamos que el sistema esté libre
                         de errores o disponible continuamente. No seremos
                         responsables por cualquier interrupción del servicio.
                     </p>
@@ -156,3 +156,4 @@ import AppLayout from '@/layouts/AppLayout.vue';
         </div>
     </AppLayout>
 </template>
+

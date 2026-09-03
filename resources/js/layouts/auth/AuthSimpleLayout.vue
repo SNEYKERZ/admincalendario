@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useAppearance } from '@/composables/useAppearance';
@@ -52,7 +52,7 @@ const setAuthTheme = () => {
                 </div>
 
                 <h2 class="mb-4 text-3xl font-semibold text-white/90">
-                    Gestión de Ausencias y Vacaciones
+                    Gestión de Ausencias/Novedades y Vacaciones
                 </h2>
 
                 <p class="mb-8 text-lg leading-relaxed text-white/70">
@@ -128,7 +128,7 @@ const setAuthTheme = () => {
             </div>
 
             <div class="absolute bottom-8 text-xs text-white/40">
-                © 2026 Ausentra. Todos los derechos reservados.
+                Â© 2026 Ausentra. Todos los derechos reservados.
             </div>
         </div>
 
@@ -217,3 +217,4 @@ const setAuthTheme = () => {
     color: var(--auth-brand-strong);
 }
 </style>
+

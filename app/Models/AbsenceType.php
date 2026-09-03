@@ -21,6 +21,7 @@ class AbsenceType extends Model
         'default_include_sunday',
         'default_include_holidays',
         'color',
+        'max_days_limit',
     ];
 
     protected $casts = [

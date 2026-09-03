@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { ShieldBan, ShieldCheck } from 'lucide-vue-next';
 import { onUnmounted, ref } from 'vue';
@@ -123,3 +123,4 @@ onUnmounted(() => {
         </SettingsLayout>
     </AppLayout>
 </template>
+

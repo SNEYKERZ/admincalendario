@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -78,7 +78,7 @@
                     <div class="flex items-center justify-between">
                         <div>
                             <p class="text-sm font-medium text-gray-600 dark:text-gray-400">
-                                Ausencias Pendientes
+                                Ausencias/Novedades Pendientes
                             </p>
                             <p class="text-3xl font-bold text-gray-900 dark:text-white mt-2">
                                 {{ stats.pending_absences }}
@@ -108,7 +108,7 @@
                     href="/superadmin/audit"
                     class="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all"
                 >
-                    <span class="font-medium text-gray-900 dark:text-white">Ver Auditoría</span>
+                    <span class="font-medium text-gray-900 dark:text-white">Ver AuditorÃ­a</span>
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
@@ -128,13 +128,13 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        Últimos Tenants
+                        Ãšltimos Tenants
                     </h3>
                     <Link
                         href="/superadmin/tenants"
                         class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                     >
-                        Ver todos →
+                        Ver todos â†’
                     </Link>
                 </div>
                 <div class="overflow-x-auto">
@@ -193,7 +193,7 @@
                                                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
                                         ]"
                                     >
-                                        {{ tenant.is_active ? '✓ Activo' : '✗ Inactivo' }}
+                                        {{ tenant.is_active ? 'âœ“ Activo' : 'âœ— Inactivo' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">
@@ -247,3 +247,4 @@ defineProps<{
     recentTenants: Tenant[];
 }>();
 </script>
+

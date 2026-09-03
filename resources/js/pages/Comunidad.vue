@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { includesNormalized } from '@/lib/search';
 import axios from 'axios';
@@ -101,7 +101,7 @@ onMounted(loadCommunity);
                 </div>
 
                 <div class="flex w-full flex-col gap-2 sm:max-w-sm sm:flex-row sm:gap-3">
-                    <!-- Filtro por área (solo si hay más de 1) -->
+                    <!-- Filtro por área (solo si hay Más de 1) -->
                     <select
                         v-if="areas.length > 1"
                         v-model.number="selectedArea"
@@ -117,7 +117,7 @@ onMounted(loadCommunity);
                     <input
                         v-model="search"
                         type="text"
-                        placeholder="Buscar por nombre, correo, teléfono, rol o área..."
+                        placeholder="Buscar por nombre, correo, Teléfono, rol o área..."
                         class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900"
                     />
                 </div>
@@ -133,7 +133,7 @@ onMounted(loadCommunity);
                 v-else-if="filteredUsers.length === 0"
                 class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-900"
             >
-                No se encontraron personas con ese criterio de búsqueda.
+                No se encontraron personas con ese criterio de bÃºsqueda.
             </div>
 
             <!-- Grid -->
@@ -187,7 +187,7 @@ onMounted(loadCommunity);
                                 </p>
 
                                 <div class="mt-auto w-full rounded-lg border border-dashed border-slate-300 p-2 text-xs text-slate-500 dark:border-slate-700 dark:text-slate-400">
-                                    Pasa el cursor para ver más información
+                                    Pasa el cursor para ver Más información
                                 </div>
                             </div>
                         </article>

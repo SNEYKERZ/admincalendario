@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -307,7 +307,7 @@ const remove = async () => {
                     >
                         {{
                             mode === 'create'
-                                ? 'Nueva ausencia'
+                                ? 'Nueva Ausencia/Novedad'
                                 : 'Detalle de ausencia'
                         }}
                     </h2>
@@ -347,7 +347,7 @@ const remove = async () => {
                     </div>
                     <div>
                         <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Tipo de ausencia
+                            Tipo de Ausencia/Novedad
                         </p>
                         <p class="font-medium text-gray-900 dark:text-gray-100">
                             {{ absence.type?.name }}
@@ -358,7 +358,7 @@ const remove = async () => {
                             Duración
                         </p>
                         <p class="font-medium text-gray-900 dark:text-gray-100">
-                            {{ absence.total_days }} días / {{ absence.total_hours }} horas
+                            {{ absence.total_days }} dí­as / {{ absence.total_hours }} horas
                         </p>
                     </div>
                 </div>
@@ -442,7 +442,7 @@ const remove = async () => {
                     <p
                         class="mb-3 text-sm font-medium text-amber-900 dark:text-amber-200"
                     >
-                        Descontar del saldo de días
+                        Descontar del saldo de dí­as
                     </p>
                     <div class="grid gap-3 md:grid-cols-3">
                         <label
@@ -496,8 +496,8 @@ const remove = async () => {
                         </select>
                     </div>
                     <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Si están marcados, estos días se descontarán del saldo
-                        de días disponibles.
+                        Si están marcados, estos dí­as se descontarán del saldo
+                        de dí­as disponibles.
                     </p>
                 </div>
 
@@ -566,7 +566,7 @@ const remove = async () => {
 
                     <ConfirmDialog
                         title="Eliminar ausencia"
-                        description="¿Está seguro de que desea eliminar esta ausencia? Esta acción no se puede deshacer."
+                        description="Â¿Está seguro de que desea eliminar esta ausencia? Esta acción no se puede deshacer."
                         confirm-text="Eliminar"
                         cancel-text="Cancelar"
                         variant="destructive"
@@ -586,3 +586,4 @@ const remove = async () => {
         </div>
     </div>
 </template>
+

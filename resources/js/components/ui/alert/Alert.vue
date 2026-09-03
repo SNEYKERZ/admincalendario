@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import type { AlertVariants } from "."
 import { cn } from "@/lib/utils"
@@ -19,3 +19,4 @@ const props = defineProps<{
     <slot />
   </div>
 </template>
+

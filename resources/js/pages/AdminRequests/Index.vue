@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -45,10 +45,10 @@
                         </select>
                     </div>
 
-                    <!-- Búsqueda -->
+                    <!-- BÃºsqueda -->
                     <div>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Búsqueda
+                            BÃºsqueda
                         </label>
                         <input
                             v-model="searchQuery"
@@ -70,7 +70,7 @@
                 </div>
             </div>
 
-            <!-- Estadísticas -->
+            <!-- Estadí­sticas -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
                     <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
@@ -177,7 +177,7 @@
                         @click="showModal = false"
                         class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl leading-none"
                     >
-                        ×
+                        Ã—
                     </button>
                 </div>
 
@@ -225,7 +225,7 @@
                             :disabled="approvingLoading"
                             class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                            {{ approvingLoading ? 'Aprobando...' : '✓ Aprobar Solicitud' }}
+                            {{ approvingLoading ? 'Aprobando...' : 'âœ“ Aprobar Solicitud' }}
                         </button>
 
                         <!-- Rechazar -->
@@ -235,7 +235,7 @@
                             </label>
                             <textarea
                                 v-model="rejectionReason"
-                                placeholder="Explica por qué se rechaza la solicitud..."
+                                placeholder="Explica por quÃ© se rechaza la solicitud..."
                                 rows="3"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 required
@@ -246,7 +246,7 @@
                             :disabled="rejectingLoading || !rejectionReason"
                             class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                            {{ rejectingLoading ? 'Rechazando...' : '✗ Rechazar Solicitud' }}
+                            {{ rejectingLoading ? 'Rechazando...' : 'âœ— Rechazar Solicitud' }}
                         </button>
                     </div>
 
@@ -273,7 +273,7 @@
                                                 : 'text-red-900 dark:text-red-100',
                                         ]"
                                     >
-                                        {{ approval.status === 'aprobado' ? '✓ Aprobado' : '✗ Rechazado' }}
+                                        {{ approval.status === 'aprobado' ? 'âœ“ Aprobado' : 'âœ— Rechazado' }}
                                     </p>
                                     <span
                                         :class="[
@@ -425,3 +425,4 @@ const rejectRequest = () => {
     });
 };
 </script>
+

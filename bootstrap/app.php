@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\IdentifyTenant;
+use App\Http\Middleware\SetUtf8Encoding;
 use App\Http\Middleware\SuperAdminContextMiddleware;
 use App\Http\Middleware\ValidateModuleAccess;
 use Illuminate\Foundation\Application;
@@ -24,6 +25,7 @@ return Application::configure(basePath: dirname(__DIR__))
         ]);
 
         $middleware->web([
+            SetUtf8Encoding::class, // <-- Force UTF-8 encoding
             HandleAppearance::class,
             HandleInertiaRequests::class,
             AddLinkHeadersForPreloadedAssets::class,

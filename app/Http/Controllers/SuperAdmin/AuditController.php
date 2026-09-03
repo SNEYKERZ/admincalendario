@@ -44,31 +44,23 @@ class AuditController extends Controller
         $paginated = $query->orderBy('created_at', 'desc')->paginate(50);
 
         return Inertia::render('SuperAdmin/Audit', [
-            'audits' => [
-                'data' => $paginated->map(fn ($log) => [
-                    'id' => $log->id,
-                    'action' => $log->action,
-                    'description' => $log->description,
-                    'superadmin_name' => $log->superadmin?->name,
-                    'superadmin_email' => $log->superadmin?->email,
-                    'impersonated_name' => $log->impersonatedUser?->name,
-                    'impersonated_email' => $log->impersonatedUser?->email,
-                    'tenant_name' => $log->tenant?->name,
-                    'ip_address' => $log->ip_address,
-                    'created_at' => $log->created_at->format('Y-m-d H:i:s'),
-                ])->toArray(),
-                'meta' => [
-                    'current_page' => $paginated->currentPage(),
-                    'last_page' => $paginated->lastPage(),
-                    'per_page' => $paginated->perPage(),
-                    'total' => $paginated->total(),
-                ],
-                'links' => [
-                    'first' => $paginated->url(1),
-                    'last' => $paginated->url($paginated->lastPage()),
-                    'prev' => $paginated->previousPageUrl(),
-                    'next' => $paginated->nextPageUrl(),
-                ],
+            'data' => $paginated->map(fn ($log) => [
+                'id' => $log->id,
+                'action' => $log->action,
+                'description' => $log->description,
+                'superadmin_name' => $log->superadmin?->name,
+                'superadmin_email' => $log->superadmin?->email,
+                'impersonated_name' => $log->impersonatedUser?->name,
+                'impersonated_email' => $log->impersonatedUser?->email,
+                'tenant_name' => $log->tenant?->name,
+                'ip_address' => $log->ip_address,
+                'created_at' => $log->created_at->format('Y-m-d H:i:s'),
+            ])->toArray(),
+            'meta' => [
+                'current_page' => $paginated->currentPage(),
+                'last_page' => $paginated->lastPage(),
+                'per_page' => $paginated->perPage(),
+                'total' => $paginated->total(),
             ],
             'filters' => [
                 'action' => $request->action,

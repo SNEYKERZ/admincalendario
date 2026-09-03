@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\UserRole;
 use App\Models\Concerns\Tenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -115,6 +116,11 @@ class User extends Authenticatable
     public function employeeRequests(): HasMany
     {
         return $this->hasMany(EmployeeRequest::class);
+    }
+
+    public function leadAreas(): BelongsToMany
+    {
+        return $this->belongsToMany(Area::class, 'area_leaders', 'user_id', 'area_id')->withTimestamps();
     }
 
     /*

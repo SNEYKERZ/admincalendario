@@ -6,6 +6,7 @@ use App\Models\Concerns\Tenantable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Area extends Model
@@ -47,6 +48,11 @@ class Area extends Model
     public function manager(): BelongsTo
     {
         return $this->belongsTo(User::class, 'area_manager_id');
+    }
+
+    public function leaders(): BelongsToMany
+    {
+        return $this->belongsToMany(User::class, 'area_leaders', 'area_id', 'user_id')->withTimestamps();
     }
 
     /*

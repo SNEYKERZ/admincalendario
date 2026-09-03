@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
 import Heading from '@/components/Heading.vue';
 import { Button } from '@/components/ui/button';
@@ -74,4 +74,5 @@ const { isCurrentOrParentUrl } = useCurrentUrl();
         </div>
     </div>
 </template>
+
 

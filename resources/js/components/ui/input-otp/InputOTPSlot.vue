@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { useForwardProps } from "reka-ui"
@@ -30,3 +30,4 @@ const slot = computed(() => context?.value.slots[props.index])
     </div>
   </div>
 </template>
+

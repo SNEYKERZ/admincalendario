@@ -20,8 +20,9 @@ class AbsenceController extends Controller
     {
         $this->authorize('viewAny', Absence::class);
 
-        $query = Absence::withoutTenant()
-            ->with(['user', 'type', 'approver']);
+        $query = auth()->user()->isSuperAdmin()
+            ? Absence::withoutTenant()->with(['user', 'type', 'approver'])
+            : Absence::with(['user', 'type', 'approver']);
 
         // Para administradores y colaboradores se ocultan ausencias de superadmin.
         if (! auth()->user()->isSuperAdmin()) {
@@ -50,6 +51,26 @@ class AbsenceController extends Controller
         } elseif ($request->filled('user_id')) {
             $query->where('user_id', (int) $request->user_id);
 
+        }
+
+        if ($request->filled('area_ids')) {
+            $areaIds = $request->input('area_ids');
+
+            if (is_string($areaIds)) {
+                $areaIds = explode(',', $areaIds);
+            }
+
+            $areaIds = collect($areaIds)
+                ->map(fn ($id) => (int) $id)
+                ->filter(fn ($id) => $id > 0)
+                ->values()
+                ->all();
+
+            if (!empty($areaIds)) {
+                $query->whereHas('user', function ($userQuery) use ($areaIds) {
+                    $userQuery->whereIn('area_id', $areaIds);
+                });
+            }
         }
 
         if ($request->filled('status')) {

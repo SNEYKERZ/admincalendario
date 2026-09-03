@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
 import { IdCard, LogOut, Settings } from 'lucide-vue-next';
 import {
@@ -59,4 +59,5 @@ defineProps<Props>();
         </Link>
     </DropdownMenuItem>
 </template>
+
 

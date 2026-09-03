@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { CollapsibleContentProps } from "reka-ui"
 import { CollapsibleContent } from "reka-ui"
 
@@ -13,3 +13,4 @@ const props = defineProps<CollapsibleContentProps>()
     <slot />
   </CollapsibleContent>
 </template>
+

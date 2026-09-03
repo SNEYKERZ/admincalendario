@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import { MinusIcon } from "lucide-vue-next"
 import { useForwardProps } from "reka-ui"
@@ -19,3 +19,4 @@ const forwarded = useForwardProps(props)
     </slot>
   </div>
 </template>
+

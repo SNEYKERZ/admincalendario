@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import FullCalendar from '@fullcalendar/vue3';
@@ -20,10 +20,13 @@ const modalMode = ref('create');
 const selectedRange = ref(null);
 const selectedAbsence = ref(null);
 const selectedUsers = ref<number[]>([]);
+const selectedAreas = ref<number[]>([]);
 const usersSelectRef = ref<HTMLSelectElement | null>(null);
+const areasSelectRef = ref<HTMLSelectElement | null>(null);
 const users = ref<
     { id: number; name: string; identification: string; email: string }[]
 >([]);
+const areas = ref<{ id: number; name: string }[]>([]);
 const isAdmin = ref(false);
 const toast = useToast();
 const selectedCountry = ref('CO');
@@ -31,6 +34,7 @@ const holidays = ref<{ date: string; title: string }[]>([]);
 const countries = ref<{ code: string; name: string }[]>([]);
 
 let usersSelect2: any = null;
+let areasSelect2: any = null;
 let select2Loaded = false;
 const isMobile = ref(false);
 
@@ -59,11 +63,23 @@ onMounted(async () => {
             email: u.email || '',
         }));
 
+        // Cargar áreas disponibles
+        try {
+            const areasRes = await axios.get('/api/areas');
+            areas.value = areasRes.data.areas.map((a: any) => ({
+                id: a.id,
+                name: a.name,
+            }));
+        } catch (e) {
+            console.error('Error loading areas:', e);
+        }
+
         // Load countries and holidays
         await loadCountries();
         await loadHolidays(new Date().getFullYear());
         await nextTick();
         await initUsersSelect2();
+        await initAreasSelect2();
     } catch (e) {
         console.error('Error loading data:', e);
     }
@@ -71,6 +87,7 @@ onMounted(async () => {
 
 onBeforeUnmount(() => {
     destroyUsersSelect2();
+    destroyAreasSelect2();
     window.removeEventListener('resize', updateViewportFlags);
 });
 
@@ -136,6 +153,11 @@ const fetchEvents = async (
             params.user_ids = selectedUsers.value.join(',');
         }
 
+        // Filtrar por áreas seleccionadas.
+        if (selectedAreas.value.length > 0) {
+            params.area_ids = selectedAreas.value.join(',');
+        }
+
         const res = await axios.get('/absences', { params });
 
         const absences = res.data;
@@ -192,6 +214,11 @@ const handleUserChange = (userIds: number[]) => {
     refreshCalendar();
 };
 
+const handleAreaChange = (areaIds: number[]) => {
+    selectedAreas.value = areaIds;
+    refreshCalendar();
+};
+
 const handleUsersSelect2Change = () => {
     if (!usersSelect2) return;
 
@@ -205,11 +232,31 @@ const handleUsersSelect2Change = () => {
     handleUserChange(ids);
 };
 
+const handleAreasSelect2Change = () => {
+    if (!areasSelect2) return;
+
+    const rawValue = areasSelect2.val();
+    const ids = Array.isArray(rawValue)
+        ? rawValue
+              .map((value: string | number) => Number(value))
+              .filter((value: number) => Number.isInteger(value))
+        : [];
+
+    handleAreaChange(ids);
+};
+
 const destroyUsersSelect2 = () => {
     if (!usersSelect2) return;
     usersSelect2.off('.calendarUsers');
     usersSelect2.select2('destroy');
     usersSelect2 = null;
+};
+
+const destroyAreasSelect2 = () => {
+    if (!areasSelect2) return;
+    areasSelect2.off('.calendarAreas');
+    areasSelect2.select2('destroy');
+    areasSelect2 = null;
 };
 
 const ensureSelect2Loaded = async () => {
@@ -285,6 +332,47 @@ const initUsersSelect2 = async () => {
     });
 };
 
+const initAreasSelect2 = async () => {
+    if (!areasSelectRef.value) return;
+
+    const pluginReady = await ensureSelect2Loaded();
+    if (!pluginReady) {
+        console.error('Select2 no pudo inicializarse');
+        return;
+    }
+
+    destroyAreasSelect2();
+
+    areasSelect2 = $(areasSelectRef.value);
+    areasSelect2.select2({
+        width: '100%',
+        placeholder: 'Todas las áreas',
+        allowClear: true,
+        closeOnSelect: false,
+        minimumResultsForSearch: 0,
+        matcher: (params: any, data: any) => {
+            const term = normalizeForSearch(params?.term);
+            if (!term) return data;
+
+            const text = normalizeForSearch(data?.text);
+            return text.includes(term) ? data : null;
+        },
+        language: {
+            noResults: () => 'No se encontraron áreas',
+            searching: () => 'Buscando...',
+        },
+    });
+
+    areasSelect2.val(selectedAreas.value.map(String)).trigger('change.select2');
+    areasSelect2.on('change.calendarAreas', handleAreasSelect2Change);
+    areasSelect2.on('select2:open.calendarAreas', () => {
+        const searchField = document.querySelector<HTMLInputElement>(
+            '.select2-container--open .select2-search__field',
+        );
+        searchField?.focus();
+    });
+};
+
 const clearSelectedUsers = () => {
     if (!usersSelect2) {
         handleUserChange([]);
@@ -294,9 +382,23 @@ const clearSelectedUsers = () => {
     usersSelect2.val(null).trigger('change');
 };
 
+const clearSelectedAreas = () => {
+    if (!areasSelect2) {
+        handleAreaChange([]);
+        return;
+    }
+
+    areasSelect2.val(null).trigger('change');
+};
+
 watch(users, async () => {
     await nextTick();
     await initUsersSelect2();
+});
+
+watch(areas, async () => {
+    await nextTick();
+    await initAreasSelect2();
 });
 
 const handleEventDidMount = (info: any) => {
@@ -308,7 +410,7 @@ const handleEventDidMount = (info: any) => {
             tippy(info.el, {
                 content: `
                     <div style="font-size:18px">
-                        <strong>🎉 ${info.event.title}</strong>
+                        <strong>ðŸŽ‰ ${info.event.title}</strong>
                     </div>
                 `,
                 allowHTML: true,
@@ -396,7 +498,7 @@ const calendarOptions = computed(() => ({
         today: 'Hoy',
         month: 'Mes',
         week: 'Semana',
-        day: 'Día',
+        day: 'dí­a',
         list: 'Lista',
     },
 }));
@@ -413,7 +515,7 @@ const calendarOptions = computed(() => ({
                     <h1
                         class="text-2xl font-bold text-gray-900 dark:text-gray-100"
                     >
-                        Calendario de Ausencias
+                        Calendario de Ausencias/Novedades
                     </h1>
                     <p class="text-sm text-gray-500 dark:text-gray-400">
                         Visualiza y gestiona las ausencias del equipo
@@ -465,6 +567,35 @@ const calendarOptions = computed(() => ({
                     <button
                         v-if="selectedUsers.length"
                         @click="clearSelectedUsers"
+                        class="text-sm text-red-500 hover:text-red-700 dark:text-red-400"
+                    >
+                        ✕
+                    </button>
+                </div>
+
+                <!-- Area Select Searchable -->
+                <div class="calendar-areas-filter flex items-center justify-between gap-2 sm:justify-start">
+                    <label class="text-sm text-gray-600 dark:text-gray-400">
+                        Áreas:
+                    </label>
+                    <div class="relative w-full sm:w-56">
+                        <select
+                            ref="areasSelectRef"
+                            multiple
+                            class="calendar-areas-select"
+                        >
+                            <option
+                                v-for="area in areas"
+                                :key="area.id"
+                                :value="area.id"
+                            >
+                                {{ area.name }}
+                            </option>
+                        </select>
+                    </div>
+                    <button
+                        v-if="selectedAreas.length"
+                        @click="clearSelectedAreas"
                         class="text-sm text-red-500 hover:text-red-700 dark:text-red-400"
                     >
                         ✕
@@ -594,3 +725,4 @@ const calendarOptions = computed(() => ({
     }
 }
 </style>
+

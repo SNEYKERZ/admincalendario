@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { DropdownMenuRadioGroupEmits, DropdownMenuRadioGroupProps } from "reka-ui"
 import {
   DropdownMenuRadioGroup,
@@ -19,3 +19,4 @@ const forwarded = useForwardPropsEmits(props, emits)
     <slot />
   </DropdownMenuRadioGroup>
 </template>
+

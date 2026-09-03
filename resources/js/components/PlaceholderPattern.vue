@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { useId } from 'vue';
 
 const patternId = `pattern-${useId()}`;
@@ -29,3 +29,4 @@ const patternId = `pattern-${useId()}`;
         ></rect>
     </svg>
 </template>
+

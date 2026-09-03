@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from 'vue';
 
 defineOptions({
@@ -27,3 +27,4 @@ defineProps<Props>();
         />
     </svg>
 </template>
+

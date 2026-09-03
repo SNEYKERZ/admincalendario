@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { LinkComponentBaseProps, Method } from '@inertiajs/core';
 import { Link } from '@inertiajs/vue3';
 
@@ -23,3 +23,4 @@ defineProps<Props>();
         <slot />
     </Link>
 </template>
+

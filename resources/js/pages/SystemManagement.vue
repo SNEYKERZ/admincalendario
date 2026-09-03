@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
@@ -219,7 +219,7 @@ const savePlan = async () => {
 };
 
 const deletePlan = async (plan: SubscriptionPlan) => {
-    if (!confirm(`¿Eliminar el plan "${plan.name}"?`)) return;
+    if (!confirm(`Â¿Eliminar el plan "${plan.name}"?`)) return;
     try {
         await axios.delete(`/gestion-sistema/plans/${plan.id}`);
         toast.success('Plan eliminado');
@@ -254,7 +254,7 @@ const activateSubscription = async () => {
 };
 
 const deactivateSubscription = async (admin: Admin) => {
-    if (!confirm(`¿Desactivar suscripción de ${admin.name}?`)) return;
+    if (!confirm(`Â¿Desactivar suscripción de ${admin.name}?`)) return;
     try {
         await axios.post('/gestion-sistema/subscription/deactivate', {
             user_id: admin.id,
@@ -313,7 +313,7 @@ const saveAnnouncement = async () => {
 };
 
 const deleteAnnouncement = async (announcement: Announcement) => {
-    if (!confirm(`¿Eliminar el anuncio "${announcement.title}"?`)) return;
+    if (!confirm(`Â¿Eliminar el anuncio "${announcement.title}"?`)) return;
     try {
         await axios.delete(`/gestion-sistema/announcements/${announcement.id}`);
         toast.success('Anuncio eliminado');
@@ -496,7 +496,7 @@ onMounted(() => {
                         </p>
                         <div class="max-w-xs">
                             <label class="label"
-                                >Días antes del vencimiento</label
+                                >dí­as antes del vencimiento</label
                             >
                             <input
                                 v-model.number="settings.show_ads_days_before"
@@ -567,7 +567,7 @@ onMounted(() => {
                                         {{ plan.name }}
                                     </h3>
                                     <p class="text-sm text-gray-500">
-                                        {{ plan.duration_days }} días
+                                        {{ plan.duration_days }} dí­as
                                     </p>
                                 </div>
                                 <span
@@ -674,7 +674,7 @@ onMounted(() => {
                                     <th
                                         class="px-4 py-3 text-left text-xs font-medium text-gray-500"
                                     >
-                                        Días
+                                        dí­as
                                     </th>
                                     <th
                                         class="px-4 py-3 text-left text-xs font-medium text-gray-500"
@@ -748,7 +748,7 @@ onMounted(() => {
                                             >{{
                                                 admin.subscription_days_remaining
                                             }}
-                                            días</span
+                                            dí­as</span
                                         >
                                         <span v-else class="text-gray-400"
                                             >-</span
@@ -862,7 +862,7 @@ onMounted(() => {
                                     v-if="announcement.days_before"
                                     class="ml-2"
                                 >
-                                    ({{ announcement.days_before }} días antes)
+                                    ({{ announcement.days_before }} dí­as antes)
                                 </span>
                             </div>
                             <div class="mt-4 flex gap-2">
@@ -911,7 +911,7 @@ onMounted(() => {
                                 </div>
                                 <span
                                     class="rounded-full bg-red-500 px-3 py-1 text-sm font-bold text-white"
-                                    >{{ admin.days_remaining }} días</span
+                                    >{{ admin.days_remaining }} dí­as</span
                                 >
                             </div>
                             <div class="mt-3 text-sm text-amber-800">
@@ -953,7 +953,7 @@ onMounted(() => {
                         />
                     </div>
                     <div>
-                        <label class="label">Duración (días)</label>
+                        <label class="label">Duración (dí­as)</label>
                         <input
                             v-model.number="planForm.duration_days"
                             type="number"
@@ -1066,7 +1066,7 @@ onMounted(() => {
                             <div>
                                 <p class="font-medium">{{ plan.name }}</p>
                                 <p class="text-sm text-gray-500">
-                                    {{ plan.duration_days }} días
+                                    {{ plan.duration_days }} dí­as
                                 </p>
                             </div>
                         </div>
@@ -1129,7 +1129,7 @@ onMounted(() => {
                         </select>
                     </div>
                     <div v-if="announcementForm.type !== 'general'">
-                        <label class="label">Días antes del vencimiento</label>
+                        <label class="label">dí­as antes del vencimiento</label>
                         <input
                             v-model.number="announcementForm.days_before"
                             type="number"
@@ -1162,3 +1162,4 @@ onMounted(() => {
         </div>
     </AppLayout>
 </template>
+

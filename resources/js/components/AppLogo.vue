@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <div class="flex items-center gap-2">
         <img
             src="/ausentra-logo.png"
@@ -8,3 +8,4 @@
         <span class="truncate text-sm font-semibold">Ausentra</span>
     </div>
 </template>
+

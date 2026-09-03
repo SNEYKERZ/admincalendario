@@ -1,10 +1,10 @@
-<template>
+﻿<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
-                        Auditoría de SuperAdmin
+                        AuditorÃ­a de SuperAdmin
                     </h2>
                     <p class="text-gray-500 dark:text-gray-400 mt-2">
                         Registro de todas las acciones realizadas
@@ -14,7 +14,7 @@
                     href="/superadmin/dashboard"
                     class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                    ← Volver
+                    â† Volver
                 </Link>
             </div>
         </template>
@@ -143,14 +143,14 @@
                 <!-- Empty State -->
                 <div v-if="audits.data.length === 0" class="text-center py-12">
                     <p class="text-gray-500 dark:text-gray-400">
-                        No hay registros de auditoría
+                        No hay registros de auditorÃ­a
                     </p>
                 </div>
 
                 <!-- Pagination -->
                 <div v-if="audits.meta && audits.meta.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50">
                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                        Página {{ audits.meta.current_page }} de {{ audits.meta.last_page }}
+                        PÃ¡gina {{ audits.meta.current_page }} de {{ audits.meta.last_page }}
                         ({{ audits.meta.total }} registros)
                     </p>
                     <div class="space-x-2">
@@ -159,14 +159,14 @@
                             :href="`/superadmin/audit?page=${audits.meta.current_page - 1}`"
                             class="px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                            ← Anterior
+                            â† Anterior
                         </Link>
                         <Link
                             v-if="audits.meta.current_page < audits.meta.last_page"
                             :href="`/superadmin/audit?page=${audits.meta.current_page + 1}`"
                             class="px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                            Siguiente →
+                            Siguiente â†’
                         </Link>
                     </div>
                 </div>
@@ -259,3 +259,4 @@ const getActionBadgeClass = (action: string): string => {
     return classMap[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
 };
 </script>
+

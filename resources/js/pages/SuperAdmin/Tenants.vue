@@ -1,4 +1,4 @@
-<template>
+﻿<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -14,7 +14,7 @@
                     href="/superadmin/dashboard"
                     class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                    ← Volver
+                    â† Volver
                 </Link>
             </div>
         </template>
@@ -102,7 +102,7 @@
                                                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
                                         ]"
                                     >
-                                        {{ tenant.is_active ? '✓ Activo' : '✗ Inactivo' }}
+                                        {{ tenant.is_active ? 'âœ“ Activo' : 'âœ— Inactivo' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm space-x-3">
@@ -183,8 +183,9 @@ const impersonate = (adminId: number | null) => {
         return;
     }
 
-    if (confirm('¿Impersonar a este administrador?')) {
+    if (confirm('Â¿Impersonar a este administrador?')) {
         startImpersonation(adminId);
     }
 };
 </script>
+

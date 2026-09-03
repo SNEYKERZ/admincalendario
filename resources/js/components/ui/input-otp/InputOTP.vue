@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import type { OTPInputEmits, OTPInputProps } from "vue-input-otp"
 import { reactiveOmit } from "@vueuse/core"
@@ -26,3 +26,4 @@ const forwarded = useForwardPropsEmits(delegatedProps, emits)
     <slot v-bind="slotProps" />
   </OTPInput>
 </template>
+

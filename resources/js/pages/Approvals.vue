@@ -1,7 +1,7 @@
-<template>
+﻿<template>
   <Layout>
     <div class="max-w-6xl mx-auto px-4 py-8">
-      <h1 class="text-3xl font-bold mb-8">Ausencias Pendientes de Aprobación</h1>
+      <h1 class="text-3xl font-bold mb-8">Ausencias/Novedades Pendientes de Aprobación</h1>
 
       <div v-if="loading" class="text-center py-12">
         <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
@@ -9,7 +9,7 @@
       </div>
 
       <div v-else-if="!pendingChains.length" class="bg-yellow-50 border border-yellow-200 rounded-lg p-6 text-center">
-        <p class="text-gray-600">No hay ausencias pendientes de aprobación</p>
+        <p class="text-gray-600">No hay ausencias/novedades pendientes de aprobación</p>
       </div>
 
       <div v-else class="space-y-4">
@@ -30,12 +30,12 @@
 
               <div class="mt-4 grid grid-cols-2 gap-4">
                 <div>
-                  <p class="text-xs text-gray-500 uppercase">Tipo de Ausencia</p>
+                  <p class="text-xs text-gray-500 uppercase">Tipo de Ausencia/Novedad</p>
                   <p class="font-medium">{{ chain.absence.type.name }}</p>
                 </div>
                 <div>
                   <p class="text-xs text-gray-500 uppercase">Duración</p>
-                  <p class="font-medium">{{ chain.absence.total_days }} días</p>
+                  <p class="font-medium">{{ chain.absence.total_days }} dí­as</p>
                 </div>
                 <div class="col-span-2">
                   <p class="text-xs text-gray-500 uppercase">Período</p>
@@ -56,13 +56,13 @@
                 @click="openApproveModal(chain)"
                 class="px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded font-medium transition"
               >
-                ✓ Aprobar
+                âœ“ Aprobar
               </button>
               <button
                 @click="openRejectModal(chain)"
                 class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded font-medium transition"
               >
-                ✗ Rechazar
+                âœ— Rechazar
               </button>
             </div>
           </div>
@@ -75,7 +75,7 @@
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       >
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <h3 class="text-xl font-bold mb-4">Aprobar Ausencia</h3>
+          <h3 class="text-xl font-bold mb-4">Aprobar Ausencia/Novedad</h3>
 
           <div class="bg-gray-50 p-4 rounded mb-4">
             <p class="text-sm"><strong>Empleado:</strong> {{ selectedChain.absence.user.name }}</p>
@@ -84,7 +84,7 @@
               {{ formatDate(selectedChain.absence.start_datetime) }} a
               {{ formatDate(selectedChain.absence.end_datetime) }}
             </p>
-            <p class="text-sm mt-1"><strong>Duración:</strong> {{ selectedChain.absence.total_days }} días</p>
+            <p class="text-sm mt-1"><strong>Duración:</strong> {{ selectedChain.absence.total_days }} dí­as</p>
           </div>
 
           <textarea
@@ -117,7 +117,7 @@
         class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4"
       >
         <div class="bg-white rounded-lg shadow-xl max-w-md w-full p-6">
-          <h3 class="text-xl font-bold mb-4">Rechazar Ausencia</h3>
+          <h3 class="text-xl font-bold mb-4">Rechazar Ausencia/Novedad</h3>
 
           <div class="bg-gray-50 p-4 rounded mb-4">
             <p class="text-sm"><strong>Empleado:</strong> {{ selectedChain.absence.user.name }}</p>
@@ -282,3 +282,4 @@ onMounted(() => {
   fetchPendingApprovals()
 })
 </script>
+

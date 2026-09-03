@@ -34,14 +34,9 @@ class AreaController extends Controller
             $query->where('is_active', $request->active === 'active');
         }
 
-        // Filtrar por usuario creador (para admin)
-        if ($request->user()->isSuperAdmin()) {
-            // Superadmin ve todas las áreas
-            $areas = $query->ordered()->get();
-        } else {
-            // Admin normal solo ve sus áreas
-            $areas = $query->byCreator($request->user()->id)->ordered()->get();
-        }
+        // Admins ven todas las áreas del tenant (Tenantable scope automático)
+        // SuperAdmins ven todas las áreas de todos los tenants
+        $areas = $query->ordered()->get();
 
         return response()->json([
             'areas' => $areas->map(function ($area) {
@@ -71,13 +66,24 @@ class AreaController extends Controller
             'color' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
             'display_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
+            'leader_ids' => 'nullable|array',
+            'leader_ids.*' => 'integer|exists:users,id',
         ]);
 
         $validated['created_by'] = $request->user()->id;
         $validated['color'] = $validated['color'] ?? '#3B82F6';
         $validated['is_active'] = $validated['is_active'] ?? true;
 
+        $leaderIds = $validated['leader_ids'] ?? [];
+        unset($validated['leader_ids']);
+
         $area = Area::create($validated);
+
+        if (!empty($leaderIds)) {
+            $area->leaders()->attach($leaderIds);
+        }
+
+        $area->load('leaders');
 
         return response()->json([
             'success' => true,
@@ -88,6 +94,7 @@ class AreaController extends Controller
                 'color' => $area->color,
                 'display_order' => $area->display_order,
                 'is_active' => $area->is_active,
+                'leader_ids' => $area->leaders->pluck('id')->toArray(),
             ],
             'message' => 'Área creada exitosamente',
         ], 201);
@@ -102,6 +109,8 @@ class AreaController extends Controller
         $area->loadCount('users');
         $area->load(['users' => function ($query) {
             $query->select('id', 'name', 'email', 'is_active');
+        }, 'leaders' => function ($query) {
+            $query->select('id', 'name', 'email');
         }]);
 
         return response()->json([
@@ -121,6 +130,14 @@ class AreaController extends Controller
                         'is_active' => $user->is_active,
                     ];
                 }),
+                'leader_ids' => $area->leaders->pluck('id')->toArray(),
+                'leaders' => $area->leaders->map(function ($user) {
+                    return [
+                        'id' => $user->id,
+                        'name' => $user->name,
+                        'email' => $user->email,
+                    ];
+                }),
                 'created_at' => $area->created_at,
             ],
         ]);
@@ -138,9 +155,20 @@ class AreaController extends Controller
             'color' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
             'display_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
+            'leader_ids' => 'nullable|array',
+            'leader_ids.*' => 'integer|exists:users,id',
         ]);
 
+        $leaderIds = $validated['leader_ids'] ?? null;
+        unset($validated['leader_ids']);
+
         $area->update($validated);
+
+        if ($leaderIds !== null) {
+            $area->leaders()->sync($leaderIds);
+        }
+
+        $area->load('leaders');
 
         return response()->json([
             'success' => true,
@@ -151,6 +179,7 @@ class AreaController extends Controller
                 'color' => $area->color,
                 'display_order' => $area->display_order,
                 'is_active' => $area->is_active,
+                'leader_ids' => $area->leaders->pluck('id')->toArray(),
             ],
             'message' => 'Área actualizada exitosamente',
         ]);

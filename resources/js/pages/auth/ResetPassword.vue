@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import { ref } from 'vue';
 import InputError from '@/components/InputError.vue';
@@ -87,3 +87,4 @@ const inputEmail = ref(props.email);
         </Form>
     </AuthLayout>
 </template>
+

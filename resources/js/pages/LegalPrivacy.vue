@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 </script>
 
@@ -7,10 +7,10 @@ import AppLayout from '@/layouts/AppLayout.vue';
         <div class="mx-auto max-w-4xl space-y-8 p-8">
             <div class="text-center">
                 <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-100">
-                    Política de Privacidad
+                    Plí­tica de Privacidad
                 </h1>
                 <p class="mt-2 text-gray-500 dark:text-gray-400">
-                    Última actualización:
+                    Ãšltima actualización:
                     {{ new Date().toLocaleDateString('es-CO') }}
                 </p>
             </div>
@@ -33,14 +33,14 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     >
                         <li>
                             <strong>Información de registro:</strong> Nombre,
-                            correo electrónico, teléfono, identificación
+                            correo electrónico, Teléfono, identificación
                         </li>
                         <li>
                             <strong>Información laboral:</strong> Fecha de
                             contratación, departamento, cargo
                         </li>
                         <li>
-                            <strong>Datos de uso:</strong> Cómo interactúa con
+                            <strong>Datos de uso:</strong> Cómo interactÃºa con
                             el sistema
                         </li>
                         <li>
@@ -66,7 +66,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     >
                         <li>Gestionar solicitudes de ausencia y vacaciones</li>
                         <li>Mantener registros de tiempo de empleados</li>
-                        <li>Generar reportes y estadísticas</li>
+                        <li>Generar reportes y estadí­sticas</li>
                         <li>Comunicarnos con usted sobre sus solicitudes</li>
                         <li>Cumplir con obligaciones legales y fiscales</li>
                     </ul>
@@ -82,7 +82,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         No vendemos su información personal. Compartimos datos
-                        únicamente con:
+                        Ãºnicamente con:
                     </p>
                     <ul
                         class="mt-4 list-disc space-y-2 pl-6 text-gray-600 dark:text-gray-400"
@@ -114,7 +114,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                         Implementamos medidas de seguridad apropiadas para
                         proteger su información personal, incluyendo
                         encriptación, controles de acceso y auditorías de
-                        seguridad regulares. Sin embargo, ningún sistema es 100%
+                        seguridad regulares. Sin embargo, ningÃºn sistema es 100%
                         seguro y no podemos garantizar seguridad absoluta.
                     </p>
                 </section>
@@ -129,8 +129,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         Conservamos su información mientras su cuenta esté
-                        activa o según sea necesario para proporcionar
-                        servicios. Los datos de ausencia se mantienen según las
+                        activa o segÃºn sea necesario para proporcionar
+                        servicios. Los datos de ausencia se mantienen segÃºn las
                         regulaciones laborales aplicables. Puede solicitar la
                         eliminación de sus datos en cualquier momento.
                     </p>
@@ -196,13 +196,13 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     <h2
                         class="text-xl font-semibold text-gray-900 dark:text-gray-100"
                     >
-                        8. Cambios a esta Política
+                        8. Cambios a esta Plí­tica
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
-                        Podemos actualizar esta política periódicamente. Le
+                        Podemos actualizar esta plí­tica periódicamente. Le
                         notificaremos sobre cambios significativos publicando la
-                        nueva política en el sistema. Le recomendamos revisar
-                        esta política regularmente.
+                        nueva plí­tica en el sistema. Le recomendamos revisar
+                        esta plí­tica regularmente.
                     </p>
                 </section>
 
@@ -215,7 +215,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                         9. Contacto
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
-                        Si tiene preguntas sobre esta Política de Privacidad o
+                        Si tiene preguntas sobre esta Plí­tica de Privacidad o
                         desea ejercer sus derechos, contacte al administrador
                         del sistema o envíe un correo a privacidad@empresa.com.
                     </p>
@@ -224,3 +224,4 @@ import AppLayout from '@/layouts/AppLayout.vue';
         </div>
     </AppLayout>
 </template>
+

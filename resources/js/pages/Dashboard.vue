@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
@@ -372,7 +372,7 @@ onMounted(loadDashboard);
                         "
                         class="btn-primary"
                     >
-                        Nueva Ausencia
+                        Nueva Ausencia/Novedad
                     </button>
                 </div>
             </div>
@@ -387,7 +387,7 @@ onMounted(loadDashboard);
                 class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900"
             >
                 Plan {{ subscription.plan_name }}: vence en
-                {{ subscription.days_remaining }} días.
+                {{ subscription.days_remaining }} dí­as.
             </div>
 
             <div
@@ -438,13 +438,13 @@ onMounted(loadDashboard);
             <template v-else>
                 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-sm text-gray-500">Mis días disponibles</p>
+                        <p class="text-sm text-gray-500">Mis dí­as disponibles</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {{ personalMetrics?.available_vacation_days ?? 0 }}
                         </p>
                     </div>
                     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-sm text-gray-500">Mis días usados (año)</p>
+                        <p class="text-sm text-gray-500">Mis dí­as usados (año)</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {{ personalMetrics?.used_vacation_days ?? 0 }}
                         </p>
@@ -462,7 +462,7 @@ onMounted(loadDashboard);
                         </p>
                     </div>
                     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-sm text-gray-500">Vencen en 30 días</p>
+                        <p class="text-sm text-gray-500">Vencen en 30 dí­as</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {{ personalMetrics?.upcoming_expirations ?? 0 }}
                         </p>
@@ -522,7 +522,7 @@ onMounted(loadDashboard);
                         </p>
                     </div>
                     <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-                        <p class="text-sm text-indigo-700">Vencen en 30 días</p>
+                        <p class="text-sm text-indigo-700">Vencen en 30 dí­as</p>
                         <p class="text-2xl font-bold text-indigo-900">
                             {{ superadminMetrics.subscriptions_expiring_30d }}
                         </p>
@@ -578,7 +578,7 @@ onMounted(loadDashboard);
                                 <tr class="border-b border-slate-200 text-left text-slate-600">
                                     <th class="px-2 py-2">Colaborador</th>
                                     <th class="px-2 py-2">Estado</th>
-                                    <th class="px-2 py-2">Ausencia actual</th>
+                                    <th class="px-2 py-2">Ausencia/Novedad actual</th>
                                     <th class="px-2 py-2">Próxima ausencia</th>
                                 </tr>
                             </thead>
@@ -634,7 +634,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
                         <span>
-                            Página {{ employeeMeta.current_page }} de {{ employeeMeta.last_page }} ·
+                            Página {{ employeeMeta.current_page }} de {{ employeeMeta.last_page }} Â·
                             {{ employeeMeta.total }} registros
                         </span>
                         <div class="flex gap-2">
@@ -689,7 +689,7 @@ onMounted(loadDashboard);
                                     <th class="px-2 py-2">Tipo</th>
                                     <th class="px-2 py-2">Inicio</th>
                                     <th class="px-2 py-2">Fin</th>
-                                    <th class="px-2 py-2">Días</th>
+                                    <th class="px-2 py-2">dí­as</th>
                                     <th class="px-2 py-2">Solicitado</th>
                                 </tr>
                             </thead>
@@ -714,7 +714,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
                         <span>
-                            Página {{ pendingMeta.current_page }} de {{ pendingMeta.last_page }} ·
+                            Página {{ pendingMeta.current_page }} de {{ pendingMeta.last_page }} Â·
                             {{ pendingMeta.total }} registros
                         </span>
                         <div class="flex gap-2">
@@ -739,7 +739,7 @@ onMounted(loadDashboard);
                 <div class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800">
                     <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
                         <h3 class="text-lg font-semibold text-gray-900 dark:text-gray-100">
-                            {{ isAdmin ? 'Ausencias recientes del equipo' : 'Mis ausencias recientes' }}
+                            {{ isAdmin ? 'Ausencias/Novedades recientes del equipo' : 'Mis ausencias/novedades recientes' }}
                         </h3>
                         <div class="flex flex-wrap gap-2">
                             <input
@@ -769,7 +769,7 @@ onMounted(loadDashboard);
                                     <th class="px-2 py-2">Tipo</th>
                                     <th class="px-2 py-2">Inicio</th>
                                     <th class="px-2 py-2">Fin</th>
-                                    <th class="px-2 py-2">Días</th>
+                                    <th class="px-2 py-2">dí­as</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -792,7 +792,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
                         <span>
-                            Página {{ recentMeta.current_page }} de {{ recentMeta.last_page }} ·
+                            Página {{ recentMeta.current_page }} de {{ recentMeta.last_page }} Â·
                             {{ recentMeta.total }} registros
                         </span>
                         <div class="flex gap-2">
@@ -847,7 +847,7 @@ onMounted(loadDashboard);
                             <thead>
                                 <tr class="border-b border-gray-200 text-left text-gray-500">
                                     <th class="px-2 py-2">Colaborador</th>
-                                    <th class="px-2 py-2">Días disponibles</th>
+                                    <th class="px-2 py-2">dí­as disponibles</th>
                                     <th class="px-2 py-2">Próximos vencimientos</th>
                                 </tr>
                             </thead>
@@ -861,8 +861,8 @@ onMounted(loadDashboard);
                                         <span v-if="item.expiring_soon.length">
                                             {{
                                                 item.expiring_soon
-                                                    .map((row) => `${row.days} días (${formatDate(row.expires)})`)
-                                                    .join(' · ')
+                                                    .map((row) => `${row.days} dí­as (${formatDate(row.expires)})`)
+                                                    .join(' Â· ')
                                             }}
                                         </span>
                                         <span v-else>-</span>
@@ -878,7 +878,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
                         <span>
-                            Página {{ vacationMeta.current_page }} de {{ vacationMeta.last_page }} ·
+                            Página {{ vacationMeta.current_page }} de {{ vacationMeta.last_page }} Â·
                             {{ vacationMeta.total }} registros
                         </span>
                         <div class="flex gap-2">
@@ -905,14 +905,14 @@ onMounted(loadDashboard);
                     class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
                 >
                     <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Mis vacaciones por vencer (90 días)
+                        Mis vacaciones por vencer (90 dí­as)
                     </h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-gray-200 text-left text-gray-500">
                                     <th class="px-2 py-2">Año</th>
-                                    <th class="px-2 py-2">Días disponibles</th>
+                                    <th class="px-2 py-2">dí­as disponibles</th>
                                     <th class="px-2 py-2">Vencimiento</th>
                                 </tr>
                             </thead>
@@ -924,7 +924,7 @@ onMounted(loadDashboard);
                                 </tr>
                                 <tr v-if="myExpiringVacations.length === 0">
                                     <td colspan="3" class="px-2 py-6 text-center text-gray-500">
-                                        No tienes días por vencer en los próximos 90 días
+                                        No tienes dí­as por vencer en los próximos 90 dí­as
                                     </td>
                                 </tr>
                             </tbody>
@@ -959,3 +959,4 @@ onMounted(loadDashboard);
         />
     </AppLayout>
 </template>
+

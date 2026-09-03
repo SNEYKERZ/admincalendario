@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, computed, onBeforeUnmount } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
@@ -152,7 +152,7 @@ onBeforeUnmount(() => {
                     Configuración de Empresa
                 </h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    Administra los datos y políticas de tu organización
+                    Administra los datos y plí­ticas de tu organización
                 </p>
             </div>
 
@@ -264,13 +264,13 @@ onBeforeUnmount(() => {
                     <h2
                         class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100"
                     >
-                        Políticas de Vacaciones
+                        Plí­ticas de Vacaciones
                     </h2>
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label class="label"
-                                >Días de Vacación por Defecto</label
+                                >dí­as de Vacación por Defecto</label
                             >
                             <input
                                 v-model.number="form.vacation_days_default"
@@ -281,7 +281,7 @@ onBeforeUnmount(() => {
                         </div>
                         <div>
                             <label class="label"
-                                >Días de Anticipación Máxima</label
+                                >dí­as de Anticipación Máxima</label
                             >
                             <input
                                 v-model.number="form.vacation_days_advance"
@@ -318,7 +318,7 @@ onBeforeUnmount(() => {
                     <h2
                         class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100"
                     >
-                        Reglas de Ausencias
+                        Reglas de Ausencias/Novedades
                     </h2>
 
                     <div class="space-y-4">
@@ -349,11 +349,11 @@ onBeforeUnmount(() => {
                             <div>
                                 <span
                                     class="font-medium text-gray-900 dark:text-gray-100"
-                                    >Permitir ausencias en días festivos</span
+                                    >Permitir ausencias en dí­as festivos</span
                                 >
                                 <p class="text-sm text-gray-500">
                                     Los empleados pueden registrar ausencias que
-                                    incluyan días festivos
+                                    incluyan dí­as festivos
                                 </p>
                             </div>
                         </label>
@@ -438,14 +438,15 @@ onBeforeUnmount(() => {
                         class="text-blue-600 hover:underline dark:text-blue-400"
                         >Términos y Condiciones</a
                     >
-                    ·
+                    Â·
                     <a
                         href="/legal/privacy"
                         class="text-blue-600 hover:underline dark:text-blue-400"
-                        >Política de Privacidad</a
+                        >Plí­tica de Privacidad</a
                     >
                 </p>
             </div>
         </div>
     </AppLayout>
 </template>
+

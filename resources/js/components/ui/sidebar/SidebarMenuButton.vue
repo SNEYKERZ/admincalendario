@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { Component } from "vue"
 import type { SidebarMenuButtonProps } from "./SidebarMenuButtonChild.vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -46,3 +46,4 @@ const delegatedProps = reactiveOmit(props, "tooltip")
     </TooltipContent>
   </Tooltip>
 </template>
+

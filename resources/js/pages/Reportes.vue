@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, computed, watch } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
@@ -339,13 +339,13 @@ const getStatusBadge = (status: string) => {
                 class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4"
             >
                 <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Total de Ausencias</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total de Ausencias/Novedades</p>
                     <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
                         {{ absencesData.length }}
                     </p>
                 </div>
                 <div class="rounded-lg border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                    <p class="text-sm text-gray-500 dark:text-gray-400">Total de Días</p>
+                    <p class="text-sm text-gray-500 dark:text-gray-400">Total de dí­as</p>
                     <p class="mt-2 text-2xl font-bold text-gray-900 dark:text-gray-100">
                         {{ (absencesData.reduce((sum, item) => sum + item.dias, 0)).toFixed(1) }}
                     </p>
@@ -401,7 +401,7 @@ const getStatusBadge = (status: string) => {
                                 <th
                                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
                                 >
-                                    Días
+                                    dí­as
                                 </th>
                                 <th
                                     class="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase dark:text-gray-400"
@@ -528,7 +528,7 @@ const getStatusBadge = (status: string) => {
                     <h3
                         class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100"
                     >
-                        Resumen de Ausencias
+                        Resumen de Ausencias/Novedades
                     </h3>
                     <div class="space-y-3">
                         <div class="flex justify-between">
@@ -542,7 +542,7 @@ const getStatusBadge = (status: string) => {
                         </div>
                         <div class="flex justify-between">
                             <span class="text-gray-600 dark:text-gray-400"
-                                >Total Días</span
+                                >Total dí­as</span
                             >
                             <span
                                 class="font-bold text-gray-900 dark:text-gray-100"
@@ -621,7 +621,7 @@ const getStatusBadge = (status: string) => {
                                         >{{
                                             emp.available.toFixed(1)
                                         }}
-                                        días</span
+                                        dí­as</span
                                     >
                                 </div>
                             </div>
@@ -632,3 +632,4 @@ const getStatusBadge = (status: string) => {
         </div>
     </AppLayout>
 </template>
+

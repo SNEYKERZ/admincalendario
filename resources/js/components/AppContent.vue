@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { computed } from 'vue';
 import { SidebarInset } from '@/components/ui/sidebar';
 import ImpersonationBadge from '@/components/ImpersonationBadge.vue';
@@ -30,3 +30,4 @@ const className = computed(() => props.class);
         <slot />
     </main>
 </template>
+

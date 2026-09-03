@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -106,3 +106,4 @@ import { store } from '@/routes/register';
         </Form>
     </AuthBase>
 </template>
+

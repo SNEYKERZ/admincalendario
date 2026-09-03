@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 type Props = {
     title: string;
     description?: string;
@@ -26,3 +26,4 @@ withDefaults(defineProps<Props>(), {
         </p>
     </header>
 </template>
+

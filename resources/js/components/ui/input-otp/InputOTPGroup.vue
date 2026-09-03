@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
 import { useForwardProps } from "reka-ui"
@@ -20,3 +20,4 @@ const forwarded = useForwardProps(delegatedProps)
     <slot />
   </div>
 </template>
+

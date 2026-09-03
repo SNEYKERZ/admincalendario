@@ -1,6 +1,6 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, LayoutDashboard, LayoutGrid, Users, FileBarChart, FileText, Settings, Cog } from 'lucide-vue-next';
+import { Building2, LayoutDashboard, LayoutGrid, Users, FileBarChart, FileText, Settings, Cog, Clock, FileCheck } from 'lucide-vue-next';
 import NavFooter from '@/components/NavFooter.vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
@@ -116,6 +116,24 @@ const mainNavItems = computed<NavItem[]>(() => {
                   },
               ]
             : []),
+        ...(isAdmin && canAccessModule('horas-extra')
+            ? [
+                  {
+                      title: 'Horas Extra',
+                      href: '/overtime-hours',
+                      icon: Clock,
+                  },
+              ]
+            : []),
+        ...(canAccessModule('solicitudes')
+            ? [
+                  {
+                      title: 'Solicitudes de Empleados',
+                      href: '/solicitudes',
+                      icon: FileCheck,
+                  },
+              ]
+            : []),
         ...(canAccessModule('documentos')
             ? [
                   {
@@ -169,7 +187,7 @@ const footerNavItems: NavItem[] = [
                                 <div class="grid flex-1 text-left text-sm leading-tight">
                                     <span class="truncate font-semibold">{{ companyName }}</span>
                                     <span class="truncate text-xs text-slate-500 dark:text-slate-400">
-                                        Menú de empresa
+                                       Menú de empresa
                                     </span>
                                 </div>
                             </div>
@@ -190,3 +208,4 @@ const footerNavItems: NavItem[] = [
     </Sidebar>
     <slot />
 </template>
+

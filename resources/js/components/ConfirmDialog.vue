@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref } from 'vue';
 import {
     Dialog,
@@ -23,7 +23,7 @@ type Props = {
 
 const props = withDefaults(defineProps<Props>(), {
     title: 'Confirmar acción',
-    description: '¿Está seguro de que desea continuar?',
+    description: 'Â¿Está seguro de que desea continuar?',
     confirmText: 'Confirmar',
     cancelText: 'Cancelar',
     variant: 'default',
@@ -77,3 +77,4 @@ const handleConfirm = () => {
         </DialogContent>
     </Dialog>
 </template>
+

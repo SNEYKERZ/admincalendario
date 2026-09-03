@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { ref, onMounted } from 'vue'
 import axios from 'axios'
 
@@ -25,7 +25,7 @@ onMounted(async () => {
         <!-- TODOS -->
         <div @click="selectUser({ id: null })" class="cursor-pointer flex flex-col items-center">
             <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
-                👥
+                ðŸ‘¥
             </div>
             <span class="text-xs">Todos</span>
         </div>
@@ -44,7 +44,7 @@ onMounted(async () => {
             </span>
 
             <span class="text-[10px] text-gray-500">
-                {{ user.available_days }} días
+                {{ user.available_days }} dí­as
             </span>
         </div>
 

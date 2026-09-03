@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { HTMLAttributes } from "vue"
 import { cn } from "@/lib/utils"
 
@@ -15,3 +15,4 @@ const props = defineProps<SkeletonProps>()
     :class="cn('animate-pulse rounded-md bg-primary/10', props.class)"
   />
 </template>
+

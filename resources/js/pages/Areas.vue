@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
@@ -23,12 +23,20 @@ interface Area {
     display_order: number;
     is_active: boolean;
     employee_count: number;
+    leader_ids?: number[];
     created_at: string;
+}
+
+interface User {
+    id: number;
+    name: string;
+    email: string;
 }
 
 const toast = useToast();
 
 const areas = ref<Area[]>([]);
+const users = ref<User[]>([]);
 const loading = ref(false);
 const showModal = ref(false);
 const modalMode = ref<'create' | 'edit'>('create');
@@ -43,6 +51,7 @@ const form = ref({
     color: '#3B82F6',
     display_order: 0,
     is_active: true,
+    leader_ids: [] as number[],
 });
 
 const filteredAreas = computed(() => {
@@ -71,7 +80,18 @@ const loadAreas = async () => {
     }
 };
 
-const openCreate = () => {
+const loadUsers = async () => {
+    try {
+        const res = await axios.get('/api/users', {
+            params: { role: 'admin,employee' },
+        });
+        users.value = res.data.users || [];
+    } catch (e) {
+        console.error('Error loading users:', e);
+    }
+};
+
+const openCreate = async () => {
     modalMode.value = 'create';
     form.value = {
         name: '',
@@ -79,21 +99,31 @@ const openCreate = () => {
         color: '#3B82F6',
         display_order: 0,
         is_active: true,
+        leader_ids: [],
     };
     selectedArea.value = null;
+    await loadUsers();
     showModal.value = true;
 };
 
-const openEdit = (area: Area) => {
+const openEdit = async (area: Area) => {
     modalMode.value = 'edit';
-    form.value = {
-        name: area.name,
-        description: area.description || '',
-        color: area.color,
-        display_order: area.display_order,
-        is_active: area.is_active,
-    };
+    try {
+        const res = await axios.get(`/api/areas/${area.id}`);
+        const areaData = res.data.area;
+        form.value = {
+            name: areaData.name,
+            description: areaData.description || '',
+            color: areaData.color,
+            display_order: areaData.display_order,
+            is_active: areaData.is_active,
+            leader_ids: areaData.leader_ids || [],
+        };
+    } catch (e) {
+        console.error('Error loading area:', e);
+    }
     selectedArea.value = area;
+    await loadUsers();
     showModal.value = true;
 };
 
@@ -115,7 +145,7 @@ const saveArea = async () => {
 };
 
 const deleteArea = async (area: Area) => {
-    if (!confirm(`¿Eliminar el área "${area.name}"?`)) return;
+    if (!confirm(`Â¿Eliminar el área "${area.name}"?`)) return;
 
     try {
         await axios.delete(`/api/areas/${area.id}`);
@@ -381,6 +411,36 @@ onMounted(() => {
                         </label>
                     </div>
 
+                    <div>
+                        <label
+                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
+                        >
+                            Líderes de Área (Opcional)
+                        </label>
+                        <div class="max-h-40 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                            <div
+                                v-for="user in users"
+                                :key="user.id"
+                                class="flex items-center gap-2 border-b border-slate-100 p-2 last:border-b-0 dark:border-slate-700 dark:bg-slate-800"
+                            >
+                                <input
+                                    :id="`leader_${user.id}`"
+                                    :value="user.id"
+                                    v-model.number="form.leader_ids"
+                                    type="checkbox"
+                                    class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600"
+                                />
+                                <label
+                                    :for="`leader_${user.id}`"
+                                    class="flex-1 cursor-pointer text-sm text-slate-700 dark:text-slate-300"
+                                >
+                                    {{ user.name }}
+                                    <span class="text-xs text-slate-500">{{ user.email }}</span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex gap-3 pt-4">
                         <button
                             type="button"
@@ -401,3 +461,4 @@ onMounted(() => {
         </div>
     </AppLayout>
 </template>
+

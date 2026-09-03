@@ -1,4 +1,4 @@
-<script setup lang="ts">
+﻿<script setup lang="ts">
 import type { DialogDescriptionProps } from "reka-ui"
 import type { HTMLAttributes } from "vue"
 import { reactiveOmit } from "@vueuse/core"
@@ -21,3 +21,4 @@ const forwardedProps = useForwardProps(delegatedProps)
     <slot />
   </DialogDescription>
 </template>
+
