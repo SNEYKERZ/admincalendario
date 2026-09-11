@@ -116,11 +116,20 @@ const mainNavItems = computed<NavItem[]>(() => {
                   },
               ]
             : []),
-        ...(isAdmin && canAccessModule('horas-extra')
+        ...(canAccessModule('horas-extra')
             ? [
                   {
                       title: 'Horas Extra',
                       href: '/overtime-hours',
+                      icon: Clock,
+                  },
+              ]
+            : []),
+        ...(isAdmin && canAccessModule('horas-extra')
+            ? [
+                  {
+                      title: 'Admin Horas Extra',
+                      href: '/admin/overtime-hours',
                       icon: Clock,
                   },
               ]
