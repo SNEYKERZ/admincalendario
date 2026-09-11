@@ -220,6 +220,15 @@ const calculateHours = () => {
   calculatedHours.value = (endTotalMin - startTotalMin) / 60
 }
 
+const getCsrfToken = () => {
+  const token = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content')
+  if (!token) {
+    const csrfElement = document.querySelector('input[name="_token"]')
+    return csrfElement?.value || ''
+  }
+  return token
+}
+
 const submit = async () => {
   loading.value = true
   errors.value = {}
@@ -240,7 +249,11 @@ const submit = async () => {
 
     const response = await fetch('/api/overtime-hours', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'X-CSRF-Token': getCsrfToken(),
+        'Accept': 'application/json',
+      },
       body: JSON.stringify(data),
     })
 
