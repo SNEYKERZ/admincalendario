@@ -99,10 +99,16 @@ class Absence extends Model
     public function scopeVisibleOnCalendar($query)
     {
         $visibilityDays = 3;
+        $currentUserId = auth()->id();
+
         return $query->where('status', AbsenceStatus::APPROVED->value)
             ->orWhere(function ($q) use ($visibilityDays) {
                 $q->where('status', AbsenceStatus::REJECTED->value)
                   ->where('rejected_at', '>', now()->subDays($visibilityDays));
+            })
+            ->orWhere(function ($q) use ($currentUserId) {
+                $q->where('status', AbsenceStatus::PENDING->value)
+                  ->where('user_id', $currentUserId);
             });
     }
 

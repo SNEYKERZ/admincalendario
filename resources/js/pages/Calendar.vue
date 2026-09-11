@@ -32,6 +32,7 @@ const toast = useToast();
 const selectedCountry = ref('CO');
 const holidays = ref<{ date: string; title: string }[]>([]);
 const countries = ref<{ code: string; name: string }[]>([]);
+const currentUserId = ref<number | null>(null);
 
 let usersSelect2: any = null;
 let areasSelect2: any = null;
@@ -49,6 +50,7 @@ onMounted(async () => {
     try {
         const userRes = await axios.get('/me');
         const user = userRes.data;
+        currentUserId.value = user?.id || null;
         isAdmin.value =
             user?.role === 'admin' ||
             user?.role === 'superadmin' ||
@@ -149,8 +151,13 @@ const fetchEvents = async (
         };
 
         // Filtrar por usuarios seleccionados.
+        // Si no es admin, siempre mostrar al usuario actual
+        // Si es admin, respetar filtros
         if (selectedUsers.value.length > 0) {
             params.user_ids = selectedUsers.value.join(',');
+        } else if (!isAdmin.value && currentUserId.value) {
+            // Usuario normal: siempre ver sus propias ausencias
+            params.user_ids = currentUserId.value;
         }
 
         // Filtrar por áreas seleccionadas.

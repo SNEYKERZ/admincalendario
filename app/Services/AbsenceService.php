@@ -273,7 +273,7 @@ class AbsenceService
             // Notificar al usuario
             $absence->user->notify(new AbsenceApproved($absence));
 
-            return $absence;
+            return $absence->fresh(['user', 'type', 'approver']);
         });
     }
 
@@ -290,7 +290,7 @@ class AbsenceService
 
             $absence->refresh();
 
-            // Guardar timestamp de rechazo
+            // Guardar timestamp de rechazo y estado
             $absence->update([
                 'rejected_at' => now(),
             ]);
@@ -316,7 +316,7 @@ class AbsenceService
                 new AbsenceRejected($absence, $reason)
             );
 
-            return $absence;
+            return $absence->fresh(['user', 'type', 'approver']);
         });
     }
 

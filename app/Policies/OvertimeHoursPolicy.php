@@ -19,29 +19,32 @@ class OvertimeHoursPolicy
         }
 
         if (!$user->isAdmin()) {
-            return $user->id === $overtime->user_id;
+            return $user->id === $overtime->user_id && $user->tenant_id === $overtime->tenant_id;
         }
 
-        return $user->tenant_id === $overtime->record()->first()?->user?->tenant_id;
+        return $user->tenant_id === $overtime->tenant_id;
     }
 
     public function create(User $user): bool
     {
-        return true;
+        return $user->tenant_id !== null;
     }
 
     public function store(User $user, ?User $targetUser = null): bool
     {
+        // SuperAdmin can create for anyone in any tenant
         if ($user->isSuperAdmin()) {
             return true;
         }
 
+        // Non-admin can only create for themselves
         if (!$user->isAdmin()) {
-            return true;
+            return !$targetUser || $user->id === $targetUser->id;
         }
 
+        // Admin can create for anyone in their tenant
         if ($targetUser) {
-            return $user->area_id === $targetUser->area_id;
+            return $user->tenant_id === $targetUser->tenant_id;
         }
 
         return true;
@@ -53,7 +56,11 @@ class OvertimeHoursPolicy
             return true;
         }
 
-        return $user->id === $overtime->user_id;
+        if (!$user->isAdmin()) {
+            return $user->id === $overtime->user_id && $overtime->status === 'pending';
+        }
+
+        return $user->tenant_id === $overtime->tenant_id;
     }
 
     public function delete(User $user, OvertimeHours $overtime): bool
@@ -62,7 +69,11 @@ class OvertimeHoursPolicy
             return true;
         }
 
-        return $user->isAdmin() && $user->area_id === $overtime->user->area_id;
+        if (!$user->isAdmin()) {
+            return $user->id === $overtime->user_id && $overtime->status === 'pending';
+        }
+
+        return $user->tenant_id === $overtime->tenant_id;
     }
 
     public function approve(User $user, OvertimeHours $overtime): bool
@@ -71,7 +82,7 @@ class OvertimeHoursPolicy
             return true;
         }
 
-        return $user->isAdmin() && $user->area_id === $overtime->user->area_id;
+        return $user->isAdmin() && $user->tenant_id === $overtime->tenant_id;
     }
 
     public function reject(User $user, OvertimeHours $overtime): bool
@@ -80,6 +91,6 @@ class OvertimeHoursPolicy
             return true;
         }
 
-        return $user->isAdmin() && $user->area_id === $overtime->user->area_id;
+        return $user->isAdmin() && $user->tenant_id === $overtime->tenant_id;
     }
 }

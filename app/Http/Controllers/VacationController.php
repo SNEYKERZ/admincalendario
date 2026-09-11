@@ -20,8 +20,11 @@ class VacationController extends Controller
             // Superadmin sees everyone except themselves (handled by UI)
             $query->where('role', '!=', \App\Enums\UserRole::SUPERADMIN->value);
         } elseif ($user->isAdmin()) {
-            // Admin sees only colaboradores
-            $query->where('role', \App\Enums\UserRole::COLLABORATOR->value);
+            // Admin sees themselves and all colaboradores
+            $query->where(function ($q) use ($user) {
+                $q->where('id', $user->id)
+                  ->orWhere('role', \App\Enums\UserRole::COLLABORATOR->value);
+            });
         } else {
             // Regular users see only themselves
             $query->where('id', $user->id);

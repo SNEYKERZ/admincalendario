@@ -23,12 +23,32 @@ class UserPolicy
 
     public function update(User $user, User $model): bool
     {
-        return $user->isAdmin();
+        if (!$user->isAdmin()) {
+            return false;
+        }
+
+        // Superadmin can update anyone
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Regular admin can only update users from their own tenant
+        return $user->tenant_id === $model->tenant_id;
     }
 
     public function delete(User $user, User $model): bool
     {
-        return $user->isAdmin();
+        if (!$user->isAdmin()) {
+            return false;
+        }
+
+        // Superadmin can delete anyone
+        if ($user->isSuperAdmin()) {
+            return true;
+        }
+
+        // Regular admin can only delete users from their own tenant
+        return $user->tenant_id === $model->tenant_id;
     }
     
 }

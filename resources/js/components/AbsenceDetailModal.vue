@@ -43,12 +43,17 @@ const approve = async () => {
     loading.value = true
 
     try {
-        await axios.post(`/absences/${props.absence.id}/approve`)
+        await axios.post(`/absences/${props.absence.id}/approve`, {}, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+            }
+        })
         toast.success('Solicitud aprobada')
         emit('updated')
         emit('close')
     } catch (e) {
-        toast.error('Error al aprobar')
+        console.error(e)
+        toast.error('Error al aprobar: ' + (e.response?.data?.message || e.message))
     } finally {
         loading.value = false
     }
@@ -59,12 +64,17 @@ const reject = async () => {
     loading.value = true
 
     try {
-        await axios.post(`/absences/${props.absence.id}/reject`)
+        await axios.post(`/absences/${props.absence.id}/reject`, {}, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+            }
+        })
         toast.success('Solicitud rechazada')
         emit('updated')
         emit('close')
     } catch (e) {
-        toast.error('Error al rechazar')
+        console.error(e)
+        toast.error('Error al rechazar: ' + (e.response?.data?.message || e.message))
     } finally {
         loading.value = false
     }

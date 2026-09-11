@@ -252,12 +252,22 @@ const update = async () => {
 
 const changeStatus = async (status: 'aprobado' | 'rechazado' | 'pendiente') => {
     if (!props.absence) return;
-    const endpoint = status === 'pendiente' ? 'pending' : status;
+
+    const statusMap: Record<string, string> = {
+        'pendiente': 'pending',
+        'aprobado': 'approve',
+        'rechazado': 'reject'
+    };
+    const endpoint = statusMap[status];
 
     loading.value = true;
 
     try {
-        await axios.post(`/absences/${props.absence.id}/${endpoint}`);
+        await axios.post(`/absences/${props.absence.id}/${endpoint}`, {}, {
+            headers: {
+                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
+            }
+        });
         toast.success(`Estado cambiado a ${status}`);
         emit('saved');
         emit('close');

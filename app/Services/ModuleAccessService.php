@@ -16,8 +16,8 @@ class ModuleAccessService
             return false;
         }
 
-        // User debe ser admin y tener tenant
-        if (!$user->isAdmin() || !$user->tenant_id) {
+        // User debe tener tenant
+        if (!$user->tenant_id) {
             return false;
         }
 

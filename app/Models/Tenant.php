@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
+use App\Models\OvertimeHours;
 
 class Tenant extends Model
 {
@@ -105,6 +106,11 @@ class Tenant extends Model
     public function employeeRequests(): HasMany
     {
         return $this->hasMany(EmployeeRequest::class);
+    }
+
+    public function overtimeHours(): HasMany
+    {
+        return $this->hasMany(OvertimeHours::class);
     }
 
     /*

@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AbsenceController;
 use App\Http\Controllers\Admin\UserController;
+use App\Http\Controllers\Admin\PlanModulesController;
 use App\Http\Controllers\AdminRequestController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AreaController;
@@ -155,6 +156,12 @@ Route::middleware(['auth'])->group(function () {
         Route::get('/admin/users/{user}', [UserController::class, 'show'])->name('admin.users.show');
         Route::put('/admin/users/{user}', [UserController::class, 'update'])->name('admin.users.update');
         Route::delete('/admin/users/{user}', [UserController::class, 'destroy'])->name('admin.users.destroy');
+
+        // Tipos de Ausencia/Novedades
+        Route::get('/admin/absence-types', [\App\Http\Controllers\AbsenceTypeController::class, 'index'])->name('admin.absence-types.index');
+        Route::post('/admin/absence-types', [\App\Http\Controllers\AbsenceTypeController::class, 'store'])->name('admin.absence-types.store');
+        Route::put('/admin/absence-types/{absenceType}', [\App\Http\Controllers\AbsenceTypeController::class, 'update'])->name('admin.absence-types.update');
+        Route::delete('/admin/absence-types/{absenceType}', [\App\Http\Controllers\AbsenceTypeController::class, 'destroy'])->name('admin.absence-types.destroy');
     });
 
     Route::get('/users-list', function () {
@@ -231,13 +238,14 @@ Route::middleware(['auth'])->group(function () {
         Route::inertia('/overtime-hours', 'OvertimeHours/Index')->name('overtime-hours.index');
 
         Route::prefix('api/overtime-hours')->group(function () {
+            Route::get('/', [\App\Http\Controllers\OvertimeHoursController::class, 'index'])->name('overtime-hours.api.index');
             Route::post('/batch', [\App\Http\Controllers\OvertimeHoursController::class, 'storeBatch'])->name('overtime-hours.api.batch-store');
             Route::put('/{overtimeHours}', [\App\Http\Controllers\OvertimeHoursController::class, 'update'])->name('overtime-hours.api.update');
             Route::delete('/{overtimeHours}', [\App\Http\Controllers\OvertimeHoursController::class, 'destroy'])->name('overtime-hours.api.destroy');
         });
 
         Route::middleware('can:admin')->prefix('admin/overtime-hours')->group(function () {
-            Route::inertia('/', 'AdminOvertimeHours/Index')->name('admin.overtime-hours.index');
+            Route::get('/', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'index'])->name('admin.overtime-hours.index');
             Route::put('/{overtimeHours}', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'update'])->name('admin.overtime-hours.update');
             Route::post('/{overtimeHours}/approve', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'approve'])->name('admin.overtime-hours.approve');
             Route::post('/{overtimeHours}/reject', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'reject'])->name('admin.overtime-hours.reject');
@@ -269,19 +277,22 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/absence-types', function () {
         $tenantId = app(TenantManager::class)->getTenantId();
 
-        return AbsenceType::withoutGlobalScopes()
+        // Primero intentar obtener tipos locales del tenant
+        $types = AbsenceType::withoutGlobalScopes()
             ->select('id', 'name', 'counts_as_hours', 'deducts_vacation', 'default_include_saturday', 'default_include_sunday', 'default_include_holidays')
-            ->when($tenantId, function ($query) use ($tenantId) {
-                $query->where(function ($innerQuery) use ($tenantId) {
-                    $innerQuery
-                        ->where('tenant_id', $tenantId)
-                        ->orWhereNull('tenant_id');
-                });
-            }, function ($query) {
-                $query->whereNull('tenant_id');
-            })
-            ->orderBy('id')
+            ->where('tenant_id', $tenantId)
+            ->orderBy('name')
             ->get();
+
+        // Si no hay tipos locales, usar los globales
+        if ($types->isEmpty()) {
+            $types = AbsenceType::whereNull('tenant_id')
+                ->select('id', 'name', 'counts_as_hours', 'deducts_vacation', 'default_include_saturday', 'default_include_sunday', 'default_include_holidays')
+                ->orderBy('name')
+                ->get();
+        }
+
+        return $types;
     })->name('absence-types.index');
 
     /*
@@ -371,6 +382,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/gestion-sistema/announcements', [SystemManagementController::class, 'storeAnnouncement'])->name('system-management.announcements.store');
         Route::put('/gestion-sistema/announcements/{announcement}', [SystemManagementController::class, 'updateAnnouncement'])->name('system-management.announcements.update');
         Route::delete('/gestion-sistema/announcements/{announcement}', [SystemManagementController::class, 'destroyAnnouncement'])->name('system-management.announcements.destroy');
+
+        // Plan Modules Management
+        Route::get('/admin/gestion-sistema/planes', [PlanModulesController::class, 'index'])->name('admin.plan-modules.index');
+        Route::put('/admin/gestion-sistema/planes/{plan}', [PlanModulesController::class, 'update'])->name('admin.plan-modules.update');
 
         // License Tokens API
         Route::get('/gestion-sistema/api/licenses', [PublicApiController::class, 'listLicenses'])->name('system-management.licenses.index');

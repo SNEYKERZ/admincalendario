@@ -48,6 +48,11 @@ const mainNavItems = computed<NavItem[]>(() => {
                 icon: Building2,
             },
             {
+                title: 'Gestión de Planes',
+                href: '/admin/gestion-sistema/planes',
+                icon: FileCheck,
+            },
+            {
                 title: 'Auditoría',
                 href: '/superadmin/audit',
                 icon: FileBarChart,
@@ -134,7 +139,16 @@ const mainNavItems = computed<NavItem[]>(() => {
                   },
               ]
             : []),
-        ...(canAccessModule('solicitudes')
+        ...(isAdmin
+            ? [
+                  {
+                      title: 'Tipos de Ausencia',
+                      href: '/admin/absence-types',
+                      icon: FileCheck,
+                  },
+              ]
+            : []),
+        ...(isAdmin && canAccessModule('solicitudes')
             ? [
                   {
                       title: 'Solicitudes de Empleados',
@@ -143,7 +157,7 @@ const mainNavItems = computed<NavItem[]>(() => {
                   },
               ]
             : []),
-        ...(canAccessModule('documentos')
+        ...(isAdmin && canAccessModule('documentos')
             ? [
                   {
                       title: 'Documentos',
