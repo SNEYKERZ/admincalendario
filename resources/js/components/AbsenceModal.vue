@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed, ref, watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
@@ -566,7 +566,7 @@ const remove = async () => {
 
                     <ConfirmDialog
                         title="Eliminar ausencia"
-                        description="Â¿Está seguro de que desea eliminar esta ausencia? Esta acción no se puede deshacer."
+                        description="¿Está seguro de que desea eliminar esta ausencia? Esta acción no se puede deshacer."
                         confirm-text="Eliminar"
                         cancel-text="Cancelar"
                         variant="destructive"
@@ -586,4 +586,5 @@ const remove = async () => {
         </div>
     </div>
 </template>
+
 

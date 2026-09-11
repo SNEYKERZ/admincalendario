@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Form, Head } from '@inertiajs/vue3';
 import InputError from '@/components/InputError.vue';
 import TextLink from '@/components/TextLink.vue';
@@ -57,14 +57,14 @@ defineProps<{
 
                 <div class="grid gap-2">
                     <div class="flex items-center justify-between">
-                        <Label for="password">ContraseÃ±a</Label>
+                        <Label for="password">Contraseña</Label>
                         <TextLink
                             v-if="canResetPassword"
                             :href="request()"
                             class="text-sm"
                             :tabindex="5"
                         >
-                            Â¿Olvidaste tu contraseÃ±a?
+                            ¿Olvidaste tu contraseña?
                         </TextLink>
                     </div>
                     <Input
@@ -74,7 +74,7 @@ defineProps<{
                         required
                         :tabindex="2"
                         autocomplete="current-password"
-                        placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                        placeholder="••••••••"
                     />
                     <InputError :message="errors.password" />
                 </div>
@@ -102,10 +102,11 @@ defineProps<{
                 class="text-center text-sm text-muted-foreground"
                 v-if="canRegister"
             >
-                Â¿No tienes una cuenta?
-                <TextLink :href="register()" :tabindex="5">RegÃ­strate</TextLink>
+                ¿No tienes una cuenta?
+                <TextLink :href="register()" :tabindex="5">Regístrate</TextLink>
             </div>
         </Form>
     </AuthBase>
 </template>
+
 

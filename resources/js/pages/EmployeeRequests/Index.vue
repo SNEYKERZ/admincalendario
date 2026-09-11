@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -105,7 +105,7 @@
             <!-- Pagination -->
             <div v-if="requests.links && requests.links.length > 3" class="flex items-center justify-between">
                 <p class="text-sm text-gray-600 dark:text-gray-400">
-                    PÃ¡gina {{ requests.current_page }} de {{ requests.last_page }}
+                    Página {{ requests.current_page }} de {{ requests.last_page }}
                 </p>
                 <div class="space-x-2">
                     <Link
@@ -203,9 +203,10 @@ const formatDate = (date: string): string => {
 };
 
 const deleteRequest = (id: number) => {
-    if (confirm('Â¿EstÃ¡s seguro de que deseas eliminar esta solicitud?')) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta solicitud?')) {
         router.delete(`/solicitudes/${id}`);
     }
 };
 </script>
+
 

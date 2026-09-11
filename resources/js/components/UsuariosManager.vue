@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
@@ -178,7 +178,7 @@ const saveRole = async () => {
 };
 
 const deleteRole = async (role: Role) => {
-    if (!confirm(`Â¿Eliminar el rol "${role.display_name}"?`)) return;
+    if (!confirm(`¿Eliminar el rol "${role.display_name}"?`)) return;
 
     try {
         await axios.delete(`/admin/roles/${role.id}`);
@@ -455,7 +455,7 @@ const getRoleBadge = (role: string) => {
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         El archivo debe incluir: nombre, apellidos, identificación, género, correo,
-                        nÃºmero de celular, área, rol, fecha de nacimiento y fecha de contratación.
+                        nÁºmero de celular, área, rol, fecha de nacimiento y fecha de contratación.
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -655,7 +655,7 @@ const getRoleBadge = (role: string) => {
                                                 d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                         </svg>
                                     </button>
-                                    <ConfirmDialog title="Eliminar usuario" :description="'Â¿Está seguro de que desea eliminar el usuario ' +
+                                    <ConfirmDialog title="Eliminar usuario" :description="'¿Está seguro de que desea eliminar el usuario ' +
                                         user.name +
                                         '? Esta acción no se puede deshacer.'
                                         " confirm-text="Eliminar" cancel-text="Cancelar" variant="destructive"
@@ -956,4 +956,5 @@ const getRoleBadge = (role: string) => {
         </div>
     </div>
 </template>
+
 

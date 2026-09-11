@@ -15,18 +15,18 @@ class FixVueUtf8 extends Command
         $this->info('=== Corrigiendo UTF-8 en archivos Vue ===');
 
         $replacements = [
-            'Ã©' => 'é',
-            'Ã¡' => 'á',
-            'Ã­' => 'í',
-            'Ã³' => 'ó',
-            'Ã¼' => 'ü',
-            'Ã±' => 'ñ',
-            'aÃ±o' => 'año',
-            'dÃ­a' => 'día',
-            'AnticipaciÃ³n' => 'Anticipación',
-            'MÃ¡xima' => 'Máxima',
-            'invÃ¡lida' => 'inválida',
-            'estÃ¡' => 'está',
+            'é' => 'é',
+            'á' => 'á',
+            'í' => 'í',
+            'ó' => 'ó',
+            'ü' => 'ü',
+            'ñ' => 'ñ',
+            'año' => 'año',
+            'día' => 'día',
+            'Anticipación' => 'Anticipación',
+            'Máxima' => 'Máxima',
+            'inválida' => 'inválida',
+            'está' => 'está',
         ];
 
         $vueFiles = File::glob(base_path('resources/js/**/*.vue'));
@@ -55,3 +55,4 @@ class FixVueUtf8 extends Command
         return self::SUCCESS;
     }
 }
+

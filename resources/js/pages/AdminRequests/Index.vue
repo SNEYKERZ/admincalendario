@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -45,10 +45,10 @@
                         </select>
                     </div>
 
-                    <!-- BÃºsqueda -->
+                    <!-- BÁºsqueda -->
                     <div>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            BÃºsqueda
+                            BÁºsqueda
                         </label>
                         <input
                             v-model="searchQuery"
@@ -177,7 +177,7 @@
                         @click="showModal = false"
                         class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl leading-none"
                     >
-                        Ã—
+                        Á—
                     </button>
                 </div>
 
@@ -235,7 +235,7 @@
                             </label>
                             <textarea
                                 v-model="rejectionReason"
-                                placeholder="Explica por quÃ© se rechaza la solicitud..."
+                                placeholder="Explica por qué se rechaza la solicitud..."
                                 rows="3"
                                 class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                 required
@@ -425,4 +425,5 @@ const rejectRequest = () => {
     });
 };
 </script>
+
 

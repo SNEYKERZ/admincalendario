@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import AppLayout from '@/layouts/AppLayout.vue';
 import axios from 'axios';
@@ -219,7 +219,7 @@ const savePlan = async () => {
 };
 
 const deletePlan = async (plan: SubscriptionPlan) => {
-    if (!confirm(`Â¿Eliminar el plan "${plan.name}"?`)) return;
+    if (!confirm(`¿Eliminar el plan "${plan.name}"?`)) return;
     try {
         await axios.delete(`/gestion-sistema/plans/${plan.id}`);
         toast.success('Plan eliminado');
@@ -254,7 +254,7 @@ const activateSubscription = async () => {
 };
 
 const deactivateSubscription = async (admin: Admin) => {
-    if (!confirm(`Â¿Desactivar suscripción de ${admin.name}?`)) return;
+    if (!confirm(`¿Desactivar suscripción de ${admin.name}?`)) return;
     try {
         await axios.post('/gestion-sistema/subscription/deactivate', {
             user_id: admin.id,
@@ -313,7 +313,7 @@ const saveAnnouncement = async () => {
 };
 
 const deleteAnnouncement = async (announcement: Announcement) => {
-    if (!confirm(`Â¿Eliminar el anuncio "${announcement.title}"?`)) return;
+    if (!confirm(`¿Eliminar el anuncio "${announcement.title}"?`)) return;
     try {
         await axios.delete(`/gestion-sistema/announcements/${announcement.id}`);
         toast.success('Anuncio eliminado');
@@ -1162,4 +1162,5 @@ onMounted(() => {
         </div>
     </AppLayout>
 </template>
+
 

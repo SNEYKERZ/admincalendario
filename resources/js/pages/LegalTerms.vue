@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 </script>
 
@@ -10,7 +10,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     Términos y Condiciones
                 </h1>
                 <p class="mt-2 text-gray-500 dark:text-gray-400">
-                    Ãšltima actualización:
+                    Ášltima actualización:
                     {{ new Date().toLocaleDateString('es-CO') }}
                 </p>
             </div>
@@ -49,7 +49,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                         class="mt-4 list-disc space-y-2 pl-6 text-gray-600 dark:text-gray-400"
                     >
                         <li>
-                            Utilizar el sistema Ãºnicamente para fines legítimos
+                            Utilizar el sistema Áºnicamente para fines legítimos
                         </li>
                         <li>
                             No intentar acceder a información de otros usuarios
@@ -132,7 +132,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         El sistema se proporciona "tal cual" sin garantías de
-                        ningÃºn tipo. No garantizamos que el sistema esté libre
+                        ningÁºn tipo. No garantizamos que el sistema esté libre
                         de errores o disponible continuamente. No seremos
                         responsables por cualquier interrupción del servicio.
                     </p>
@@ -156,4 +156,5 @@ import AppLayout from '@/layouts/AppLayout.vue';
         </div>
     </AppLayout>
 </template>
+
 

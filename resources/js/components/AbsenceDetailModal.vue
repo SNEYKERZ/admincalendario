@@ -1,4 +1,4 @@
-﻿<script setup>
+<script setup>
 import { ref, watch, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
@@ -148,7 +148,7 @@ const formatDate = (date: string | null) => {
                 <template v-if="absence.status === 'pendiente'">
                     <ConfirmDialog
                         title="Rechazar solicitud"
-                        description="Â¿Está seguro de que desea rechazar esta solicitud de ausencia?"
+                        description="¿Está seguro de que desea rechazar esta solicitud de ausencia?"
                         confirm-text="Rechazar"
                         cancel-text="Cancelar"
                         variant="destructive"
@@ -166,7 +166,7 @@ const formatDate = (date: string | null) => {
 
                     <ConfirmDialog
                         title="Aprobar solicitud"
-                        description="Â¿Está seguro de que desea aprobar esta solicitud de ausencia?"
+                        description="¿Está seguro de que desea aprobar esta solicitud de ausencia?"
                         confirm-text="Aprobar"
                         cancel-text="Cancelar"
                         variant="default"
@@ -186,4 +186,5 @@ const formatDate = (date: string | null) => {
         </div>
     </div>
 </template>
+
 

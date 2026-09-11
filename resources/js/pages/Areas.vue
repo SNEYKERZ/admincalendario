@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
@@ -145,7 +145,7 @@ const saveArea = async () => {
 };
 
 const deleteArea = async (area: Area) => {
-    if (!confirm(`Â¿Eliminar el área "${area.name}"?`)) return;
+    if (!confirm(`¿Eliminar el área "${area.name}"?`)) return;
 
     try {
         await axios.delete(`/api/areas/${area.id}`);
@@ -461,4 +461,5 @@ onMounted(() => {
         </div>
     </AppLayout>
 </template>
+
 

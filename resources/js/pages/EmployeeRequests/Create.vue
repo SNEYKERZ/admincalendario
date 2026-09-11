@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center gap-4">
@@ -87,7 +87,7 @@
             <!-- Información -->
             <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
                 <p class="text-sm text-blue-900 dark:text-blue-100">
-                    â„¹ï¸ Tu solicitud serÃ¡ revisada por el equipo de Recursos Humanos. RecibirÃ¡s una notificación cuando sea procesada.
+                    â„¹ï¸ Tu solicitud será revisada por el equipo de Recursos Humanos. Recibirás una notificación cuando sea procesada.
                 </p>
             </div>
         </div>
@@ -141,4 +141,5 @@ const submit = async () => {
     });
 };
 </script>
+
 

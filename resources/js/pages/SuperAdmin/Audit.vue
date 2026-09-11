@@ -1,10 +1,10 @@
-﻿<template>
+<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
                 <div>
                     <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
-                        AuditorÃ­a de SuperAdmin
+                        Auditoría de SuperAdmin
                     </h2>
                     <p class="text-gray-500 dark:text-gray-400 mt-2">
                         Registro de todas las acciones realizadas
@@ -143,14 +143,14 @@
                 <!-- Empty State -->
                 <div v-if="audits.data.length === 0" class="text-center py-12">
                     <p class="text-gray-500 dark:text-gray-400">
-                        No hay registros de auditorÃ­a
+                        No hay registros de auditoría
                     </p>
                 </div>
 
                 <!-- Pagination -->
                 <div v-if="audits.meta && audits.meta.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50">
                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                        PÃ¡gina {{ audits.meta.current_page }} de {{ audits.meta.last_page }}
+                        Página {{ audits.meta.current_page }} de {{ audits.meta.last_page }}
                         ({{ audits.meta.total }} registros)
                     </p>
                     <div class="space-x-2">
@@ -259,4 +259,5 @@ const getActionBadgeClass = (action: string): string => {
     return classMap[action] || 'bg-gray-100 text-gray-800 dark:bg-gray-900 dark:text-gray-200';
 };
 </script>
+
 

@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import AppLayout from '@/layouts/AppLayout.vue';
 import { includesNormalized } from '@/lib/search';
 import axios from 'axios';
@@ -133,7 +133,7 @@ onMounted(loadCommunity);
                 v-else-if="filteredUsers.length === 0"
                 class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-900"
             >
-                No se encontraron personas con ese criterio de bÃºsqueda.
+                No se encontraron personas con ese criterio de bÁºsqueda.
             </div>
 
             <!-- Grid -->
@@ -273,3 +273,4 @@ onMounted(loadCommunity);
     transform: rotateY(180deg);
 }
 </style>
+

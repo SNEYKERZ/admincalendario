@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -108,7 +108,7 @@
                     href="/superadmin/audit"
                     class="flex items-center justify-between px-6 py-4 bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 hover:shadow-md hover:border-blue-300 dark:hover:border-blue-600 transition-all"
                 >
-                    <span class="font-medium text-gray-900 dark:text-white">Ver AuditorÃ­a</span>
+                    <span class="font-medium text-gray-900 dark:text-white">Ver Auditoría</span>
                     <svg class="w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
                     </svg>
@@ -128,7 +128,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        Ãšltimos Tenants
+                        Ášltimos Tenants
                     </h3>
                     <Link
                         href="/superadmin/tenants"
@@ -247,4 +247,5 @@ defineProps<{
     recentTenants: Tenant[];
 }>();
 </script>
+
 

@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center gap-4">
@@ -30,7 +30,7 @@
                             <span class="text-gray-900 dark:text-white font-medium">{{ formatDate(request.created_at) }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-600 dark:text-gray-400">Ãšltima actualización:</span>
+                            <span class="text-gray-600 dark:text-gray-400">Ášltima actualización:</span>
                             <span class="text-gray-900 dark:text-white font-medium">{{ formatDate(request.updated_at) }}</span>
                         </div>
                     </div>
@@ -191,7 +191,7 @@ const latestApproval = computed(() => {
 });
 
 const deleteRequest = () => {
-    if (confirm('Â¿EstÃ¡s seguro de que deseas eliminar esta solicitud? Esta acción no se puede deshacer.')) {
+    if (confirm('¿Estás seguro de que deseas eliminar esta solicitud? Esta acción no se puede deshacer.')) {
         router.delete(`/solicitudes/${props.request.id}`, {
             onSuccess: () => {
                 router.visit('/solicitudes');
@@ -200,4 +200,5 @@ const deleteRequest = () => {
     }
 };
 </script>
+
 

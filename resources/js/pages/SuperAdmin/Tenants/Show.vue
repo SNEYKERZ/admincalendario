@@ -1,4 +1,4 @@
-﻿<template>
+<template>
     <AppLayout>
         <template #header>
             <div class="flex items-center justify-between">
@@ -194,9 +194,10 @@ const impersonate = () => {
         return;
     }
 
-    if (confirm(`Â¿Impersonar a ${props.tenant.admin_name}?`)) {
+    if (confirm(`¿Impersonar a ${props.tenant.admin_name}?`)) {
         startImpersonation(props.tenant.admin_id);
     }
 };
 </script>
+
 

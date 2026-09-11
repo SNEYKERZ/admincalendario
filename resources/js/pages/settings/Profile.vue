@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 import { computed, ref } from 'vue';
 import DeleteUser from '@/components/DeleteUser.vue';
@@ -58,7 +58,7 @@ const tenureLabel = computed(() => {
     const years = Math.floor(months / 12);
     const remainingMonths = months % 12;
 
-    return `${years} aÃ±o(s) y ${remainingMonths} mes(es) en la empresa`;
+    return `${years} año(s) y ${remainingMonths} mes(es) en la empresa`;
 });
 
 const handlePhotoChange = (event: Event) => {
@@ -112,7 +112,7 @@ const submit = () => {
                                     <InputError class="mt-2" :message="form.errors.photo" />
                                 </div>
                                 <p class="text-sm text-muted-foreground">
-                                    Usa una imagen clara. TamaÃ±o Máximo: 2 MB.
+                                    Usa una imagen clara. Tamaño Máximo: 2 MB.
                                 </p>
                             </div>
                         </div>
@@ -206,5 +206,6 @@ const submit = () => {
         </SettingsLayout>
     </AppLayout>
 </template>
+
 
 
