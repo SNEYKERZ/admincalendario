@@ -14,18 +14,42 @@ class OvertimeHoursService
     public function create(array $data): OvertimeHours
     {
         return DB::transaction(function () use ($data) {
-            $authUser = auth()->user();
+            return $this->createOne($data, auth()->user());
+        });
+    }
 
-            if ($authUser->isAdmin() && isset($data['user_id'])) {
-                $user = User::findOrFail($data['user_id']);
-                if ($authUser->area_id !== $user->area_id && !$authUser->isSuperAdmin()) {
-                    throw ValidationException::withMessages([
-                        'user_id' => 'No puedes registrar horas extras de usuarios de otras áreas.',
-                    ]);
+    public function createBatch(array $records): array
+    {
+        return DB::transaction(function () use ($records) {
+            $authUser = auth()->user();
+            $created = [];
+            $errors = [];
+
+            foreach ($records as $index => $record) {
+                try {
+                    $created[] = $this->createOne($record, $authUser);
+                } catch (ValidationException $e) {
+                    $errors[$index] = $e->errors;
+                    throw $e;
                 }
-            } else {
-                $user = $authUser;
             }
+
+            return $created;
+        });
+    }
+
+    private function createOne(array $data, User $authUser): OvertimeHours
+    {
+        if ($authUser->isAdmin() && isset($data['user_id'])) {
+            $user = User::findOrFail($data['user_id']);
+            if ($user->tenant_id !== $authUser->tenant_id) {
+                throw ValidationException::withMessages([
+                    'user_id' => 'Solo puedes registrar horas extras de usuarios del mismo tenant.',
+                ]);
+            }
+        } else {
+            $user = $authUser;
+        }
 
             $date = Carbon::parse($data['date']);
             $startTime = Carbon::createFromFormat('H:i', $data['start_time']);
@@ -82,9 +106,85 @@ class OvertimeHoursService
                 ]);
             }
 
-            return OvertimeHours::create([
-                'tenant_id' => $user->tenant_id,
-                'user_id' => $user->id,
+        return OvertimeHours::create([
+            'tenant_id' => $user->tenant_id,
+            'user_id' => $user->id,
+            'date' => $date,
+            'day_of_week' => $dayOfWeek,
+            'day_of_month' => $dayOfMonth,
+            'month' => $month,
+            'start_time' => $startTime->format('H:i:s'),
+            'end_time' => $endTime->format('H:i:s'),
+            'client' => $data['client'] ?? null,
+            'project' => $data['project'] ?? null,
+            'reason' => $data['reason'],
+            'hours' => $calculatedHours,
+            'status' => 'pending',
+            'exceeds_daily_limit' => false,
+            'exceeds_weekly_limit' => false,
+            'respects_company_schedule' => $respectsSchedule,
+        ]);
+    }
+
+    public function update(OvertimeHours $overtime, array $data): OvertimeHours
+    {
+        return DB::transaction(function () use ($overtime, $data) {
+            if ($overtime->tenant_id !== auth()->user()->tenant_id) {
+                throw ValidationException::withMessages([
+                    'unauthorized' => 'No tienes permiso para actualizar este registro.',
+                ]);
+            }
+
+            $date = Carbon::parse($data['date']);
+            $startTime = Carbon::createFromFormat('H:i', $data['start_time']);
+            $endTime = Carbon::createFromFormat('H:i', $data['end_time']);
+
+            if ($endTime->lte($startTime)) {
+                throw ValidationException::withMessages([
+                    'end_time' => 'La hora de fin debe ser posterior a la hora de inicio.',
+                ]);
+            }
+
+            $calculatedHours = $endTime->floatDiffInHours($startTime);
+            $dayOfWeek = $date->translatedFormat('l');
+            $dayOfMonth = $date->day;
+            $month = $date->translatedFormat('F');
+
+            $exceedsDailyLimit = $calculatedHours > 2;
+            $exceedsWeeklyLimit = $this->checkWeeklyLimit($overtime->user, $date, $calculatedHours, $overtime->id);
+            $respectsSchedule = $this->checkCompanySchedule($overtime->user, $startTime, $endTime);
+
+            if ($exceedsDailyLimit) {
+                throw ValidationException::withMessages([
+                    'hours' => 'El límite máximo de horas extra diarias es 2 horas (Ley colombiana).',
+                ]);
+            }
+
+            if ($exceedsWeeklyLimit) {
+                throw ValidationException::withMessages([
+                    'hours' => 'El total de horas extra semanales no puede exceder 12 horas (Ley colombiana).',
+                ]);
+            }
+
+            if (!$respectsSchedule) {
+                throw ValidationException::withMessages([
+                    'start_time' => 'Las horas extra deben registrarse después de la jornada laboral.',
+                ]);
+            }
+
+            $existing = OvertimeHours::where('tenant_id', $overtime->tenant_id)
+                ->where('user_id', $overtime->user_id)
+                ->where('date', $date)
+                ->where('id', '!=', $overtime->id)
+                ->first();
+
+            if ($existing) {
+                throw ValidationException::withMessages([
+                    'date' => 'Ya existe otro registro de horas extra para esta fecha.',
+                ]);
+            }
+
+            $overtime->update([
                 'date' => $date,
                 'day_of_week' => $dayOfWeek,
                 'day_of_month' => $dayOfMonth,
@@ -95,11 +195,10 @@ class OvertimeHoursService
                 'project' => $data['project'] ?? null,
                 'reason' => $data['reason'],
                 'hours' => $calculatedHours,
-                'status' => 'pending',
-                'exceeds_daily_limit' => false,
-                'exceeds_weekly_limit' => false,
                 'respects_company_schedule' => $respectsSchedule,
             ]);
+
+            return $overtime->fresh();
         });
     }
 
@@ -130,16 +229,21 @@ class OvertimeHoursService
         });
     }
 
-    protected function checkWeeklyLimit(User $user, Carbon $date, float $hours): bool
+    protected function checkWeeklyLimit(User $user, Carbon $date, float $hours, ?int $excludeId = null): bool
     {
         $weekStart = $date->copy()->startOfWeek();
         $weekEnd = $date->copy()->endOfWeek();
 
-        $existingWeekly = OvertimeHours::where('tenant_id', $user->tenant_id)
+        $query = OvertimeHours::where('tenant_id', $user->tenant_id)
             ->where('user_id', $user->id)
             ->whereBetween('date', [$weekStart, $weekEnd])
-            ->where('status', 'approved')
-            ->sum('hours');
+            ->where('status', 'approved');
+
+        if ($excludeId) {
+            $query->where('id', '!=', $excludeId);
+        }
+
+        $existingWeekly = $query->sum('hours');
 
         return ($existingWeekly + $hours) > 12;
     }

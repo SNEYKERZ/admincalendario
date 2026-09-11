@@ -188,7 +188,7 @@ Route::middleware(['auth'])->group(function () {
     });
 
     Route::get('/api/users/employees', function () {
-        return User::where('role', 'employee')
+        return User::where('role', 'colaborador')
             ->where('is_active', true)
             ->orderBy('name')
             ->get(['id', 'name', 'email'])->toArray();
@@ -229,21 +229,20 @@ Route::middleware(['auth'])->group(function () {
     */
     Route::middleware('module:horas-extra')->group(function () {
         Route::inertia('/overtime-hours', 'OvertimeHours/Index')->name('overtime-hours.index');
-        Route::inertia('/overtime-hours/create', 'OvertimeHours/Create')->name('overtime-hours.create');
-        Route::inertia('/overtime-hours/reports', 'OvertimeHours/Reports')->name('overtime-hours.reports');
-        Route::inertia('/overtime-hours/{id}', 'OvertimeHours/Show')->name('overtime-hours.show');
 
         Route::prefix('api/overtime-hours')->group(function () {
-            Route::get('/', [\App\Http\Controllers\OvertimeHoursController::class, 'index'])->name('overtime-hours.api.index');
-            Route::post('/', [\App\Http\Controllers\OvertimeHoursController::class, 'store'])->name('overtime-hours.api.store');
-            Route::get('/{overtimeHours}', [\App\Http\Controllers\OvertimeHoursController::class, 'show'])->name('overtime-hours.api.show');
-            Route::post('/{overtimeHours}/approve', [\App\Http\Controllers\OvertimeHoursController::class, 'approve'])->name('overtime-hours.api.approve');
-            Route::post('/{overtimeHours}/reject', [\App\Http\Controllers\OvertimeHoursController::class, 'reject'])->name('overtime-hours.api.reject');
+            Route::post('/batch', [\App\Http\Controllers\OvertimeHoursController::class, 'storeBatch'])->name('overtime-hours.api.batch-store');
+            Route::put('/{overtimeHours}', [\App\Http\Controllers\OvertimeHoursController::class, 'update'])->name('overtime-hours.api.update');
             Route::delete('/{overtimeHours}', [\App\Http\Controllers\OvertimeHoursController::class, 'destroy'])->name('overtime-hours.api.destroy');
         });
 
-        Route::get('/overtime-reports', [\App\Http\Controllers\OvertimeReportsController::class, 'index'])->name('overtime.reports.index');
-        Route::get('/overtime-reports/export', [\App\Http\Controllers\OvertimeReportsController::class, 'export'])->name('overtime.reports.export');
+        Route::middleware('can:admin')->prefix('admin/overtime-hours')->group(function () {
+            Route::inertia('/', 'AdminOvertimeHours/Index')->name('admin.overtime-hours.index');
+            Route::put('/{overtimeHours}', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'update'])->name('admin.overtime-hours.update');
+            Route::post('/{overtimeHours}/approve', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'approve'])->name('admin.overtime-hours.approve');
+            Route::post('/{overtimeHours}/reject', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'reject'])->name('admin.overtime-hours.reject');
+            Route::get('/export', [\App\Http\Controllers\AdminOvertimeHoursController::class, 'exportExcel'])->name('admin.overtime-hours.export');
+        });
     });
 
     /*
