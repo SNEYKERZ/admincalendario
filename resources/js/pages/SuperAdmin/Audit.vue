@@ -14,7 +14,7 @@
                     href="/superadmin/dashboard"
                     class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                    â† Volver
+                    ← Volver
                 </Link>
             </div>
         </template>
@@ -95,7 +95,7 @@
                             </tr>
                         </thead>
                         <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr v-for="log in audits.data" :key="log.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
+                            <tr v-for="log in data" :key="log.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                                 <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
                                     {{ log.created_at }}
                                 </td>
@@ -141,32 +141,32 @@
                 </div>
 
                 <!-- Empty State -->
-                <div v-if="audits.data.length === 0" class="text-center py-12">
+                <div v-if="data.length === 0" class="text-center py-12">
                     <p class="text-gray-500 dark:text-gray-400">
                         No hay registros de auditoría
                     </p>
                 </div>
 
                 <!-- Pagination -->
-                <div v-if="audits.meta && audits.meta.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50">
+                <div v-if="meta && meta.last_page > 1" class="px-6 py-4 border-t border-gray-200 dark:border-gray-700 flex justify-between items-center bg-gray-50 dark:bg-gray-700/50">
                     <p class="text-sm text-gray-600 dark:text-gray-400">
-                        Página {{ audits.meta.current_page }} de {{ audits.meta.last_page }}
-                        ({{ audits.meta.total }} registros)
+                        Página {{ meta.current_page }} de {{ meta.last_page }}
+                        ({{ meta.total }} registros)
                     </p>
                     <div class="space-x-2">
                         <Link
-                            v-if="audits.meta.current_page > 1"
-                            :href="`/superadmin/audit?page=${audits.meta.current_page - 1}`"
+                            v-if="meta.current_page > 1"
+                            :href="`/superadmin/audit?page=${meta.current_page - 1}`"
                             class="px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                            â† Anterior
+                            ← Anterior
                         </Link>
                         <Link
-                            v-if="audits.meta.current_page < audits.meta.last_page"
-                            :href="`/superadmin/audit?page=${audits.meta.current_page + 1}`"
+                            v-if="meta.current_page < meta.last_page"
+                            :href="`/superadmin/audit?page=${meta.current_page + 1}`"
                             class="px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                         >
-                            Siguiente â†’
+                            Siguiente →
                         </Link>
                     </div>
                 </div>

@@ -2,7 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\UserRole;
 use App\Models\Area;
+use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -81,6 +83,7 @@ class AreaController extends Controller
 
         if (!empty($leaderIds)) {
             $area->leaders()->attach($leaderIds);
+            $this->promoteLeadersToAdmin($leaderIds);
         }
 
         $area->load('leaders');
@@ -165,7 +168,18 @@ class AreaController extends Controller
         $area->update($validated);
 
         if ($leaderIds !== null) {
+            $currentLeaderIds = $area->leaders()->get()->pluck('id')->toArray();
+            $removedLeaderIds = array_diff($currentLeaderIds, $leaderIds);
+
+            if (in_array($request->user()->id, $removedLeaderIds, true)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'No puedes quitarte a ti mismo como líder de esta área. Pídele a otro administrador que lo haga.',
+                ], 422);
+            }
+
             $area->leaders()->sync($leaderIds);
+            $this->promoteLeadersToAdmin($leaderIds);
         }
 
         $area->load('leaders');
@@ -205,6 +219,17 @@ class AreaController extends Controller
             'success' => true,
             'message' => 'Área eliminada exitosamente',
         ]);
+    }
+
+    /**
+     * Promueve a "admin" a los usuarios asignados como líderes de área,
+     * ya que el módulo de áreas solo es visible para administradores.
+     */
+    protected function promoteLeadersToAdmin(array $leaderIds): void
+    {
+        User::whereIn('id', $leaderIds)
+            ->where('role', UserRole::COLLABORATOR->value)
+            ->update(['role' => UserRole::ADMIN->value]);
     }
 
     /**

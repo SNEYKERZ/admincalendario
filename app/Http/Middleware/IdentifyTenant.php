@@ -46,7 +46,15 @@ class IdentifyTenant
         }
 
         // Lógica normal para Admin/Colaborador
-        $tenantManager->resolveFromRequest();
+        // El usuario autenticado ya sabe a qué tenant pertenece (users.tenant_id).
+        // Esa es la fuente de verdad: no debe adivinarse por subdominio/header/sesión,
+        // que solo tienen sentido para flujos sin usuario autenticado (ej. verificación
+        // pública de licencias por dominio).
+        if (auth()->check() && auth()->user()->tenant_id) {
+            $tenantManager->setTenant(auth()->user()->tenant_id);
+        } else {
+            $tenantManager->resolveFromRequest();
+        }
 
         // Si no hay tenant y no es ruta pública, redirigir o mostrar error
         if (! $tenantManager->hasTenant()) {

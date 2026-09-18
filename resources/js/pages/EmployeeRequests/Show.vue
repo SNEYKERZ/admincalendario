@@ -3,7 +3,7 @@
         <template #header>
             <div class="flex items-center gap-4">
                 <Link href="/solicitudes" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium">
-                    â† Volver
+                    ← Volver
                 </Link>
                 <div class="flex-1">
                     <h2 class="text-3xl font-bold text-gray-900 dark:text-white">{{ request.title }}</h2>

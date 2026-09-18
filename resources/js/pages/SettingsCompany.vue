@@ -438,7 +438,7 @@ onBeforeUnmount(() => {
                         class="text-blue-600 hover:underline dark:text-blue-400"
                         >Términos y Condiciones</a
                     >
-                    Â·
+                    ·
                     <a
                         href="/legal/privacy"
                         class="text-blue-600 hover:underline dark:text-blue-400"

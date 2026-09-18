@@ -113,14 +113,14 @@
                         :href="requests.prev_page_url"
                         class="px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                        â† Anterior
+                        ← Anterior
                     </Link>
                     <Link
                         v-if="requests.next_page_url"
                         :href="requests.next_page_url"
                         class="px-3 py-2 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded border border-gray-300 dark:border-gray-600 hover:bg-gray-50 dark:hover:bg-gray-700"
                     >
-                        Siguiente â†’
+                        Siguiente →
                     </Link>
                 </div>
             </div>

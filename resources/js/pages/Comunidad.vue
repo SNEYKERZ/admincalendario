@@ -133,7 +133,7 @@ onMounted(loadCommunity);
                 v-else-if="filteredUsers.length === 0"
                 class="rounded-xl border border-slate-200 bg-white p-8 text-center text-slate-500 dark:border-slate-700 dark:bg-slate-900"
             >
-                No se encontraron personas con ese criterio de bÁºsqueda.
+                No se encontraron personas con ese criterio de búsqueda.
             </div>
 
             <!-- Grid -->
@@ -144,24 +144,24 @@ onMounted(loadCommunity);
                 <div
                     v-for="user in filteredUsers"
                     :key="user.id"
-                    class="card-flip-container h-[420px] w-full"
+                    class="card-flip-container h-80 w-full"
                 >
                     <div class="card-flip-inner">
 
                         <!-- FRONT -->
-                        <article class="card-face card-front border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+                        <article class="card-face card-front border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-slate-900">
                             <div class="flex h-full flex-col items-center text-center">
 
-                                <div class="mb-4 mt-2">
+                                <div class="mb-2 mt-1">
                                     <img
                                         v-if="user.photo_url"
                                         :src="user.photo_url"
                                         :alt="`Foto de ${user.name}`"
-                                        class="h-32 w-32 rounded-full object-cover ring-4 ring-slate-100 dark:ring-slate-800"
+                                        class="h-24 w-24 rounded-full object-cover ring-4 ring-slate-100 dark:ring-slate-800"
                                     />
                                     <div
                                         v-else
-                                        class="flex h-32 w-32 items-center justify-center rounded-full bg-slate-200 text-2xl font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100"
+                                        class="flex h-24 w-24 items-center justify-center rounded-full bg-slate-200 text-2xl font-semibold text-slate-700 dark:bg-slate-700 dark:text-slate-100"
                                     >
                                         {{ initials(user.name) }}
                                     </div>
@@ -171,18 +171,18 @@ onMounted(loadCommunity);
                                     {{ user.name }}
                                 </h3>
 
-                                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
+                                <p class="mt-0.5 text-sm text-slate-500 dark:text-slate-400">
                                     {{ user.role_label }}
                                 </p>
 
                                 <span
-                                    class="mt-3 inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium"
+                                    class="mt-2 inline-flex items-center rounded-full border px-3 py-1 text-xs font-medium"
                                     :class="statusBadgeClass(user.status)"
                                 >
                                     {{ statusLabel(user.status) }}
                                 </span>
 
-                                <p class="mt-2 text-sm text-slate-500 dark:text-slate-400">
+                                <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">
                                     {{ user.area || 'Sin área' }}
                                 </p>
 
@@ -193,12 +193,12 @@ onMounted(loadCommunity);
                         </article>
 
                         <!-- BACK -->
-                        <article class="card-face card-back border border-slate-200 bg-slate-900 p-5 text-slate-100 shadow-sm dark:border-slate-700">
-                            <h3 class="mb-4 text-base font-semibold">
+                        <article class="card-face card-back border border-slate-200 bg-slate-900 p-4 text-slate-100 shadow-sm dark:border-slate-700">
+                            <h3 class="mb-3 text-base font-semibold">
                                 {{ user.name }}
                             </h3>
 
-                            <dl class="space-y-3 text-sm">
+                            <dl class="space-y-2 text-sm">
                                 <div>
                                     <dt class="text-xs uppercase tracking-wide text-slate-400">
                                         Correo

@@ -45,10 +45,10 @@
                         </select>
                     </div>
 
-                    <!-- BÁºsqueda -->
+                    <!-- Búsqueda -->
                     <div>
                         <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            BÁºsqueda
+                            Búsqueda
                         </label>
                         <input
                             v-model="searchQuery"
@@ -225,7 +225,7 @@
                             :disabled="approvingLoading"
                             class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                            {{ approvingLoading ? 'Aprobando...' : 'âœ“ Aprobar Solicitud' }}
+                            {{ approvingLoading ? 'Aprobando...' : '✓ Aprobar Solicitud' }}
                         </button>
 
                         <!-- Rechazar -->
@@ -246,7 +246,7 @@
                             :disabled="rejectingLoading || !rejectionReason"
                             class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
                         >
-                            {{ rejectingLoading ? 'Rechazando...' : 'âœ— Rechazar Solicitud' }}
+                            {{ rejectingLoading ? 'Rechazando...' : '✗ Rechazar Solicitud' }}
                         </button>
                     </div>
 
@@ -273,7 +273,7 @@
                                                 : 'text-red-900 dark:text-red-100',
                                         ]"
                                     >
-                                        {{ approval.status === 'aprobado' ? 'âœ“ Aprobado' : 'âœ— Rechazado' }}
+                                        {{ approval.status === 'aprobado' ? '✓ Aprobado' : '✗ Rechazado' }}
                                     </p>
                                     <span
                                         :class="[

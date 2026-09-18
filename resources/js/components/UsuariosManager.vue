@@ -69,6 +69,8 @@ const showModal = ref(false);
 const showRolesModal = ref(false);
 const modalMode = ref<'create' | 'edit' | 'view'>('create');
 const selectedUser = ref<User | null>(null);
+const vacationDaysInput = ref<number>(0);
+const savingVacation = ref(false);
 
 // Form state
 const form = ref({
@@ -263,6 +265,7 @@ const openView = async (user: User) => {
     try {
         const res = await axios.get(`/admin/users/${user.id}`);
         selectedUser.value = res.data;
+        vacationDaysInput.value = res.data.allocated ?? 0;
 
         // Llenar el formulario con los datos del usuario
         form.value = {
@@ -287,6 +290,30 @@ const openView = async (user: User) => {
         loading.value = false;
     }
     showModal.value = true;
+};
+
+const updateVacationDays = async () => {
+    if (!selectedUser.value) return;
+
+    savingVacation.value = true;
+    try {
+        await axios.post('/admin/vacation-years', {
+            user_id: selectedUser.value.id,
+            year: new Date().getFullYear(),
+            allocated_days: vacationDaysInput.value,
+        });
+        toast.success('Días de vacaciones actualizados');
+
+        const res = await axios.get(`/admin/users/${selectedUser.value.id}`);
+        selectedUser.value = res.data;
+        vacationDaysInput.value = res.data.allocated ?? 0;
+        await loadUsers();
+    } catch (e: any) {
+        console.error(e);
+        toast.error(e.response?.data?.message || 'Error actualizando días de vacaciones');
+    } finally {
+        savingVacation.value = false;
+    }
 };
 
 const downloadImportTemplate = () => {
@@ -387,10 +414,10 @@ const deleteUser = async (user: User) => {
 const adjustDays = async (user: User, days: number) => {
     try {
         await axios.post(`/gestion-usuarios/${user.id}/adjust`, { days });
-        toast.success('dí­as actualizados');
+        toast.success('Días actualizados');
         loadUsers();
     } catch {
-        toast.error('Error actualizando dí­as');
+        toast.error('Error actualizando días');
     }
 };
 
@@ -455,7 +482,7 @@ const getRoleBadge = (role: string) => {
                     </h3>
                     <p class="text-xs text-gray-500 dark:text-gray-400">
                         El archivo debe incluir: nombre, apellidos, identificación, género, correo,
-                        nÁºmero de celular, área, rol, fecha de nacimiento y fecha de contratación.
+                        número de celular, área, rol, fecha de nacimiento y fecha de contratación.
                     </p>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -806,17 +833,34 @@ const getRoleBadge = (role: string) => {
                                 <p class="text-gray-900 dark:text-gray-100">{{ formatDate(selectedUser.hire_date) }}</p>
                             </div>
                             <div>
-                                <span class="text-xs font-medium text-gray-500 uppercase">Vacaciones asignadas:</span>
-                                <p class="text-gray-900 dark:text-gray-100">{{ selectedUser.allocated }} dí­as</p>
+                                <span class="text-xs font-medium text-gray-500 uppercase">Vacaciones asignadas (año actual):</span>
+                                <div class="mt-1 flex items-center gap-2">
+                                    <input
+                                        v-model.number="vacationDaysInput"
+                                        type="number"
+                                        min="0"
+                                        max="60"
+                                        class="input w-20"
+                                        :disabled="savingVacation"
+                                    />
+                                    <button
+                                        type="button"
+                                        @click="updateVacationDays"
+                                        :disabled="savingVacation"
+                                        class="btn-secondary px-3 py-1 text-xs"
+                                    >
+                                        {{ savingVacation ? 'Guardando...' : 'Guardar' }}
+                                    </button>
+                                </div>
                             </div>
                             <div>
                                 <span class="text-xs font-medium text-gray-500 uppercase">Vacaciones usadas:</span>
-                                <p class="text-gray-900 dark:text-gray-100">{{ selectedUser.used }} dí­as</p>
+                                <p class="text-gray-900 dark:text-gray-100">{{ selectedUser.used }} días</p>
                             </div>
                             <div>
                                 <span class="text-xs font-medium text-gray-500 uppercase">Vacaciones disponibles:</span>
                                 <p class="font-bold text-emerald-600 dark:text-emerald-400">
-                                    {{ selectedUser.available }} dí­as
+                                    {{ selectedUser.available }} días
                                 </p>
                             </div>
                             <div>
@@ -919,10 +963,10 @@ const getRoleBadge = (role: string) => {
                                     {{ role.display_name }}
                                 </div>
                                 <div class="text-xs text-gray-500">
-                                    {{ role.name }} Â·
+                                    {{ role.name }} ·
                                     {{ role.user_count }} usuarios
                                     <span v-if="role.is_system" class="text-blue-600">
-                                        Â· Sistema
+                                        · Sistema
                                     </span>
                                 </div>
                             </div>

@@ -128,7 +128,7 @@ const setAuthTheme = () => {
             </div>
 
             <div class="absolute bottom-8 text-xs text-white/40">
-                Â© 2026 Ausentra. Todos los derechos reservados.
+                © 2026 Ausentra. Todos los derechos reservados.
             </div>
         </div>
 

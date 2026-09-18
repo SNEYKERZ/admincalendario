@@ -14,7 +14,7 @@
                     href="/superadmin/tenants"
                     class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                    â† Volver a Tenants
+                    ← Volver a Tenants
                 </Link>
             </div>
         </template>
@@ -46,7 +46,7 @@
                             <dt class="text-gray-600 dark:text-gray-400 font-medium">Estado</dt>
                             <dd>
                                 <span class="px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300">
-                                    âœ“ Activo
+                                    ✓ Activo
                                 </span>
                             </dd>
                         </div>

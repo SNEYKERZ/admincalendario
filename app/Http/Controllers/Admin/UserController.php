@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\User;
+use App\Models\VacationYear;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -72,6 +73,8 @@ class UserController extends Controller
         $data['tenant_id'] = $request->user()->tenant_id;
 
         $user = User::create($data);
+
+        $this->assignDefaultVacationDays($user);
 
         return response()->json($user, 201);
     }
@@ -173,7 +176,7 @@ class UserController extends Controller
         ];
 
         foreach ($headers as $index => $header) {
-            $sheet->setCellValueByColumnAndRow($index + 1, 1, $header);
+            $sheet->setCellValue([$index + 1, 1], $header);
         }
 
         $exampleRows = [
@@ -183,7 +186,7 @@ class UserController extends Controller
 
         foreach ($exampleRows as $rowIndex => $row) {
             foreach ($row as $columnIndex => $value) {
-                $sheet->setCellValueByColumnAndRow($columnIndex + 1, $rowIndex + 2, $value);
+                $sheet->setCellValue([$columnIndex + 1, $rowIndex + 2], $value);
             }
         }
 
@@ -331,7 +334,8 @@ class UserController extends Controller
                     $updated++;
                 } else {
                     $payload['password'] = Hash::make($identification !== '' ? $identification : Str::random(12));
-                    User::create($payload);
+                    $newUser = User::create($payload);
+                    $this->assignDefaultVacationDays($newUser);
                     $created++;
                 }
 
@@ -350,6 +354,24 @@ class UserController extends Controller
             'errors' => $errors,
             'message' => 'Cargue masivo procesado',
         ]);
+    }
+
+    protected function assignDefaultVacationDays(User $user, int $days = 15): void
+    {
+        $year = now()->year;
+
+        VacationYear::firstOrCreate(
+            [
+                'user_id' => $user->id,
+                'year' => $year,
+            ],
+            [
+                'tenant_id' => $user->tenant_id,
+                'allocated_days' => $days,
+                'used_days' => 0,
+                'expires_at' => \Carbon\Carbon::create($year, 12, 31),
+            ]
+        );
     }
 
     protected function sanitizeText(string $value): string

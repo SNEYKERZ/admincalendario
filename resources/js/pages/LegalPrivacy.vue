@@ -40,7 +40,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                             contratación, departamento, cargo
                         </li>
                         <li>
-                            <strong>Datos de uso:</strong> Cómo interactÁºa con
+                            <strong>Datos de uso:</strong> Cómo interactúa con
                             el sistema
                         </li>
                         <li>
@@ -82,7 +82,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         No vendemos su información personal. Compartimos datos
-                        Áºnicamente con:
+                        únicamente con:
                     </p>
                     <ul
                         class="mt-4 list-disc space-y-2 pl-6 text-gray-600 dark:text-gray-400"
@@ -114,7 +114,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                         Implementamos medidas de seguridad apropiadas para
                         proteger su información personal, incluyendo
                         encriptación, controles de acceso y auditorías de
-                        seguridad regulares. Sin embargo, ningÁºn sistema es 100%
+                        seguridad regulares. Sin embargo, ningún sistema es 100%
                         seguro y no podemos garantizar seguridad absoluta.
                     </p>
                 </section>
@@ -129,8 +129,8 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         Conservamos su información mientras su cuenta esté
-                        activa o segÁºn sea necesario para proporcionar
-                        servicios. Los datos de ausencia se mantienen segÁºn las
+                        activa o según sea necesario para proporcionar
+                        servicios. Los datos de ausencia se mantienen según las
                         regulaciones laborales aplicables. Puede solicitar la
                         eliminación de sus datos en cualquier momento.
                     </p>

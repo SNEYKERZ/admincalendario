@@ -74,6 +74,7 @@ class VacationController extends Controller
         $vacation = $user->vacationYears()->firstOrCreate(
             ['year' => $year],
             [
+                'tenant_id' => $user->tenant_id,
                 'allocated_days' => 0,
                 'used_days' => 0,
                 'expires_at' => now()->endOfYear(),

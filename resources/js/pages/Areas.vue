@@ -2,6 +2,7 @@
 import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import { useToast } from 'vue-toastification';
+import { usePage } from '@inertiajs/vue3';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { includesNormalized } from '@/lib/search';
 import {
@@ -34,6 +35,8 @@ interface User {
 }
 
 const toast = useToast();
+const page = usePage();
+const currentUserId = computed(() => (page.props.auth as any)?.user?.id ?? null);
 
 const areas = ref<Area[]>([]);
 const users = ref<User[]>([]);
@@ -41,6 +44,7 @@ const loading = ref(false);
 const showModal = ref(false);
 const modalMode = ref<'create' | 'edit'>('create');
 const selectedArea = ref<Area | null>(null);
+const initialLeaderIds = ref<number[]>([]);
 
 const search = ref('');
 const filterActive = ref('all');
@@ -102,6 +106,7 @@ const openCreate = async () => {
         leader_ids: [],
     };
     selectedArea.value = null;
+    initialLeaderIds.value = [];
     await loadUsers();
     showModal.value = true;
 };
@@ -119,6 +124,7 @@ const openEdit = async (area: Area) => {
             is_active: areaData.is_active,
             leader_ids: areaData.leader_ids || [],
         };
+        initialLeaderIds.value = areaData.leader_ids || [];
     } catch (e) {
         console.error('Error loading area:', e);
     }
@@ -319,7 +325,7 @@ onMounted(() => {
             v-if="showModal"
             class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
         >
-            <div class="w-full max-w-md rounded-xl bg-white dark:bg-slate-900">
+            <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white dark:bg-slate-900">
                 <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
                     <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
                         {{
@@ -417,18 +423,23 @@ onMounted(() => {
                         >
                             Líderes de Área (Opcional)
                         </label>
-                        <div class="max-h-40 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
+                        <div class="max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
                             <div
                                 v-for="user in users"
                                 :key="user.id"
-                                class="flex items-center gap-2 border-b border-slate-100 p-2 last:border-b-0 dark:border-slate-700 dark:bg-slate-800"
+                                class="flex items-start gap-2 border-b border-slate-100 p-2 last:border-b-0 dark:border-slate-700 dark:bg-slate-800"
                             >
                                 <input
                                     :id="`leader_${user.id}`"
                                     :value="user.id"
                                     v-model.number="form.leader_ids"
                                     type="checkbox"
-                                    class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600"
+                                    :disabled="
+                                        modalMode === 'edit' &&
+                                        user.id === currentUserId &&
+                                        initialLeaderIds.includes(user.id)
+                                    "
+                                    class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600"
                                 />
                                 <label
                                     :for="`leader_${user.id}`"
@@ -436,6 +447,16 @@ onMounted(() => {
                                 >
                                     {{ user.name }}
                                     <span class="text-xs text-slate-500">{{ user.email }}</span>
+                                    <span
+                                        v-if="
+                                            modalMode === 'edit' &&
+                                            user.id === currentUserId &&
+                                            initialLeaderIds.includes(user.id)
+                                        "
+                                        class="mt-0.5 block text-xs text-amber-600 dark:text-amber-400"
+                                    >
+                                        No puedes quitarte a ti mismo como líder. Pídele a otro administrador que lo haga.
+                                    </span>
                                 </label>
                             </div>
                         </div>

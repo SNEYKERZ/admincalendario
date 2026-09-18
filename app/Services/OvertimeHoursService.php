@@ -63,7 +63,7 @@ class OvertimeHoursService
             }
 
             // Calcular automáticamente las horas
-            $calculatedHours = $endTime->floatDiffInHours($startTime);
+            $calculatedHours = $startTime->floatDiffInHours($endTime);
 
             // Extraer componentes de fecha
             $dayOfWeek = $date->translatedFormat('l'); // Día de la semana en español
@@ -145,7 +145,7 @@ class OvertimeHoursService
                 ]);
             }
 
-            $calculatedHours = $endTime->floatDiffInHours($startTime);
+            $calculatedHours = $startTime->floatDiffInHours($endTime);
             $dayOfWeek = $date->translatedFormat('l');
             $dayOfMonth = $date->day;
             $month = $date->translatedFormat('F');

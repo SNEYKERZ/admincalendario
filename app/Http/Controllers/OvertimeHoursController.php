@@ -53,7 +53,7 @@ class OvertimeHoursController extends Controller
         ]);
 
         $targetUser = $data['user_id'] ? \App\Models\User::find($data['user_id']) : auth()->user();
-        $this->authorize('store', $targetUser);
+        $this->authorize('store', [OvertimeHours::class, $targetUser]);
 
         $overtime = $this->overtimeService->create($data);
 
@@ -76,7 +76,7 @@ class OvertimeHoursController extends Controller
         // Check authorization for each batch record's target user
         foreach ($records['records'] as $record) {
             $targetUser = $record['user_id'] ? \App\Models\User::find($record['user_id']) : auth()->user();
-            $this->authorize('store', $targetUser);
+            $this->authorize('store', [OvertimeHours::class, $targetUser]);
         }
 
         $overtimes = $this->overtimeService->createBatch($records['records']);

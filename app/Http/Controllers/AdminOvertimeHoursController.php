@@ -9,7 +9,7 @@ use App\Services\OvertimeHoursService;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
-use PhpOffice\PhpSpreadsheet\Style\PatternFill;
+use PhpOffice\PhpSpreadsheet\Style\Fill;
 use PhpOffice\PhpSpreadsheet\Style\Font;
 use Illuminate\Http\Request;
 
@@ -181,7 +181,7 @@ class AdminOvertimeHoursController extends Controller
 
         $headerStyle = [
             'font' => ['bold' => true, 'color' => ['rgb' => 'FFFFFF']],
-            'fill' => ['fillType' => PatternFill::FILL_SOLID, 'startColor' => ['rgb' => '1F67C9']],
+            'fill' => ['fillType' => Fill::FILL_SOLID, 'startColor' => ['rgb' => '1F67C9']],
             'alignment' => ['horizontal' => 'center', 'vertical' => 'center'],
         ];
 

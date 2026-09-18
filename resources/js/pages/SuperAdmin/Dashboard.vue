@@ -134,7 +134,7 @@
                         href="/superadmin/tenants"
                         class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
                     >
-                        Ver todos â†’
+                        Ver todos →
                     </Link>
                 </div>
                 <div class="overflow-x-auto">
@@ -193,7 +193,7 @@
                                                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
                                         ]"
                                     >
-                                        {{ tenant.is_active ? 'âœ“ Activo' : 'âœ— Inactivo' }}
+                                        {{ tenant.is_active ? '✓ Activo' : '✗ Inactivo' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm">

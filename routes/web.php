@@ -64,7 +64,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/', function () {
         return Auth::check() ? redirect('/dashboard') : redirect('/login');
-    });
+    })->name('home');
 
     // Current user info (for Vue apps)
     Route::get('/me', function () {
@@ -125,22 +125,27 @@ Route::middleware(['auth'])->group(function () {
 
     // Áreas organizacionales
     Route::middleware('module:areas')->group(function () {
-        Route::inertia('/areas', 'Areas')->name('areas');
+        // Lectura básica (nombre/color): usada también por colaboradores en calendario, filtros, etc.
         Route::get('/areas-list', [AreaController::class, 'list'])->name('areas.list');
         Route::get('/api/areas', [AreaController::class, 'index'])->name('areas.index');
-        Route::post('/api/areas', [AreaController::class, 'store'])->name('areas.store');
-        Route::get('/api/areas/{area}', [AreaController::class, 'show'])->name('areas.show');
-        Route::put('/api/areas/{area}', [AreaController::class, 'update'])->name('areas.update');
-        Route::delete('/api/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
-        Route::get('/api/areas/metrics', [AreaController::class, 'metrics'])->name('areas.metrics');
-        Route::get('/api/users', function () {
-            return response()->json([
-                'users' => User::where('is_active', true)
-                    ->orderBy('name')
-                    ->get(['id', 'name', 'email'])
-                    ->toArray(),
-            ]);
-        })->name('users.list');
+
+        // Administración de áreas (crear/editar/eliminar, líderes, detalle con empleados): solo admins.
+        Route::middleware('can:admin')->group(function () {
+            Route::inertia('/areas', 'Areas')->name('areas');
+            Route::post('/api/areas', [AreaController::class, 'store'])->name('areas.store');
+            Route::get('/api/areas/{area}', [AreaController::class, 'show'])->name('areas.show');
+            Route::put('/api/areas/{area}', [AreaController::class, 'update'])->name('areas.update');
+            Route::delete('/api/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
+            Route::get('/api/areas/metrics', [AreaController::class, 'metrics'])->name('areas.metrics');
+            Route::get('/api/users', function () {
+                return response()->json([
+                    'users' => User::where('is_active', true)
+                        ->orderBy('name')
+                        ->get(['id', 'name', 'email'])
+                        ->toArray(),
+                ]);
+            })->name('users.list');
+        });
     });
 
     // Settings (handled by inertia inside auth group)

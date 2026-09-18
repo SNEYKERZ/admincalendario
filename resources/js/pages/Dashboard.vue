@@ -634,7 +634,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-slate-600">
                         <span>
-                            Página {{ employeeMeta.current_page }} de {{ employeeMeta.last_page }} Â·
+                            Página {{ employeeMeta.current_page }} de {{ employeeMeta.last_page }} ·
                             {{ employeeMeta.total }} registros
                         </span>
                         <div class="flex gap-2">
@@ -714,7 +714,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
                         <span>
-                            Página {{ pendingMeta.current_page }} de {{ pendingMeta.last_page }} Â·
+                            Página {{ pendingMeta.current_page }} de {{ pendingMeta.last_page }} ·
                             {{ pendingMeta.total }} registros
                         </span>
                         <div class="flex gap-2">
@@ -792,7 +792,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
                         <span>
-                            Página {{ recentMeta.current_page }} de {{ recentMeta.last_page }} Â·
+                            Página {{ recentMeta.current_page }} de {{ recentMeta.last_page }} ·
                             {{ recentMeta.total }} registros
                         </span>
                         <div class="flex gap-2">
@@ -862,7 +862,7 @@ onMounted(loadDashboard);
                                             {{
                                                 item.expiring_soon
                                                     .map((row) => `${row.days} dí­as (${formatDate(row.expires)})`)
-                                                    .join(' Â· ')
+                                                    .join(' · ')
                                             }}
                                         </span>
                                         <span v-else>-</span>
@@ -878,7 +878,7 @@ onMounted(loadDashboard);
                     </div>
                     <div class="mt-4 flex items-center justify-between text-sm text-gray-600">
                         <span>
-                            Página {{ vacationMeta.current_page }} de {{ vacationMeta.last_page }} Â·
+                            Página {{ vacationMeta.current_page }} de {{ vacationMeta.last_page }} ·
                             {{ vacationMeta.total }} registros
                         </span>
                         <div class="flex gap-2">

@@ -49,7 +49,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                         class="mt-4 list-disc space-y-2 pl-6 text-gray-600 dark:text-gray-400"
                     >
                         <li>
-                            Utilizar el sistema Áºnicamente para fines legítimos
+                            Utilizar el sistema únicamente para fines legítimos
                         </li>
                         <li>
                             No intentar acceder a información de otros usuarios
@@ -132,7 +132,7 @@ import AppLayout from '@/layouts/AppLayout.vue';
                     </h2>
                     <p class="mt-2 text-gray-600 dark:text-gray-400">
                         El sistema se proporciona "tal cual" sin garantías de
-                        ningÁºn tipo. No garantizamos que el sistema esté libre
+                        ningún tipo. No garantizamos que el sistema esté libre
                         de errores o disponible continuamente. No seremos
                         responsables por cualquier interrupción del servicio.
                     </p>

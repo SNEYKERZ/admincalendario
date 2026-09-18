@@ -14,7 +14,7 @@
                     href="/superadmin/dashboard"
                     class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
                 >
-                    â† Volver
+                    ← Volver
                 </Link>
             </div>
         </template>
@@ -102,7 +102,7 @@
                                                 : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
                                         ]"
                                     >
-                                        {{ tenant.is_active ? 'âœ“ Activo' : 'âœ— Inactivo' }}
+                                        {{ tenant.is_active ? '✓ Activo' : '✗ Inactivo' }}
                                     </span>
                                 </td>
                                 <td class="px-6 py-4 whitespace-nowrap text-sm space-x-3">

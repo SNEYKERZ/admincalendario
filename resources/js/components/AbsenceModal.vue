@@ -103,8 +103,7 @@ const selectedType = computed(() =>
 const showBusinessRules = computed(
     () =>
         props.isAdmin &&
-        !selectedType.value?.counts_as_hours &&
-        form.value.include_holidays,
+        !selectedType.value?.counts_as_hours,
 );
 
 const canEdit = computed(() => {

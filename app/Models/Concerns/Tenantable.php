@@ -2,6 +2,7 @@
 
 namespace App\Models\Concerns;
 
+use App\Managers\TenantManager;
 use App\Models\Tenant;
 use App\Scopes\TenantScope;
 
@@ -15,6 +16,21 @@ trait Tenantable
     public static function bootTenantable(): void
     {
         static::addGlobalScope(new TenantScope);
+
+        // Si el código que crea el registro no especificó tenant_id, lo
+        // completamos con el tenant actual. Sin esto, un registro creado
+        // sin tenant_id explícito queda con tenant_id = NULL y el
+        // TenantScope lo deja invisible para siempre en las próximas
+        // consultas (aunque exista en la base de datos).
+        static::creating(function ($model) {
+            if (empty($model->tenant_id) && in_array('tenant_id', $model->getFillable())) {
+                $tenantId = app(TenantManager::class)->getTenantId();
+
+                if ($tenantId) {
+                    $model->tenant_id = $tenantId;
+                }
+            }
+        });
     }
 
     /**
