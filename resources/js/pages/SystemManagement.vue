@@ -496,7 +496,7 @@ onMounted(() => {
                         </p>
                         <div class="max-w-xs">
                             <label class="label"
-                                >dí­as antes del vencimiento</label
+                                >días antes del vencimiento</label
                             >
                             <input
                                 v-model.number="settings.show_ads_days_before"
@@ -567,7 +567,7 @@ onMounted(() => {
                                         {{ plan.name }}
                                     </h3>
                                     <p class="text-sm text-gray-500">
-                                        {{ plan.duration_days }} dí­as
+                                        {{ plan.duration_days }} días
                                     </p>
                                 </div>
                                 <span
@@ -674,7 +674,7 @@ onMounted(() => {
                                     <th
                                         class="px-4 py-3 text-left text-xs font-medium text-gray-500"
                                     >
-                                        dí­as
+                                        días
                                     </th>
                                     <th
                                         class="px-4 py-3 text-left text-xs font-medium text-gray-500"
@@ -748,7 +748,7 @@ onMounted(() => {
                                             >{{
                                                 admin.subscription_days_remaining
                                             }}
-                                            dí­as</span
+                                            días</span
                                         >
                                         <span v-else class="text-gray-400"
                                             >-</span
@@ -862,7 +862,7 @@ onMounted(() => {
                                     v-if="announcement.days_before"
                                     class="ml-2"
                                 >
-                                    ({{ announcement.days_before }} dí­as antes)
+                                    ({{ announcement.days_before }} días antes)
                                 </span>
                             </div>
                             <div class="mt-4 flex gap-2">
@@ -911,7 +911,7 @@ onMounted(() => {
                                 </div>
                                 <span
                                     class="rounded-full bg-red-500 px-3 py-1 text-sm font-bold text-white"
-                                    >{{ admin.days_remaining }} dí­as</span
+                                    >{{ admin.days_remaining }} días</span
                                 >
                             </div>
                             <div class="mt-3 text-sm text-amber-800">
@@ -953,7 +953,7 @@ onMounted(() => {
                         />
                     </div>
                     <div>
-                        <label class="label">Duración (dí­as)</label>
+                        <label class="label">Duración (días)</label>
                         <input
                             v-model.number="planForm.duration_days"
                             type="number"
@@ -1066,7 +1066,7 @@ onMounted(() => {
                             <div>
                                 <p class="font-medium">{{ plan.name }}</p>
                                 <p class="text-sm text-gray-500">
-                                    {{ plan.duration_days }} dí­as
+                                    {{ plan.duration_days }} días
                                 </p>
                             </div>
                         </div>
@@ -1129,7 +1129,7 @@ onMounted(() => {
                         </select>
                     </div>
                     <div v-if="announcementForm.type !== 'general'">
-                        <label class="label">dí­as antes del vencimiento</label>
+                        <label class="label">días antes del vencimiento</label>
                         <input
                             v-model.number="announcementForm.days_before"
                             type="number"

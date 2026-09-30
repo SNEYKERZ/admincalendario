@@ -35,7 +35,7 @@
                 </div>
                 <div>
                   <p class="text-xs text-gray-500 uppercase">Duración</p>
-                  <p class="font-medium">{{ chain.absence.total_days }} dí­as</p>
+                  <p class="font-medium">{{ chain.absence.total_days }} días</p>
                 </div>
                 <div class="col-span-2">
                   <p class="text-xs text-gray-500 uppercase">Período</p>
@@ -84,7 +84,7 @@
               {{ formatDate(selectedChain.absence.start_datetime) }} a
               {{ formatDate(selectedChain.absence.end_datetime) }}
             </p>
-            <p class="text-sm mt-1"><strong>Duración:</strong> {{ selectedChain.absence.total_days }} dí­as</p>
+            <p class="text-sm mt-1"><strong>Duración:</strong> {{ selectedChain.absence.total_days }} días</p>
           </div>
 
           <textarea

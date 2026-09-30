@@ -581,7 +581,7 @@ const getRoleBadge = (role: string) => {
                                 <div class="flex items-center gap-3">
                                     <div
                                         class="flex h-10 w-10 items-center justify-center rounded-full bg-gray-200 dark:bg-gray-600">
-                                        <img v-if="user.photo_url" :src="user.photo_url"
+                                        <img v-if="user.photo_url" :src="user.photo_url" :alt="`Foto de ${user.name}`"
                                             class="h-10 w-10 rounded-full object-cover" />
                                         <span v-else class="text-lg font-medium text-gray-600 dark:text-gray-300">{{
                                             user.name
@@ -660,12 +660,12 @@ const getRoleBadge = (role: string) => {
                                 <div class="flex items-center justify-end gap-1">
                                     <button @click="adjustDays(user, 1)"
                                         class="btn-icon bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400"
-                                        title="+1 dí­a">
+                                        title="+1 día">
                                         +
                                     </button>
                                     <button @click="adjustDays(user, -1)"
                                         class="btn-icon bg-red-100 text-red-700 hover:bg-red-200 dark:bg-red-900/30 dark:text-red-400"
-                                        title="-1 dí­a">
+                                        title="-1 día">
                                         -
                                     </button>
                                     <button @click="openView(user)" class="btn-icon" title="Ver">
@@ -721,7 +721,7 @@ const getRoleBadge = (role: string) => {
                                     : 'Detalles del Usuario'
                         }}
                     </h2>
-                    <button @click="showModal = false" class="text-gray-400 hover:text-gray-600">
+                    <button type="button" aria-label="Cerrar" @click="showModal = false" class="text-gray-400 hover:text-gray-600">
                         <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                 d="M6 18L18 6M6 6l12 12" />
@@ -893,7 +893,7 @@ const getRoleBadge = (role: string) => {
                 <h2 class="text-xl font-bold text-gray-900 dark:text-gray-100">
                     Gestión de Roles
                 </h2>
-                <button @click="showRolesModal = false" class="text-gray-500 hover:text-gray-700">
+                <button type="button" aria-label="Cerrar gestión de roles" @click="showRolesModal = false" class="text-gray-500 hover:text-gray-700">
                     <svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M6 18L18 6M6 6l12 12" />
@@ -979,14 +979,14 @@ const getRoleBadge = (role: string) => {
                             <span v-else class="rounded-full bg-gray-100 px-2 py-0.5 text-xs text-gray-800">
                                 Inactivo
                             </span>
-                            <button v-if="!role.is_system" @click="editRole(role)"
+                            <button v-if="!role.is_system" type="button" :aria-label="`Editar rol ${role.name}`" @click="editRole(role)"
                                 class="rounded p-1 text-gray-500 hover:bg-gray-100">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                         d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
                                 </svg>
                             </button>
-                            <button v-if="!role.is_system && role.user_count === 0" @click="deleteRole(role)"
+                            <button v-if="!role.is_system && role.user_count === 0" type="button" :aria-label="`Eliminar rol ${role.name}`" @click="deleteRole(role)"
                                 class="rounded p-1 text-red-500 hover:bg-red-50">
                                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"

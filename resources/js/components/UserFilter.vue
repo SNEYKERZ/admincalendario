@@ -23,30 +23,30 @@ onMounted(async () => {
     <div class="flex gap-3 overflow-x-auto pb-2">
 
         <!-- TODOS -->
-        <div @click="selectUser({ id: null })" class="cursor-pointer flex flex-col items-center">
-            <div class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
-                ðŸ‘¥
-            </div>
+        <button type="button" @click="selectUser({ id: null })" class="cursor-pointer flex flex-col items-center">
+            <span aria-hidden="true" class="w-12 h-12 rounded-full bg-gray-300 flex items-center justify-center">
+                👥
+            </span>
             <span class="text-xs">Todos</span>
-        </div>
+        </button>
 
         <!-- USUARIOS -->
-        <div v-for="user in users" :key="user.id" @click="selectUser(user)"
+        <button v-for="user in users" :key="user.id" type="button" @click="selectUser(user)"
             class="cursor-pointer flex flex-col items-center">
-            <img v-if="user.photo" :src="user.photo" class="w-12 h-12 rounded-full object-cover border-2" />
+            <img v-if="user.photo" :src="user.photo" alt="" class="w-12 h-12 rounded-full object-cover border-2" />
 
-            <div v-else class="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center">
+            <span v-else aria-hidden="true" class="w-12 h-12 rounded-full bg-blue-500 text-white flex items-center justify-center">
                 {{ user.name.charAt(0) }}
-            </div>
+            </span>
 
             <span class="text-xs text-center">
                 {{ user.name }}
             </span>
 
             <span class="text-[10px] text-gray-500">
-                {{ user.available_days }} dí­as
+                {{ user.available_days }} días
             </span>
-        </div>
+        </button>
 
     </div>
 </template>

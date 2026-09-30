@@ -505,7 +505,7 @@ const calendarOptions = computed(() => ({
         today: 'Hoy',
         month: 'Mes',
         week: 'Semana',
-        day: 'dí­a',
+        day: 'día',
         list: 'Lista',
     },
 }));

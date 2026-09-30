@@ -104,6 +104,7 @@ const formatDate = (date: string | null) => {
             <div class="mb-4 flex items-center gap-3">
                 <img
                     :src="`/storage/${absence.user.photo_path}`"
+                    :alt="`Foto de ${absence.user.name}`"
                     class="h-12 w-12 rounded-full object-cover"
                 />
                 <div>

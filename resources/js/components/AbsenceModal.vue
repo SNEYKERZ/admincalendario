@@ -367,7 +367,7 @@ const remove = async () => {
                             Duración
                         </p>
                         <p class="font-medium text-gray-900 dark:text-gray-100">
-                            {{ absence.total_days }} dí­as / {{ absence.total_hours }} horas
+                            {{ absence.total_days }} días / {{ absence.total_hours }} horas
                         </p>
                     </div>
                 </div>
@@ -451,7 +451,7 @@ const remove = async () => {
                     <p
                         class="mb-3 text-sm font-medium text-amber-900 dark:text-amber-200"
                     >
-                        Descontar del saldo de dí­as
+                        Descontar del saldo de días
                     </p>
                     <div class="grid gap-3 md:grid-cols-3">
                         <label
@@ -505,8 +505,8 @@ const remove = async () => {
                         </select>
                     </div>
                     <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Si están marcados, estos dí­as se descontarán del saldo
-                        de dí­as disponibles.
+                        Si están marcados, estos días se descontarán del saldo
+                        de días disponibles.
                     </p>
                 </div>
 

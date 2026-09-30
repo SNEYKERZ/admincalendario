@@ -34,6 +34,8 @@ class User extends Authenticatable
         'area_id',
         'is_area_manager',
         'managed_area_id',
+        'legal_accepted_at',
+        'legal_version',
     ];
 
     protected $appends = [
@@ -45,12 +47,15 @@ class User extends Authenticatable
     protected $hidden = [
         'password',
         'remember_token',
+        'two_factor_secret',
+        'two_factor_recovery_codes',
     ];
 
     protected $casts = [
         'birth_date' => 'date',
         'hire_date' => 'date',
         'email_verified_at' => 'datetime',
+        'legal_accepted_at' => 'datetime',
         'is_active' => 'boolean',
         'is_area_manager' => 'boolean',
         'is_superadmin_only' => 'boolean',

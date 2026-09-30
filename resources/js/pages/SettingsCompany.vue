@@ -152,7 +152,7 @@ onBeforeUnmount(() => {
                     Configuración de Empresa
                 </h1>
                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                    Administra los datos y plí­ticas de tu organización
+                    Administra los datos y políticas de tu organización
                 </p>
             </div>
 
@@ -264,13 +264,13 @@ onBeforeUnmount(() => {
                     <h2
                         class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100"
                     >
-                        Plí­ticas de Vacaciones
+                        Políticas de Vacaciones
                     </h2>
 
                     <div class="grid gap-4 md:grid-cols-2">
                         <div>
                             <label class="label"
-                                >dí­as de Vacación por Defecto</label
+                                >días de Vacación por Defecto</label
                             >
                             <input
                                 v-model.number="form.vacation_days_default"
@@ -281,7 +281,7 @@ onBeforeUnmount(() => {
                         </div>
                         <div>
                             <label class="label"
-                                >dí­as de Anticipación Máxima</label
+                                >días de Anticipación Máxima</label
                             >
                             <input
                                 v-model.number="form.vacation_days_advance"
@@ -349,11 +349,11 @@ onBeforeUnmount(() => {
                             <div>
                                 <span
                                     class="font-medium text-gray-900 dark:text-gray-100"
-                                    >Permitir ausencias en dí­as festivos</span
+                                    >Permitir ausencias en días festivos</span
                                 >
                                 <p class="text-sm text-gray-500">
                                     Los empleados pueden registrar ausencias que
-                                    incluyan dí­as festivos
+                                    incluyan días festivos
                                 </p>
                             </div>
                         </label>
@@ -442,7 +442,19 @@ onBeforeUnmount(() => {
                     <a
                         href="/legal/privacy"
                         class="text-blue-600 hover:underline dark:text-blue-400"
-                        >Plí­tica de Privacidad</a
+                        >Política de Privacidad</a
+                    >
+                    ·
+                    <a
+                        href="/legal/cookies"
+                        class="text-blue-600 hover:underline dark:text-blue-400"
+                        >Política de Cookies</a
+                    >
+                    ·
+                    <a
+                        href="/legal/refunds"
+                        class="text-blue-600 hover:underline dark:text-blue-400"
+                        >Reembolsos y Retracto</a
                     >
                 </p>
             </div>

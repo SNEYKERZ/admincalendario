@@ -12,6 +12,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\EmployeeRequestController;
 use App\Http\Controllers\HolidayController;
 use App\Http\Controllers\HrDocumentController;
+use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PublicApiController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
@@ -59,6 +60,11 @@ Route::prefix('api/public')->group(function () {
         ->middleware('auth')
         ->name('public.licenses.stats');
 });
+
+// Páginas legales: deben ser públicas (se enlazan desde registro, login y checkout)
+Route::get('/legal/{page}', [LegalController::class, 'show'])
+    ->whereIn('page', ['terms', 'privacy', 'cookies', 'refunds'])
+    ->name('legal.show');
 
 Route::middleware(['auth'])->group(function () {
 
@@ -147,10 +153,6 @@ Route::middleware(['auth'])->group(function () {
             })->name('users.list');
         });
     });
-
-    // Settings (handled by inertia inside auth group)
-    Route::inertia('/legal/terms', 'LegalTerms')->name('legal.terms');
-    Route::inertia('/legal/privacy', 'LegalPrivacy')->name('legal.privacy');
 
     // Users Admin CRUD
     Route::middleware('can:admin')->group(function () {

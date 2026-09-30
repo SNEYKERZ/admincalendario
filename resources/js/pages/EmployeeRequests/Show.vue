@@ -30,7 +30,7 @@
                             <span class="text-gray-900 dark:text-white font-medium">{{ formatDate(request.created_at) }}</span>
                         </div>
                         <div class="flex justify-between">
-                            <span class="text-gray-600 dark:text-gray-400">Ášltima actualización:</span>
+                            <span class="text-gray-600 dark:text-gray-400">Última actualización:</span>
                             <span class="text-gray-900 dark:text-white font-medium">{{ formatDate(request.updated_at) }}</span>
                         </div>
                     </div>

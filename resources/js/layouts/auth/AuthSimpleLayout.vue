@@ -1,4 +1,4 @@
-﻿<script setup lang="ts">
+<script setup lang="ts">
 import { computed } from 'vue';
 import { Link } from '@inertiajs/vue3';
 import { useAppearance } from '@/composables/useAppearance';
@@ -55,14 +55,14 @@ const setAuthTheme = () => {
                     Gestión de Ausencias/Novedades y Vacaciones
                 </h2>
 
-                <p class="mb-8 text-lg leading-relaxed text-white/70">
+                <p class="mb-8 text-lg leading-relaxed text-white/90">
                     Organiza ausencias, vacaciones y permisos sin complicaciones.
                     Desde colaboradores hasta administradores, todos pueden gestionar sus solicitudes,
                      consultar información y mantener el control del equipo con reportes y herramientas claras en un solo lugar.
                 </p>
 
                 <div
-                    class="grid grid-cols-3 gap-6 text-center text-sm text-white/60"
+                    class="grid grid-cols-3 gap-6 text-center text-sm text-white/90"
                 >
                     <div class="flex flex-col items-center gap-2">
                         <div
@@ -70,6 +70,7 @@ const setAuthTheme = () => {
                         >
                             <svg
                                 class="h-6 w-6"
+                                aria-hidden="true"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -90,6 +91,7 @@ const setAuthTheme = () => {
                         >
                             <svg
                                 class="h-6 w-6"
+                                aria-hidden="true"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -110,6 +112,7 @@ const setAuthTheme = () => {
                         >
                             <svg
                                 class="h-6 w-6"
+                                aria-hidden="true"
                                 fill="none"
                                 stroke="currentColor"
                                 viewBox="0 0 24 24"
@@ -127,7 +130,7 @@ const setAuthTheme = () => {
                 </div>
             </div>
 
-            <div class="absolute bottom-8 text-xs text-white/40">
+            <div class="absolute bottom-8 text-xs text-white/80">
                 © 2026 Ausentra. Todos los derechos reservados.
             </div>
         </div>
@@ -144,6 +147,7 @@ const setAuthTheme = () => {
                         @click="setAuthTheme"
                     >
                         <span
+                            aria-hidden="true"
                             class="inline-block h-2.5 w-2.5 rounded-full"
                             :class="
                                 isDark ? 'bg-sky-300' : 'bg-[color:var(--auth-brand)]'
@@ -179,6 +183,16 @@ const setAuthTheme = () => {
                     </div>
                     <slot />
                 </div>
+
+                <nav
+                    aria-label="Documentos legales"
+                    class="mt-10 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-muted-foreground"
+                >
+                    <a href="/legal/terms" class="underline-offset-4 hover:underline">Términos</a>
+                    <a href="/legal/privacy" class="underline-offset-4 hover:underline">Privacidad</a>
+                    <a href="/legal/cookies" class="underline-offset-4 hover:underline">Cookies</a>
+                    <a href="/legal/refunds" class="underline-offset-4 hover:underline">Reembolsos</a>
+                </nav>
             </div>
         </div>
     </div>

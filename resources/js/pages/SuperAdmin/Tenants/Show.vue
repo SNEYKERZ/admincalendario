@@ -77,10 +77,10 @@
                     </div>
                 </div>
 
-                <!-- Estadí­sticas -->
+                <!-- Estadísticas -->
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">
-                        Estadí­sticas
+                        Estadísticas
                     </h3>
                     <div class="grid grid-cols-2 gap-4">
                         <div class="bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4 border border-gray-200 dark:border-gray-700">

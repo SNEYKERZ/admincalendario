@@ -70,7 +70,7 @@
                 </div>
             </div>
 
-            <!-- Estadí­sticas -->
+            <!-- Estadísticas -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                 <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
                     <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>

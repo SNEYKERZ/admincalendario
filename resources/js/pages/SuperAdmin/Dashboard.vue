@@ -128,7 +128,7 @@
             <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
                 <div class="px-6 py-4 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between">
                     <h3 class="text-lg font-semibold text-gray-900 dark:text-white">
-                        Ášltimos Tenants
+                        Últimos Tenants
                     </h3>
                     <Link
                         href="/superadmin/tenants"

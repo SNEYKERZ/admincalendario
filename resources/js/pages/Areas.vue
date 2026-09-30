@@ -284,12 +284,16 @@ onMounted(() => {
                         </div>
                         <div class="flex gap-1">
                             <button
+                                type="button"
+                                :aria-label="`Editar área ${area.name}`"
                                 @click="openEdit(area)"
                                 class="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-500 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
                             >
                                 <Edit2 class="h-4 w-4" />
                             </button>
                             <button
+                                type="button"
+                                :aria-label="`Eliminar área ${area.name}`"
                                 @click="deleteArea(area)"
                                 class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
                             >
@@ -335,6 +339,8 @@ onMounted(() => {
                         }}
                     </h2>
                     <button
+                        type="button"
+                        aria-label="Cerrar"
                         @click="showModal = false"
                         class="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
                     >

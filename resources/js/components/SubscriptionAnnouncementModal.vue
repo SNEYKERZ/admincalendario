@@ -26,7 +26,7 @@ const title = computed(() => {
 
 const message = computed(() => {
     if (props.type === 'expiring') {
-        return `Tu suscripción ${props.planName} vence en ${props.daysRemaining} dí­as. Para seguir usando todas las funciones, renueva pronto.`;
+        return `Tu suscripción ${props.planName} vence en ${props.daysRemaining} días. Para seguir usando todas las funciones, renueva pronto.`;
     }
     return 'Tu suscripción ha vencido o no tienes una suscripción activa. Por favor, contacta al administrador del sistema para continuar usando las funciones completas.';
 });

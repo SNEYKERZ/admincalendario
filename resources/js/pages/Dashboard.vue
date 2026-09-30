@@ -387,7 +387,7 @@ onMounted(loadDashboard);
                 class="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-amber-900"
             >
                 Plan {{ subscription.plan_name }}: vence en
-                {{ subscription.days_remaining }} dí­as.
+                {{ subscription.days_remaining }} días.
             </div>
 
             <div
@@ -438,13 +438,13 @@ onMounted(loadDashboard);
             <template v-else>
                 <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
                     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-sm text-gray-500">Mis dí­as disponibles</p>
+                        <p class="text-sm text-gray-500">Mis días disponibles</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {{ personalMetrics?.available_vacation_days ?? 0 }}
                         </p>
                     </div>
                     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-sm text-gray-500">Mis dí­as usados (año)</p>
+                        <p class="text-sm text-gray-500">Mis días usados (año)</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {{ personalMetrics?.used_vacation_days ?? 0 }}
                         </p>
@@ -462,7 +462,7 @@ onMounted(loadDashboard);
                         </p>
                     </div>
                     <div class="rounded-xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                        <p class="text-sm text-gray-500">Vencen en 30 dí­as</p>
+                        <p class="text-sm text-gray-500">Vencen en 30 días</p>
                         <p class="text-2xl font-bold text-gray-900 dark:text-gray-100">
                             {{ personalMetrics?.upcoming_expirations ?? 0 }}
                         </p>
@@ -522,7 +522,7 @@ onMounted(loadDashboard);
                         </p>
                     </div>
                     <div class="rounded-xl border border-indigo-200 bg-indigo-50 p-4">
-                        <p class="text-sm text-indigo-700">Vencen en 30 dí­as</p>
+                        <p class="text-sm text-indigo-700">Vencen en 30 días</p>
                         <p class="text-2xl font-bold text-indigo-900">
                             {{ superadminMetrics.subscriptions_expiring_30d }}
                         </p>
@@ -689,7 +689,7 @@ onMounted(loadDashboard);
                                     <th class="px-2 py-2">Tipo</th>
                                     <th class="px-2 py-2">Inicio</th>
                                     <th class="px-2 py-2">Fin</th>
-                                    <th class="px-2 py-2">dí­as</th>
+                                    <th class="px-2 py-2">días</th>
                                     <th class="px-2 py-2">Solicitado</th>
                                 </tr>
                             </thead>
@@ -769,7 +769,7 @@ onMounted(loadDashboard);
                                     <th class="px-2 py-2">Tipo</th>
                                     <th class="px-2 py-2">Inicio</th>
                                     <th class="px-2 py-2">Fin</th>
-                                    <th class="px-2 py-2">dí­as</th>
+                                    <th class="px-2 py-2">días</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -847,7 +847,7 @@ onMounted(loadDashboard);
                             <thead>
                                 <tr class="border-b border-gray-200 text-left text-gray-500">
                                     <th class="px-2 py-2">Colaborador</th>
-                                    <th class="px-2 py-2">dí­as disponibles</th>
+                                    <th class="px-2 py-2">días disponibles</th>
                                     <th class="px-2 py-2">Próximos vencimientos</th>
                                 </tr>
                             </thead>
@@ -861,7 +861,7 @@ onMounted(loadDashboard);
                                         <span v-if="item.expiring_soon.length">
                                             {{
                                                 item.expiring_soon
-                                                    .map((row) => `${row.days} dí­as (${formatDate(row.expires)})`)
+                                                    .map((row) => `${row.days} días (${formatDate(row.expires)})`)
                                                     .join(' · ')
                                             }}
                                         </span>
@@ -905,14 +905,14 @@ onMounted(loadDashboard);
                     class="rounded-xl border border-gray-200 bg-white p-5 dark:border-gray-700 dark:bg-gray-800"
                 >
                     <h3 class="mb-4 text-lg font-semibold text-gray-900 dark:text-gray-100">
-                        Mis vacaciones por vencer (90 dí­as)
+                        Mis vacaciones por vencer (90 días)
                     </h3>
                     <div class="overflow-x-auto">
                         <table class="w-full text-sm">
                             <thead>
                                 <tr class="border-b border-gray-200 text-left text-gray-500">
                                     <th class="px-2 py-2">Año</th>
-                                    <th class="px-2 py-2">dí­as disponibles</th>
+                                    <th class="px-2 py-2">días disponibles</th>
                                     <th class="px-2 py-2">Vencimiento</th>
                                 </tr>
                             </thead>
@@ -924,7 +924,7 @@ onMounted(loadDashboard);
                                 </tr>
                                 <tr v-if="myExpiringVacations.length === 0">
                                     <td colspan="3" class="px-2 py-6 text-center text-gray-500">
-                                        No tienes dí­as por vencer en los próximos 90 dí­as
+                                        No tienes días por vencer en los próximos 90 días
                                     </td>
                                 </tr>
                             </tbody>
