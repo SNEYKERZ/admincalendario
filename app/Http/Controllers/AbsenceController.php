@@ -44,7 +44,7 @@ class AbsenceController extends Controller
                 ->values()
                 ->all();
 
-            if (!empty($userIds)) {
+            if (! empty($userIds)) {
                 $query->whereIn('user_id', $userIds);
             }
 
@@ -66,7 +66,7 @@ class AbsenceController extends Controller
                 ->values()
                 ->all();
 
-            if (!empty($areaIds)) {
+            if (! empty($areaIds)) {
                 $query->whereHas('user', function ($userQuery) use ($areaIds) {
                     $userQuery->whereIn('area_id', $areaIds);
                 });
@@ -74,7 +74,7 @@ class AbsenceController extends Controller
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('status', (string) $request->status);
         }
 
         if ($request->filled('start') && $request->filled('end')) {
@@ -86,7 +86,7 @@ class AbsenceController extends Controller
                     ->orWhereBetween('end_datetime', [$start, $end])
                     ->orWhere(function ($q2) use ($start, $end) {
                         $q2->where('start_datetime', '<=', $start)
-                           ->where('end_datetime', '>=', $end);
+                            ->where('end_datetime', '>=', $end);
                     });
             });
 
@@ -116,21 +116,29 @@ class AbsenceController extends Controller
         return response()->json($absence->load(['user', 'type', 'approver']));
     }
 
-    public function approve(Absence $absence): JsonResponse
+    public function approve(Request $request, Absence $absence): JsonResponse
     {
         $this->authorize('approve', $absence);
 
+        $data = $request->validate([
+            'notes' => ['nullable', 'string', 'max:500'],
+        ]);
+
         return response()->json(
-            $this->absenceService->approve($absence, auth()->user())
+            $this->absenceService->approve($absence, auth()->user(), null, $data['notes'] ?? null)
         );
     }
 
-    public function reject(Absence $absence): JsonResponse
+    public function reject(Request $request, Absence $absence): JsonResponse
     {
         $this->authorize('reject', $absence);
 
+        $data = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
         return response()->json(
-            $this->absenceService->reject($absence, auth()->user())
+            $this->absenceService->reject($absence, auth()->user(), (string) ($data['reason'] ?? ''))
         );
     }
 
@@ -147,11 +155,9 @@ class AbsenceController extends Controller
     {
         $this->authorize('delete', $absence);
 
-        if ($absence->status === 'aprobado' && $absence->type->deducts_vacation) {
-            $this->vacationService->restoreDays($absence->user, $absence->total_days);
-        }
-
-        $absence->delete();
+        // Antes comparaba el enum con el string 'aprobado' (siempre false) y
+        // nunca restauraba el saldo al eliminar una ausencia aprobada.
+        $this->absenceService->delete($absence);
 
         return response()->json([
             'message' => 'Registro eliminado',
@@ -169,7 +175,7 @@ class AbsenceController extends Controller
             'include_sunday' => ['sometimes', 'boolean'],
             'include_holidays' => ['sometimes', 'boolean'],
             'holiday_country' => ['sometimes', 'string', 'size:2'],
-            'reason' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string', 'max:1000'],
         ]);
 
         return response()->json(

@@ -23,7 +23,7 @@ class VacationController extends Controller
             // Admin sees themselves and all colaboradores
             $query->where(function ($q) use ($user) {
                 $q->where('id', $user->id)
-                  ->orWhere('role', \App\Enums\UserRole::COLLABORATOR->value);
+                    ->orWhere('role', \App\Enums\UserRole::COLLABORATOR->value);
             });
         } else {
             // Regular users see only themselves
@@ -66,7 +66,7 @@ class VacationController extends Controller
         $this->authorize('update', $user);
 
         $data = $request->validate([
-            'days' => 'required|numeric',
+            'days' => 'required|numeric|min:-365|max:365',
         ]);
 
         $year = now()->year;
@@ -80,6 +80,13 @@ class VacationController extends Controller
                 'expires_at' => now()->endOfYear(),
             ]
         );
+
+        if ($vacation->allocated_days + $data['days'] < $vacation->used_days) {
+            return response()->json([
+                'message' => 'El ajuste dejaría el año con menos días asignados que los ya disfrutados.',
+                'errors' => ['days' => ['El ajuste dejaría el año con menos días asignados que los ya disfrutados.']],
+            ], 422);
+        }
 
         $vacation->increment('allocated_days', $data['days']);
 

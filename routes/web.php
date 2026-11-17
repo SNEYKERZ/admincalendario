@@ -1,8 +1,8 @@
 <?php
 
 use App\Http\Controllers\AbsenceController;
-use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\PlanModulesController;
+use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\AdminRequestController;
 use App\Http\Controllers\ApprovalController;
 use App\Http\Controllers\AreaController;
@@ -16,11 +16,11 @@ use App\Http\Controllers\LegalController;
 use App\Http\Controllers\PublicApiController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\SettingsController;
-use App\Http\Controllers\SystemManagementController;
-use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
-use App\Http\Controllers\SuperAdmin\TenantController;
-use App\Http\Controllers\SuperAdmin\ImpersonationController;
 use App\Http\Controllers\SuperAdmin\AuditController;
+use App\Http\Controllers\SuperAdmin\DashboardController as SuperAdminDashboardController;
+use App\Http\Controllers\SuperAdmin\ImpersonationController;
+use App\Http\Controllers\SuperAdmin\TenantController;
+use App\Http\Controllers\SystemManagementController;
 use App\Http\Controllers\VacationController;
 use App\Http\Controllers\VacationYearController;
 use App\Managers\TenantManager;
@@ -43,7 +43,8 @@ Route::inertia('/', 'Welcome', [
 */
 
 // API Pública para el landing page y verificación de licencias
-Route::prefix('api/public')->group(function () {
+// Rate limiting: las rutas públicas no requieren sesión y antes no tenían límite.
+Route::prefix('api/public')->middleware('throttle:60,1')->group(function () {
     // Planes de suscripción (para el landing)
     Route::get('/plans', [PublicApiController::class, 'getPlans'])->name('public.plans');
 
@@ -52,12 +53,16 @@ Route::prefix('api/public')->group(function () {
     Route::get('/license/{token}', [PublicApiController::class, 'getLicenseStatus'])->name('public.license-status');
 
     // Checkout y payment
-    Route::post('/create-checkout-session', [PublicApiController::class, 'createCheckoutSession'])->name('public.checkout');
-    Route::get('/payment-callback', [PublicApiController::class, 'paymentCallback'])->name('public.payment-callback');
+    Route::post('/create-checkout-session', [PublicApiController::class, 'createCheckoutSession'])
+        ->middleware('throttle:10,1')
+        ->name('public.checkout');
+    Route::get('/payment-callback', [PublicApiController::class, 'paymentCallback'])
+        ->middleware('throttle:10,1')
+        ->name('public.payment-callback');
 
     // Estadísticas para superadmin (solo con autenticación)
     Route::get('/admin/licenses/stats', [PublicApiController::class, 'getLicenseStats'])
-        ->middleware('auth')
+        ->middleware(['auth', 'can:superadmin'])
         ->name('public.licenses.stats');
 });
 
@@ -90,7 +95,7 @@ Route::middleware(['auth'])->group(function () {
 
     // Dashboard API
     Route::get('/dashboard/data', [DashboardController::class, 'index'])->name('dashboard.data');
-    Route::inertia('/dashboard', 'Dashboard')->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'page'])->name('dashboard');
     Route::inertia('/comunidad', 'Comunidad')->name('comunidad');
     Route::get('/comunidad/data', [CommunityController::class, 'index'])->name('comunidad.data');
 
@@ -98,14 +103,14 @@ Route::middleware(['auth'])->group(function () {
     Route::inertia('/calendario', 'Calendar')->name('calendario');
 
     Route::middleware('module:gestion-usuarios')->group(function () {
-        Route::inertia('/gestion-usuarios', 'GestionUsuarios')->name('gestion-usuarios');
+        Route::inertia('/gestion-usuarios', 'GestionUsuarios')->middleware('can:admin')->name('gestion-usuarios');
         Route::get('/gestion-usuarios/data', [VacationController::class, 'index'])->name('gestion-usuarios.data');
         Route::post('/gestion-usuarios/{user}/adjust', [VacationController::class, 'adjust'])->name('gestion-usuarios.adjust');
     });
 
     // Reportes
     Route::middleware('module:reportes')->group(function () {
-        Route::inertia('/reportes', 'Reportes')->name('reportes');
+        Route::inertia('/reportes', 'Reportes')->middleware('can:admin')->name('reportes');
     });
 
     // Documentos
@@ -139,10 +144,11 @@ Route::middleware(['auth'])->group(function () {
         Route::middleware('can:admin')->group(function () {
             Route::inertia('/areas', 'Areas')->name('areas');
             Route::post('/api/areas', [AreaController::class, 'store'])->name('areas.store');
+            // Debe ir antes de /api/areas/{area}: si no, "metrics" se resolvía como {area} (404).
+            Route::get('/api/areas/metrics', [AreaController::class, 'metrics'])->name('areas.metrics');
             Route::get('/api/areas/{area}', [AreaController::class, 'show'])->name('areas.show');
             Route::put('/api/areas/{area}', [AreaController::class, 'update'])->name('areas.update');
             Route::delete('/api/areas/{area}', [AreaController::class, 'destroy'])->name('areas.destroy');
-            Route::get('/api/areas/metrics', [AreaController::class, 'metrics'])->name('areas.metrics');
             Route::get('/api/users', function () {
                 return response()->json([
                     'users' => User::where('is_active', true)
@@ -230,6 +236,9 @@ Route::middleware(['auth'])->group(function () {
     | Approvals (Cadena de Aprobación)
     |--------------------------------------------------------------------------
     */
+    // Bandeja de aprobaciones: la API sólo devuelve cadenas asignadas al usuario.
+    Route::inertia('/aprobaciones', 'Approvals')->name('aprobaciones');
+
     Route::prefix('approvals')->group(function () {
         Route::get('/pending', [ApprovalController::class, 'pending'])->name('approvals.pending');
         Route::post('/{chain}/approve', [ApprovalController::class, 'approve'])->name('approvals.approve');
@@ -265,8 +274,10 @@ Route::middleware(['auth'])->group(function () {
     | Area Managers (Jefes de Área)
     |--------------------------------------------------------------------------
     */
-    Route::put('/api/areas/{area}/manager', [AreaManagerController::class, 'setManager'])->name('area-managers.set');
-    Route::delete('/api/areas/{area}/manager', [AreaManagerController::class, 'removeManager'])->name('area-managers.remove');
+    Route::middleware('can:admin')->group(function () {
+        Route::put('/api/areas/{area}/manager', [AreaManagerController::class, 'setManager'])->name('area-managers.set');
+        Route::delete('/api/areas/{area}/manager', [AreaManagerController::class, 'removeManager'])->name('area-managers.remove');
+    });
 
     /*
     |--------------------------------------------------------------------------
@@ -293,7 +304,9 @@ Route::middleware(['auth'])->group(function () {
 
         // Si no hay tipos locales, usar los globales
         if ($types->isEmpty()) {
-            $types = AbsenceType::whereNull('tenant_id')
+            // Los globales tienen tenant_id NULL: sin quitar el TenantScope nunca aparecen.
+            $types = AbsenceType::withoutGlobalScope(\App\Scopes\TenantScope::class)
+                ->whereNull('tenant_id')
                 ->select('id', 'name', 'counts_as_hours', 'deducts_vacation', 'default_include_saturday', 'default_include_sunday', 'default_include_holidays')
                 ->orderBy('name')
                 ->get();
@@ -309,8 +322,10 @@ Route::middleware(['auth'])->group(function () {
     */
     Route::prefix('admin')->group(function () {
 
-        // usuarios
-        Route::apiResource('users', UserController::class);
+        // usuarios: estas rutas sobrescribían a las de /admin/users protegidas con
+        // can:admin (mismo método+URI, gana la última registrada), dejando el CRUD
+        // de usuarios abierto a cualquier colaborador autenticado.
+        Route::apiResource('users', UserController::class)->middleware('can:admin');
 
         // vacaciones
         Route::prefix('vacation-years')->group(function () {
@@ -333,7 +348,7 @@ Route::middleware(['auth'])->group(function () {
     | Reports
     |--------------------------------------------------------------------------
     */
-    Route::prefix('reports')->group(function () {
+    Route::prefix('reports')->middleware('can:admin')->group(function () {
         Route::get('/', [ReportController::class, 'index'])->name('reports.index');
         Route::get('/export', [ReportController::class, 'export'])->name('reports.export');
         Route::get('/filters-data', function () {
@@ -366,7 +381,9 @@ Route::middleware(['auth'])->group(function () {
     */
     Route::inertia('/settings/company', 'SettingsCompany')->name('settings.company');
     Route::get('/settings/company/data', [SettingsController::class, 'index'])->name('settings.company.data');
-    Route::put('/settings/company', [SettingsController::class, 'update'])->name('settings.company.update');
+    Route::put('/settings/company', [SettingsController::class, 'update'])
+        ->middleware('can:admin')
+        ->name('settings.company.update');
 
     /*
     |--------------------------------------------------------------------------

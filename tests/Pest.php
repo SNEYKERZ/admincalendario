@@ -15,6 +15,10 @@ pest()->extend(Tests\TestCase::class)
     ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
     ->in('Feature');
 
+// Los tests de servicios usan la BD y facades: necesitan la app de Laravel.
+pest()->extend(Tests\TestCase::class)
+    ->in('Unit/Services');
+
 /*
 |--------------------------------------------------------------------------
 | Expectations

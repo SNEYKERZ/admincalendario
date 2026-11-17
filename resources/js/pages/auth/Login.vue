@@ -28,7 +28,7 @@ defineProps<{
 
         <div
             v-if="status"
-            class="mb-4 text-center text-sm font-medium text-green-600"
+            class="mb-4 rounded-md bg-success-soft px-3 py-2 text-center text-sm font-medium text-success"
         >
             {{ status }}
         </div>
@@ -88,7 +88,7 @@ defineProps<{
 
                 <Button
                     type="submit"
-                    class="mt-4 w-full !bg-[#1f67c9] !text-white hover:!bg-[#1b56a8] dark:!bg-[#1f67c9] dark:hover:!bg-[#1b56a8]"
+                    class="mt-4 w-full"
                     :tabindex="4"
                     :disabled="processing"
                     data-test="login-button"

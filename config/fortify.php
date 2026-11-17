@@ -144,7 +144,9 @@ return [
     */
 
     'features' => [
-        Features::registration(),
+        // Registro público deshabilitado por defecto: un usuario auto-registrado
+        // no pertenece a ninguna empresa. Las cuentas las crea el admin del tenant.
+        ...(env('FORTIFY_REGISTRATION', false) ? [Features::registration()] : []),
         Features::resetPasswords(),
         Features::emailVerification(),
         Features::twoFactorAuthentication([

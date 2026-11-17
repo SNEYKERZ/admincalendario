@@ -1,7 +1,8 @@
-import axios, { AxiosError } from 'axios';
-import { ref, Ref } from 'vue';
-import { useNotification } from './useNotification';
+import type { AxiosError } from 'axios';
+import axios from 'axios';
+
 import { useLoadingState } from './useLoadingState';
+import { useNotification } from './useNotification';
 
 type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -15,7 +16,7 @@ interface ApiCallOptions {
 
 export const useApiCall = () => {
     const { error: showError, success: showSuccess } = useNotification();
-    const { setState, setLoading } = useLoadingState();
+    const { setState } = useLoadingState();
 
     const call = async <T = any>(
         url: string,

@@ -76,13 +76,15 @@ class HandleInertiaRequests extends Middleware
         $superAdminContextCheck = session('super_admin_context');
         if ($superAdminContextCheck && $superAdminContextCheck['impersonated_user_id']) {
             $impersonatedUser = \App\Models\User::withoutGlobalScopes()->find($superAdminContextCheck['impersonated_user_id']);
-            if ($impersonatedUser && $impersonatedUser->tenant_id) {
-                $moduleAccessService = app(ModuleAccessService::class);
-                $enabledModules = $moduleAccessService->getTenantEnabledModuleSlugs($impersonatedUser->tenant);
-            }
-        } elseif ($user?->tenant_id) {
             $moduleAccessService = app(ModuleAccessService::class);
-            $enabledModules = $moduleAccessService->getTenantEnabledModuleSlugs($user->tenant);
+            if ($impersonatedUser && $tenant = $moduleAccessService->effectiveTenant($impersonatedUser)) {
+                $enabledModules = $moduleAccessService->getTenantEnabledModuleSlugs($tenant);
+            }
+        } elseif ($user) {
+            $moduleAccessService = app(ModuleAccessService::class);
+            if ($tenant = $moduleAccessService->effectiveTenant($user)) {
+                $enabledModules = $moduleAccessService->getTenantEnabledModuleSlugs($tenant);
+            }
         }
 
         return [

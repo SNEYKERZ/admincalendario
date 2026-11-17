@@ -1,4 +1,4 @@
-import { ref, computed, Ref } from 'vue';
+import { ref, computed } from 'vue';
 
 interface PaginationData {
     current_page: number;

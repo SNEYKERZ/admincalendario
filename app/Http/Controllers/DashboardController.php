@@ -12,17 +12,36 @@ use App\Models\User;
 use App\Models\VacationYear;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Collection;
+use Inertia\Inertia;
+use Inertia\Response;
 
 class DashboardController extends Controller
 {
+    /**
+     * Página Inertia del dashboard. El superadmin en contexto global tiene su
+     * propio panel: se le redirige aquí (y no sólo en /dashboard/data, donde
+     * axios seguía la redirección y recibía HTML en lugar de JSON).
+     */
+    public function page(): Response|RedirectResponse
+    {
+        $user = auth()->user();
+
+        if ($user->isSuperAdmin() && ! session('super_admin_context.impersonated_user_id')) {
+            return redirect('/superadmin/dashboard');
+        }
+
+        return Inertia::render('Dashboard');
+    }
+
     public function index()
     {
         /** @var User $user */
         $user = auth()->user();
 
         // Si es SuperAdmin en contexto global, redirigir al dashboard de SuperAdmin
-        if ($user->isSuperAdmin() && !session('super_admin_context.impersonated_user_id')) {
+        if ($user->isSuperAdmin() && ! session('super_admin_context.impersonated_user_id')) {
             return redirect('/superadmin/dashboard');
         }
 
@@ -97,9 +116,10 @@ class DashboardController extends Controller
             ->get()
             ->sum(fn (VacationYear $year) => $year->allocated_days - $year->used_days);
 
+        // `year` es un entero, no una fecha: whereYear() nunca coincidía.
         $usedVacationDays = VacationYear::query()
             ->where('user_id', $user->id)
-            ->whereYear('year', now()->year)
+            ->where('year', now()->year)
             ->sum('used_days');
 
         $pendingAbsences = Absence::query()
@@ -510,12 +530,16 @@ class DashboardController extends Controller
         );
 
         $data = collect($paginator->items())->map(function (User $user) {
+            // Se usa la relación ya cargada (antes: una consulta extra por usuario).
+            $available = $user->vacationYears->sum(fn (VacationYear $year) => $year->allocated_days - $year->used_days);
+
             return [
                 'id' => $user->id,
                 'name' => $user->name,
-                'available' => round($user->availableVacationDays(), 1),
+                'available' => round($available, 1),
                 'expiring_soon' => $user->vacationYears
-                    ->filter(fn (VacationYear $year) => $year->expires_at->diffInDays(now()) <= 30)
+                    // diffInDays() con signo (Carbon 3): antes cualquier año futuro "vencía pronto".
+                    ->filter(fn (VacationYear $year) => now()->startOfDay()->diffInDays($year->expires_at, false) <= 30)
                     ->map(fn (VacationYear $year) => [
                         'year' => $year->year,
                         'days' => round($year->availableDays(), 1),

@@ -13,11 +13,23 @@ class ReportController extends Controller
 {
     public function index(Request $request): \Illuminate\Http\JsonResponse
     {
+        // Antes no había ninguna autorización: cualquier colaborador podía
+        // descargar ausencias y saldos de toda la empresa.
+        $this->authorize('admin');
+
+        $request->validate([
+            'type' => ['nullable', 'string', 'in:absences,vacations,summary'],
+            'start' => ['nullable', 'date'],
+            'end' => ['nullable', 'date'],
+            'user_id' => ['nullable', 'integer'],
+            'area_id' => ['nullable', 'integer'],
+        ]);
+
         $type = $request->get('type', 'absences');
-        $start = $request->get('start', now()->startOfYear()->toDateString());
-        $end = $request->get('end', now()->endOfYear()->toDateString());
-        $userId = $request->get('user_id');
-        $areaId = $request->get('area_id');
+        $start = Carbon::parse($request->get('start') ?: now()->startOfYear())->toDateString();
+        $end = Carbon::parse($request->get('end') ?: now()->endOfYear())->toDateString();
+        $userId = $request->filled('user_id') ? (int) $request->get('user_id') : null;
+        $areaId = $request->filled('area_id') ? (int) $request->get('area_id') : null;
 
         return match ($type) {
             'absences' => $this->absencesReport($start, $end, $userId, $areaId),
@@ -29,8 +41,9 @@ class ReportController extends Controller
 
     protected function absencesReport(string $start, string $end, ?int $userId, ?int $areaId): \Illuminate\Http\JsonResponse
     {
-        $query = Absence::with(['user', 'type', 'approver'])
-            ->whereBetween('start_datetime', [$start, $end]);
+        // Día final inclusivo (antes se cortaba a las 00:00 del último día).
+        $query = Absence::with(['user.area', 'type', 'approver'])
+            ->whereBetween('start_datetime', [$start.' 00:00:00', $end.' 23:59:59']);
 
         if ($userId) {
             $query->where('user_id', $userId);
@@ -44,7 +57,7 @@ class ReportController extends Controller
             'id' => $a->id,
             'empleado' => $a->user->name,
             'area' => $a->user->area?->name,
-            'tipo' => $a->type->name,
+            'tipo' => $a->type?->name,
             'inicio' => $a->start_datetime->toDateString(),
             'fin' => $a->end_datetime->toDateString(),
             'dias' => $a->total_days,
@@ -66,7 +79,7 @@ class ReportController extends Controller
 
     protected function vacationsReport(string $start, string $end, ?int $userId, ?int $areaId): \Illuminate\Http\JsonResponse
     {
-        $query = VacationYear::with('user');
+        $query = VacationYear::with('user.area');
 
         if ($userId) {
             $query->where('user_id', $userId);
@@ -103,7 +116,8 @@ class ReportController extends Controller
 
     protected function summaryReport(string $start, string $end, ?int $areaId): \Illuminate\Http\JsonResponse
     {
-        $userQuery = User::where('role', '!=', 'admin');
+        $userQuery = User::whereNotIn('role', ['admin', 'superadmin'])
+            ->with(['area', 'vacationYears']);
 
         if ($areaId) {
             $userQuery->where('area_id', $areaId);
@@ -111,7 +125,7 @@ class ReportController extends Controller
 
         $employees = $userQuery->get();
 
-        $absencesQuery = Absence::whereBetween('start_datetime', [$start, $end]);
+        $absencesQuery = Absence::with('type')->whereBetween('start_datetime', [$start.' 00:00:00', $end.' 23:59:59']);
 
         if ($areaId) {
             $absencesQuery->whereHas('user', fn ($q) => $q->where('area_id', $areaId));
@@ -119,18 +133,21 @@ class ReportController extends Controller
 
         $absences = $absencesQuery->get();
 
-        $byStatus = $absences->groupBy('status')->map(fn ($g) => $g->count());
-        $byType = $absences->groupBy(fn ($a) => $a->type->name)->map(fn ($g) => [
+        $byStatus = $absences->groupBy(fn ($a) => $a->status->value)->map(fn ($g) => $g->count());
+        $byType = $absences->groupBy(fn ($a) => $a->type?->name ?? 'Sin tipo')->map(fn ($g) => [
             'count' => $g->count(),
             'days' => $g->sum('total_days'),
         ]);
 
+        $today = now()->startOfDay();
         $vacationStats = $employees->map(fn ($e) => [
             'name' => $e->name,
             'area' => $e->area?->name,
-            'allocated' => $e->vacationYears()->sum('allocated_days'),
-            'used' => $e->vacationYears()->sum('used_days'),
-            'available' => $e->availableVacationDays(),
+            'allocated' => $e->vacationYears->sum('allocated_days'),
+            'used' => $e->vacationYears->sum('used_days'),
+            'available' => $e->vacationYears
+                ->filter(fn ($year) => $year->expires_at && $year->expires_at->gte($today))
+                ->sum(fn ($year) => $year->allocated_days - $year->used_days),
         ]);
 
         return response()->json([
@@ -152,15 +169,14 @@ class ReportController extends Controller
 
     public function export(Request $request): StreamedResponse
     {
-        $type = $request->get('type', 'absences');
-        $format = $request->get('format', 'csv');
-        $start = $request->get('start', now()->startOfYear()->toDateString());
-        $end = $request->get('end', now()->endOfYear()->toDateString());
-        $userId = $request->get('user_id');
-        $areaId = $request->get('area_id');
-
         $response = $this->index($request)->getData(true);
         $data = $response['data'] ?? [];
+
+        $type = preg_replace('/[^a-z]/', '', (string) $request->get('type', 'absences'));
+        $format = $request->get('format', 'csv');
+        $start = Carbon::parse($request->get('start') ?: now()->startOfYear())->toDateString();
+        $end = Carbon::parse($request->get('end') ?: now()->endOfYear())->toDateString();
+        $areaId = $request->filled('area_id') ? (int) $request->get('area_id') : null;
 
         $filename = "reporte-{$type}-{$start}-{$end}".($areaId ? "-area-{$areaId}" : '');
 
@@ -168,6 +184,22 @@ class ReportController extends Controller
             'csv' => $this->exportCsv($data, $filename),
             default => $this->exportCsv($data, $filename),
         };
+    }
+
+    /**
+     * Evita inyección de fórmulas (CSV injection) al abrir el archivo en Excel.
+     */
+    protected function sanitizeCsvValue(mixed $value): mixed
+    {
+        if (is_bool($value)) {
+            return $value ? 'Sí' : 'No';
+        }
+
+        if (is_string($value) && $value !== '' && in_array($value[0], ['=', '+', '-', '@', "\t", "\r"], true)) {
+            return "'".$value;
+        }
+
+        return $value;
     }
 
     protected function exportCsv(array $data, string $filename): StreamedResponse
@@ -188,7 +220,7 @@ class ReportController extends Controller
             fputcsv($handle, array_keys($data[0]), ';');
 
             foreach ($data as $row) {
-                fputcsv($handle, $row, ';');
+                fputcsv($handle, array_map([$this, 'sanitizeCsvValue'], $row), ';');
             }
 
             fclose($handle);

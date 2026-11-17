@@ -2,6 +2,7 @@
 
 namespace App\Policies;
 
+use App\Managers\TenantManager;
 use App\Models\User;
 
 class UserPolicy
@@ -13,7 +14,11 @@ class UserPolicy
 
     public function view(User $user, User $model): bool
     {
-        return $user->isAdmin() || $user->id === $model->id;
+        if ($user->id === $model->id) {
+            return true;
+        }
+
+        return $this->manages($user, $model);
     }
 
     public function create(User $user): bool
@@ -23,32 +28,39 @@ class UserPolicy
 
     public function update(User $user, User $model): bool
     {
-        if (!$user->isAdmin()) {
-            return false;
-        }
-
-        // Superadmin can update anyone
-        if ($user->isSuperAdmin()) {
-            return true;
-        }
-
-        // Regular admin can only update users from their own tenant
-        return $user->tenant_id === $model->tenant_id;
+        return $this->manages($user, $model);
     }
 
     public function delete(User $user, User $model): bool
     {
-        if (!$user->isAdmin()) {
+        // Nadie puede eliminarse a sí mismo desde la gestión de usuarios.
+        if ($user->id === $model->id) {
             return false;
         }
 
-        // Superadmin can delete anyone
+        return $this->manages($user, $model);
+    }
+
+    /**
+     * Un admin gestiona usuarios de su propio tenant, excepto superadmins.
+     * El superadmin gestiona a cualquiera.
+     */
+    protected function manages(User $user, User $model): bool
+    {
+        if (! $user->isAdmin()) {
+            return false;
+        }
+
         if ($user->isSuperAdmin()) {
             return true;
         }
 
-        // Regular admin can only delete users from their own tenant
-        return $user->tenant_id === $model->tenant_id;
+        if ($model->isSuperAdmin()) {
+            return false;
+        }
+
+        $tenants = app(TenantManager::class);
+
+        return $tenants->tenantIdForUser($user) === $tenants->tenantIdForUser($model);
     }
-    
 }

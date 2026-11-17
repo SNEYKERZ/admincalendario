@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Managers\TenantManager;
 use App\Models\Module;
 use App\Models\Tenant;
 use App\Models\User;
@@ -12,18 +13,19 @@ class ModuleAccessService
     public function userCanAccessModule(User $user, string $moduleSlug): bool
     {
         // SuperAdmin global (sin tenant) no puede acceder a módulos normales
-        if ($user->isSuperAdmin() && !$user->tenant_id) {
+        if ($user->isSuperAdmin() && ! $user->tenant_id) {
             return false;
         }
 
-        // User debe tener tenant
-        if (!$user->tenant_id) {
+        // User debe tener tenant (efectivo: los legados sin tenant usan el principal)
+        $tenant = $this->effectiveTenant($user);
+        if (! $tenant) {
             return false;
         }
 
         // Verificar que el módulo existe
         $module = $this->getModule($moduleSlug);
-        if (!$module) {
+        if (! $module) {
             return false;
         }
 
@@ -33,8 +35,27 @@ class ModuleAccessService
         }
 
         // Verificar que el módulo está en el plan del tenant
-        $tenant = $user->tenant;
-        return $tenant && $tenant->hasModule($moduleSlug);
+        return $tenant->hasModule($moduleSlug);
+    }
+
+    /**
+     * Tenant efectivo del usuario: el suyo o, para usuarios legados sin
+     * tenant_id, el tenant principal (misma regla que TenantManager).
+     * El superadmin global no tiene tenant efectivo.
+     */
+    public function effectiveTenant(User $user): ?Tenant
+    {
+        if ($user->tenant_id) {
+            return $user->tenant;
+        }
+
+        if ($user->isSuperAdmin()) {
+            return null;
+        }
+
+        $tenantId = app(TenantManager::class)->tenantIdForUser($user);
+
+        return $tenantId ? Tenant::query()->find($tenantId) : null;
     }
 
     public function getTenantEnabledModules(Tenant $tenant): Collection

@@ -107,7 +107,7 @@ const rightNavItems: NavItem[] = [
                                     <Link
                                         v-for="item in mainNavItems"
                                         :key="item.title"
-                                        hrefitem.href"
+                                        :href="item.href"
                                         class="flex items-center gap-x-3 rounded-lg px-3 py-2 text-sm font-medium hover:bg-accent"
                                         :class="
                                             whenCurrentUrl(
@@ -128,7 +128,7 @@ const rightNavItems: NavItem[] = [
                                     <a
                                         v-for="item in rightNavItems"
                                         :key="item.title"
-                                        hreftoUrl(item.href)"
+                                        :href="toUrl(item.href)"
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         class="flex items-center space-x-2 text-sm font-medium"
@@ -170,7 +170,7 @@ const rightNavItems: NavItem[] = [
                                         ),
                                         'h-9 cursor-pointer px-3',
                                     ]"
-                                    hrefitem.href"
+                                    :href="item.href"
                                 >
                                     <component
                                         v-if="item.icon"
@@ -215,7 +215,7 @@ const rightNavItems: NavItem[] = [
                                                 class="group h-9 w-9 cursor-pointer"
                                             >
                                                 <a
-                                                    hreftoUrl(item.href)"
+                                                    :href="toUrl(item.href)"
                                                     target="_blank"
                                                     rel="noopener noreferrer"
                                                 >

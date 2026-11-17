@@ -187,7 +187,7 @@ class PublicApiController extends Controller
         }
 
         // Paginación
-        $perPage = $request->get('per_page', 15);
+        $perPage = max(1, min(100, (int) $request->get('per_page', 15)));
         $licenses = $query->orderBy('created_at', 'desc')->paginate($perPage);
 
         return response()->json([
@@ -400,11 +400,33 @@ class PublicApiController extends Controller
     }
 
     /**
+     * El checkout actual es un MOCK: crea licencias activas sin cobrar. En
+     * producción cualquiera podía obtener una licencia gratis llamando a
+     * create-checkout-session + payment-callback. Solo se habilita en local /
+     * testing o con CHECKOUT_MOCK_ENABLED=true.
+     */
+    protected function mockCheckoutDisabledResponse(): ?JsonResponse
+    {
+        if (config('services.checkout.mock_enabled') || app()->environment(['local', 'testing'])) {
+            return null;
+        }
+
+        return response()->json([
+            'success' => false,
+            'message' => 'El pago en línea no está disponible en este momento.',
+        ], 503);
+    }
+
+    /**
      * Crea una sesión de checkout para pagos.
      * Endpoint: POST /api/public/create-checkout-session
      */
     public function createCheckoutSession(Request $request): JsonResponse
     {
+        if ($response = $this->mockCheckoutDisabledResponse()) {
+            return $response;
+        }
+
         $validated = $request->validate([
             'plan_id' => 'required|exists:subscription_plans,id',
             'payment_method' => 'required|in:stripe,mercadopago',
@@ -459,6 +481,10 @@ class PublicApiController extends Controller
      */
     public function paymentCallback(Request $request): JsonResponse
     {
+        if ($response = $this->mockCheckoutDisabledResponse()) {
+            return $response;
+        }
+
         $checkoutData = session('pending_checkout');
 
         if (! $checkoutData) {

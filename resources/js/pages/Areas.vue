@@ -1,492 +1,273 @@
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { Head, usePage } from '@inertiajs/vue3';
+import { refDebounced } from '@vueuse/core';
 import axios from 'axios';
-import { useToast } from 'vue-toastification';
-import { usePage } from '@inertiajs/vue3';
+import { Building2, MoreHorizontal, Pencil, Plus, Power, Search, Trash2, Users } from 'lucide-vue-next';
+import { computed, onMounted, ref } from 'vue';
+import EmptyState from '@/components/app/EmptyState.vue';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
+import StatusBadge from '@/components/app/StatusBadge.vue';
+import AreaFormDialog from '@/components/areas/AreaFormDialog.vue';
+import type { AreaItem } from '@/components/areas/types';
+import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useConfirm } from '@/composables/useConfirm';
+import { useNotification } from '@/composables/useNotification';
 import AppLayout from '@/layouts/AppLayout.vue';
 import { includesNormalized } from '@/lib/search';
-import {
-    Plus,
-    Search,
-    Edit2,
-    Trash2,
-    X,
-    Building2,
-    Users,
-    ChevronRight,
-} from 'lucide-vue-next';
 
-interface Area {
-    id: number;
-    name: string;
-    description: string | null;
-    color: string;
-    display_order: number;
-    is_active: boolean;
-    employee_count: number;
-    leader_ids?: number[];
-    created_at: string;
-}
-
-interface User {
-    id: number;
-    name: string;
-    email: string;
-}
-
-const toast = useToast();
+const notify = useNotification();
+const confirm = useConfirm();
 const page = usePage();
-const currentUserId = computed(() => (page.props.auth as any)?.user?.id ?? null);
+const currentUserId = computed<number | null>(() => (page.props.auth as any)?.user?.id ?? null);
 
-const areas = ref<Area[]>([]);
-const users = ref<User[]>([]);
+const areas = ref<AreaItem[]>([]);
 const loading = ref(false);
-const showModal = ref(false);
-const modalMode = ref<'create' | 'edit'>('create');
-const selectedArea = ref<Area | null>(null);
-const initialLeaderIds = ref<number[]>([]);
+const togglingId = ref<number | null>(null);
+const showForm = ref(false);
+const selectedArea = ref<AreaItem | null>(null);
 
 const search = ref('');
-const filterActive = ref('all');
+const debouncedSearch = refDebounced(search, 200);
+const filterActive = ref<'all' | 'active' | 'inactive'>('all');
 
-const form = ref({
-    name: '',
-    description: '',
-    color: '#3B82F6',
-    display_order: 0,
-    is_active: true,
-    leader_ids: [] as number[],
-});
-
-const filteredAreas = computed(() => {
-    return areas.value.filter((a) => {
-        const matchesSearch = includesNormalized(a.name, search.value);
+const filteredAreas = computed(() =>
+    areas.value.filter((a) => {
+        const matchesSearch =
+            includesNormalized(a.name, debouncedSearch.value) ||
+            includesNormalized(a.description, debouncedSearch.value);
         const matchesActive =
             filterActive.value === 'all' ||
             (filterActive.value === 'active' && a.is_active) ||
             (filterActive.value === 'inactive' && !a.is_active);
         return matchesSearch && matchesActive;
-    });
-});
+    }),
+);
+
+const hasFilters = computed(() => !!search.value || filterActive.value !== 'all');
 
 const loadAreas = async () => {
-    loading.value = true;
+    loading.value = areas.value.length === 0;
     try {
-        const res = await axios.get('/api/areas', {
-            params: { active: filterActive.value },
-        });
+        const res = await axios.get('/api/areas', { params: { active: 'all' } });
         areas.value = res.data.areas || [];
     } catch (e) {
         console.error(e);
-        toast.error('Error cargando áreas');
+        notify.error('No se pudieron cargar las áreas.');
     } finally {
         loading.value = false;
     }
 };
 
-const loadUsers = async () => {
-    try {
-        const res = await axios.get('/api/users', {
-            params: { role: 'admin,employee' },
-        });
-        users.value = res.data.users || [];
-    } catch (e) {
-        console.error('Error loading users:', e);
-    }
-};
-
-const openCreate = async () => {
-    modalMode.value = 'create';
-    form.value = {
-        name: '',
-        description: '',
-        color: '#3B82F6',
-        display_order: 0,
-        is_active: true,
-        leader_ids: [],
-    };
+const openCreate = () => {
     selectedArea.value = null;
-    initialLeaderIds.value = [];
-    await loadUsers();
-    showModal.value = true;
+    showForm.value = true;
 };
 
-const openEdit = async (area: Area) => {
-    modalMode.value = 'edit';
-    try {
-        const res = await axios.get(`/api/areas/${area.id}`);
-        const areaData = res.data.area;
-        form.value = {
-            name: areaData.name,
-            description: areaData.description || '',
-            color: areaData.color,
-            display_order: areaData.display_order,
-            is_active: areaData.is_active,
-            leader_ids: areaData.leader_ids || [],
-        };
-        initialLeaderIds.value = areaData.leader_ids || [];
-    } catch (e) {
-        console.error('Error loading area:', e);
-    }
+const openEdit = (area: AreaItem) => {
     selectedArea.value = area;
-    await loadUsers();
-    showModal.value = true;
+    showForm.value = true;
 };
 
-const saveArea = async () => {
-    try {
-        if (modalMode.value === 'create') {
-            await axios.post('/api/areas', form.value);
-            toast.success('Área creada exitosamente');
-        } else {
-            await axios.put(`/api/areas/${selectedArea.value?.id}`, form.value);
-            toast.success('Área actualizada exitosamente');
-        }
-        showModal.value = false;
-        loadAreas();
-    } catch (e: any) {
-        console.error(e);
-        toast.error(e.response?.data?.message || 'Error guardando área');
-    }
-};
-
-const deleteArea = async (area: Area) => {
-    if (!confirm(`¿Eliminar el área "${area.name}"?`)) return;
-
+const deleteArea = async (area: AreaItem) => {
+    const ok = await confirm({
+        title: 'Eliminar área',
+        description:
+            area.employee_count > 0
+                ? `«${area.name}» tiene ${area.employee_count} colaboradores asignados. ¿Eliminarla de todos modos?`
+                : `¿Eliminar el área «${area.name}»? Esta acción no se puede deshacer.`,
+        confirmText: 'Eliminar área',
+        variant: 'destructive',
+    });
+    if (!ok) return;
     try {
         await axios.delete(`/api/areas/${area.id}`);
-        toast.success('Área eliminada');
-        loadAreas();
+        notify.success('Área eliminada');
+        await loadAreas();
     } catch (e: any) {
         console.error(e);
-        toast.error(e.response?.data?.message || 'Error eliminando área');
+        notify.error(e?.response?.data?.message || 'No se pudo eliminar el área.');
     }
 };
 
-const toggleActive = async (area: Area) => {
+const toggleActive = async (area: AreaItem) => {
+    togglingId.value = area.id;
     try {
-        await axios.put(`/api/areas/${area.id}`, {
-            is_active: !area.is_active,
-        });
-        loadAreas();
-    } catch (e) {
+        await axios.put(`/api/areas/${area.id}`, { is_active: !area.is_active });
+        notify.success(area.is_active ? 'Área desactivada' : 'Área activada');
+        await loadAreas();
+    } catch (e: any) {
         console.error(e);
-        toast.error('Error cambiando estado');
+        notify.error(e?.response?.data?.message || 'No se pudo cambiar el estado.');
+    } finally {
+        togglingId.value = null;
     }
 };
 
-onMounted(() => {
-    loadAreas();
-});
+const clearFilters = () => {
+    search.value = '';
+    filterActive.value = 'all';
+};
+
+onMounted(loadAreas);
 </script>
 
 <template>
+    <Head title="Áreas" />
     <AppLayout>
-        <div class="space-y-6 p-6">
-            <!-- Header -->
-            <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        <PageContainer>
+            <PageHeader
+                title="Áreas"
+                description="Organiza a tu equipo por áreas y define quién aprueba sus ausencias."
+                :icon="Building2"
             >
-                <div>
-                    <h1 class="text-2xl font-bold text-slate-900 dark:text-slate-100">
-                        Áreas Organizacionales
-                    </h1>
-                    <p class="mt-1 text-slate-500 dark:text-slate-400">
-                        Gestiona las áreas de tu organización
-                    </p>
-                </div>
-                <button
-                    @click="openCreate"
-                    class="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-white transition-colors hover:bg-blue-700"
-                >
-                    <Plus class="h-4 w-4" />
-                    Nueva Área
-                </button>
-            </div>
+                <template #actions>
+                    <Button @click="openCreate"><Plus /> Nueva área</Button>
+                </template>
+            </PageHeader>
 
-            <!-- Filters -->
-            <div class="flex flex-col gap-4 sm:flex-row">
-                <div class="relative max-w-md flex-1">
+            <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <div class="relative w-full sm:max-w-sm">
                     <Search
-                        class="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-slate-400"
+                        class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                        aria-hidden="true"
                     />
-                    <input
+                    <Input
                         v-model="search"
-                        type="text"
-                        placeholder="Buscar áreas..."
-                        class="w-full rounded-lg border border-slate-200 bg-white py-2 pr-4 pl-10 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
+                        type="search"
+                        class="pl-9"
+                        placeholder="Buscar por nombre o descripción"
+                        aria-label="Buscar áreas"
                     />
                 </div>
-                <select
-                    v-model="filterActive"
-                    class="rounded-lg border border-slate-200 bg-white px-4 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                >
-                    <option value="all">Todos los estados</option>
-                    <option value="active">Activas</option>
-                    <option value="inactive">Inactivas</option>
-                </select>
-            </div>
-
-            <!-- Areas Grid -->
-            <div v-if="loading" class="py-12 text-center text-slate-500 dark:text-slate-400">
-                Cargando áreas...
-            </div>
-
-            <div
-                v-else-if="filteredAreas.length === 0"
-                class="py-12 text-center text-slate-500 dark:text-slate-400"
-            >
-                <Building2 class="mx-auto mb-4 h-12 w-12 text-slate-300 dark:text-slate-600" />
-                <p>No hay áreas registradas</p>
-                <button
-                    @click="openCreate"
-                    class="mt-4 text-blue-600 hover:underline dark:text-blue-400"
-                >
-                    Crear primera área
-                </button>
-            </div>
-
-            <div
-                v-else
-                class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3"
-            >
                 <div
-                    v-for="area in filteredAreas"
-                    :key="area.id"
-                    class="rounded-xl border border-slate-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-slate-700 dark:bg-slate-900"
+                    class="inline-flex h-9 w-fit items-center rounded-md border bg-card p-0.5 text-[13px]"
+                    role="radiogroup"
+                    aria-label="Filtrar por estado"
                 >
-                    <div class="mb-3 flex items-start justify-between">
-                        <div class="flex items-center gap-3">
-                            <div
-                                class="flex h-10 w-10 items-center justify-center rounded-lg"
-                                :style="{ backgroundColor: area.color + '20' }"
-                            >
-                                <Building2
-                                    class="h-5 w-5"
-                                    :style="{ color: area.color }"
-                                />
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-slate-900 dark:text-slate-100">
-                                    {{ area.name }}
-                                </h3>
-                                <span
-                                    :class="
-                                        area.is_active
-                                            ? 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
-                                            : 'bg-slate-100 text-slate-500 dark:bg-slate-700/50 dark:text-slate-300'
-                                    "
-                                    class="rounded-full px-2 py-0.5 text-xs"
-                                >
-                                    {{ area.is_active ? 'Activa' : 'Inactiva' }}
-                                </span>
-                            </div>
-                        </div>
-                        <div class="flex gap-1">
-                            <button
-                                type="button"
-                                :aria-label="`Editar área ${area.name}`"
-                                @click="openEdit(area)"
-                                class="rounded-lg p-1.5 text-slate-400 hover:bg-blue-50 hover:text-blue-600 dark:text-slate-500 dark:hover:bg-blue-500/10 dark:hover:text-blue-300"
-                            >
-                                <Edit2 class="h-4 w-4" />
-                            </button>
-                            <button
-                                type="button"
-                                :aria-label="`Eliminar área ${area.name}`"
-                                @click="deleteArea(area)"
-                                class="rounded-lg p-1.5 text-slate-400 hover:bg-rose-50 hover:text-rose-600 dark:text-slate-500 dark:hover:bg-rose-500/10 dark:hover:text-rose-300"
-                            >
-                                <Trash2 class="h-4 w-4" />
-                            </button>
+                    <button
+                        v-for="opt in [
+                            { value: 'all', label: 'Todas' },
+                            { value: 'active', label: 'Activas' },
+                            { value: 'inactive', label: 'Inactivas' },
+                        ] as const"
+                        :key="opt.value"
+                        type="button"
+                        role="radio"
+                        :aria-checked="filterActive === opt.value"
+                        class="h-full rounded-[5px] px-3 font-medium transition-colors"
+                        :class="
+                            filterActive === opt.value
+                                ? 'bg-primary-soft text-primary'
+                                : 'text-muted-foreground hover:text-foreground'
+                        "
+                        @click="filterActive = opt.value"
+                    >
+                        {{ opt.label }}
+                    </button>
+                </div>
+                <span v-if="!loading" class="text-[13px] text-muted-foreground sm:ml-auto" aria-live="polite">
+                    {{ filteredAreas.length }} de {{ areas.length }} áreas
+                </span>
+            </div>
+
+            <div v-if="loading" class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <div v-for="n in 6" :key="n" class="space-y-3 rounded-xl border bg-card p-4">
+                    <div class="flex items-center gap-3">
+                        <Skeleton class="size-9 rounded-lg" />
+                        <div class="flex-1 space-y-1.5">
+                            <Skeleton class="h-4 w-32" />
+                            <Skeleton class="h-3 w-16" />
                         </div>
                     </div>
+                    <Skeleton class="h-3 w-full" />
+                </div>
+            </div>
 
-                    <p
-                        v-if="area.description"
-                        class="mb-3 line-clamp-2 text-sm text-slate-500 dark:text-slate-400"
-                    >
+            <div v-else-if="filteredAreas.length === 0" class="rounded-xl border bg-card">
+                <EmptyState
+                    :icon="Building2"
+                    :title="hasFilters ? 'Ninguna área coincide con los filtros' : 'Aún no hay áreas'"
+                    :description="
+                        hasFilters
+                            ? 'Prueba con otro término o cambia el filtro de estado.'
+                            : 'Crea la primera área para agrupar a tus colaboradores.'
+                    "
+                >
+                    <Button v-if="hasFilters" variant="outline" size="sm" @click="clearFilters">Limpiar filtros</Button>
+                    <Button v-else size="sm" @click="openCreate"><Plus /> Crear primera área</Button>
+                </EmptyState>
+            </div>
+
+            <ul v-else class="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+                <li
+                    v-for="area in filteredAreas"
+                    :key="area.id"
+                    class="flex flex-col gap-3 rounded-xl border bg-card p-4 transition-colors hover:border-input"
+                    :class="{ 'opacity-70': !area.is_active }"
+                >
+                    <div class="flex items-start justify-between gap-2">
+                        <div class="flex min-w-0 items-center gap-3">
+                            <span
+                                class="flex size-9 shrink-0 items-center justify-center rounded-lg"
+                                :style="{ backgroundColor: `${area.color}1f`, color: area.color }"
+                                aria-hidden="true"
+                            >
+                                <Building2 class="size-[18px]" />
+                            </span>
+                            <div class="min-w-0">
+                                <h2 class="truncate text-[15px] font-semibold">{{ area.name }}</h2>
+                                <StatusBadge :status="area.is_active ? 'activo' : 'inactivo'" :label="area.is_active ? 'Activa' : 'Inactiva'" />
+                            </div>
+                        </div>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger as-child>
+                                <Button variant="ghost" size="icon-sm" :aria-label="`Acciones para ${area.name}`">
+                                    <MoreHorizontal />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end" class="w-44">
+                                <DropdownMenuItem @select="openEdit(area)"><Pencil /> Editar</DropdownMenuItem>
+                                <DropdownMenuItem :disabled="togglingId === area.id" @select="toggleActive(area)">
+                                    <Power /> {{ area.is_active ? 'Desactivar' : 'Activar' }}
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem variant="destructive" @select="deleteArea(area)">
+                                    <Trash2 /> Eliminar
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
+
+                    <p v-if="area.description" class="line-clamp-2 text-sm text-muted-foreground">
                         {{ area.description }}
                     </p>
 
-                    <div class="flex items-center gap-2 text-sm text-slate-500 dark:text-slate-400">
-                        <Users class="h-4 w-4" />
-                        <span>{{ area.employee_count }} empleados</span>
+                    <div class="mt-auto flex items-center justify-between border-t pt-3 text-[13px] text-muted-foreground">
+                        <span class="inline-flex items-center gap-1.5">
+                            <Users class="size-4" aria-hidden="true" />
+                            {{ area.employee_count }} {{ area.employee_count === 1 ? 'colaborador' : 'colaboradores' }}
+                        </span>
+                        <Button variant="ghost" size="sm" class="-mr-2 h-7" @click="openEdit(area)">Editar</Button>
                     </div>
+                </li>
+            </ul>
+        </PageContainer>
 
-                    <button
-                        @click="toggleActive(area)"
-                        class="mt-3 w-full rounded-lg border border-slate-200 py-1.5 text-sm text-slate-600 transition-colors hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                        {{ area.is_active ? 'Desactivar' : 'Activar' }}
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal -->
-        <div
-            v-if="showModal"
-            class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
-        >
-            <div class="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-white dark:bg-slate-900">
-                <div class="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-700">
-                    <h2 class="text-lg font-semibold text-slate-900 dark:text-slate-100">
-                        {{
-                            modalMode === 'create'
-                                ? 'Nueva Área'
-                                : 'Editar Área'
-                        }}
-                    </h2>
-                    <button
-                        type="button"
-                        aria-label="Cerrar"
-                        @click="showModal = false"
-                        class="rounded p-1 text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800"
-                    >
-                        <X class="h-5 w-5" />
-                    </button>
-                </div>
-
-                <form @submit.prevent="saveArea" class="space-y-4 p-4">
-                    <div>
-                        <label
-                            class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Nombre *
-                        </label>
-                        <input
-                            v-model="form.name"
-                            type="text"
-                            required
-                            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                            placeholder="Ej: Desarrollo, Marketing, Ventas"
-                        />
-                    </div>
-
-                    <div>
-                        <label
-                            class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Descripción
-                        </label>
-                        <textarea
-                            v-model="form.description"
-                            rows="2"
-                            class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                            placeholder="Descripción opcional del área"
-                        ></textarea>
-                    </div>
-
-                    <div class="grid grid-cols-2 gap-4">
-                        <div>
-                            <label
-                                class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Color
-                            </label>
-                            <div class="flex items-center gap-2">
-                                <input
-                                    v-model="form.color"
-                                    type="color"
-                                    class="h-10 w-10 cursor-pointer rounded border border-slate-200 dark:border-slate-700"
-                                />
-                                <span class="text-sm text-slate-500 dark:text-slate-400">{{
-                                    form.color
-                                }}</span>
-                            </div>
-                        </div>
-                        <div>
-                            <label
-                                class="mb-1 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                            >
-                                Orden
-                            </label>
-                            <input
-                                v-model.number="form.display_order"
-                                type="number"
-                                min="0"
-                                class="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-slate-900 focus:ring-2 focus:ring-blue-500 focus:outline-none dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
-                            />
-                        </div>
-                    </div>
-
-                    <div class="flex items-center gap-2">
-                        <input
-                            v-model="form.is_active"
-                            type="checkbox"
-                            id="is_active"
-                            class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-800"
-                        />
-                        <label for="is_active" class="text-sm text-slate-700 dark:text-slate-300">
-                            Área activa
-                        </label>
-                    </div>
-
-                    <div>
-                        <label
-                            class="mb-2 block text-sm font-medium text-slate-700 dark:text-slate-300"
-                        >
-                            Líderes de Área (Opcional)
-                        </label>
-                        <div class="max-h-64 overflow-y-auto rounded-lg border border-slate-200 dark:border-slate-700">
-                            <div
-                                v-for="user in users"
-                                :key="user.id"
-                                class="flex items-start gap-2 border-b border-slate-100 p-2 last:border-b-0 dark:border-slate-700 dark:bg-slate-800"
-                            >
-                                <input
-                                    :id="`leader_${user.id}`"
-                                    :value="user.id"
-                                    v-model.number="form.leader_ids"
-                                    type="checkbox"
-                                    :disabled="
-                                        modalMode === 'edit' &&
-                                        user.id === currentUserId &&
-                                        initialLeaderIds.includes(user.id)
-                                    "
-                                    class="mt-0.5 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-60 dark:border-slate-600"
-                                />
-                                <label
-                                    :for="`leader_${user.id}`"
-                                    class="flex-1 cursor-pointer text-sm text-slate-700 dark:text-slate-300"
-                                >
-                                    {{ user.name }}
-                                    <span class="text-xs text-slate-500">{{ user.email }}</span>
-                                    <span
-                                        v-if="
-                                            modalMode === 'edit' &&
-                                            user.id === currentUserId &&
-                                            initialLeaderIds.includes(user.id)
-                                        "
-                                        class="mt-0.5 block text-xs text-amber-600 dark:text-amber-400"
-                                    >
-                                        No puedes quitarte a ti mismo como líder. Pídele a otro administrador que lo haga.
-                                    </span>
-                                </label>
-                            </div>
-                        </div>
-                    </div>
-
-                    <div class="flex gap-3 pt-4">
-                        <button
-                            type="button"
-                            @click="showModal = false"
-                            class="flex-1 rounded-lg border border-slate-200 px-4 py-2 text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:text-slate-300 dark:hover:bg-slate-800"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            class="flex-1 rounded-lg bg-blue-600 px-4 py-2 text-white hover:bg-blue-700"
-                        >
-                            {{ modalMode === 'create' ? 'Crear' : 'Guardar' }}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
+        <AreaFormDialog
+            v-model:open="showForm"
+            :area="selectedArea"
+            :current-user-id="currentUserId"
+            @saved="loadAreas"
+        />
     </AppLayout>
 </template>
-
-

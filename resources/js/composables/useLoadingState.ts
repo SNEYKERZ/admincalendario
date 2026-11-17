@@ -1,4 +1,4 @@
-import { ref, Ref, computed } from 'vue';
+import { ref, computed } from 'vue';
 
 interface LoadingStates {
     loading?: boolean;

@@ -1,47 +1,65 @@
 ﻿<script setup lang="ts">
-import { computed, ref, onMounted, onBeforeUnmount, watch, nextTick } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import FullCalendar from '@fullcalendar/vue3';
 import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
 import interactionPlugin from '@fullcalendar/interaction';
+import timeGridPlugin from '@fullcalendar/timegrid';
+import FullCalendar from '@fullcalendar/vue3';
+import { Head } from '@inertiajs/vue3';
 import axios from 'axios';
-import AbsenceModal from '@/components/AbsenceModal.vue';
-import { useToast } from 'vue-toastification';
+import { Plus } from 'lucide-vue-next';
 import tippy from 'tippy.js';
-import $ from 'jquery';
-import { normalizeForSearch } from '@/lib/search';
 import 'tippy.js/dist/tippy.css';
-import 'select2/dist/css/select2.min.css';
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue';
+import AbsenceModal from '@/components/AbsenceModal.vue';
+import MultiSelectFilter from '@/components/app/MultiSelectFilter.vue';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { useNotification } from '@/composables/useNotification';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { getStatusLabel, getStatusTone  } from '@/lib/status';
+import type {StatusTone} from '@/lib/status';
+
+type CalendarUser = {
+    id: number;
+    name: string;
+    identification: string;
+    email: string;
+};
 
 const calendarRef = ref<any>(null);
 const showModal = ref(false);
 const modalMode = ref('create');
-const selectedRange = ref(null);
-const selectedAbsence = ref(null);
-const selectedUsers = ref<number[]>([]);
-const selectedAreas = ref<number[]>([]);
-const usersSelectRef = ref<HTMLSelectElement | null>(null);
-const areasSelectRef = ref<HTMLSelectElement | null>(null);
-const users = ref<
-    { id: number; name: string; identification: string; email: string }[]
->([]);
+const selectedRange = ref<any>(null);
+const selectedAbsence = ref<any>(null);
+const selectedUsers = ref<Array<number | string>>([]);
+const selectedAreas = ref<Array<number | string>>([]);
+const users = ref<CalendarUser[]>([]);
 const areas = ref<{ id: number; name: string }[]>([]);
 const isAdmin = ref(false);
-const toast = useToast();
+const notify = useNotification();
 const selectedCountry = ref('CO');
 const holidays = ref<{ date: string; title: string }[]>([]);
 const countries = ref<{ code: string; name: string }[]>([]);
 const currentUserId = ref<number | null>(null);
-
-let usersSelect2: any = null;
-let areasSelect2: any = null;
-let select2Loaded = false;
+const ready = ref(false);
 const isMobile = ref(false);
 
 const updateViewportFlags = () => {
     isMobile.value = window.innerWidth < 640;
 };
+
+const userOptions = computed(() =>
+    users.value.map((u) => ({
+        value: u.id,
+        label: u.name,
+        hint: u.identification || undefined,
+    })),
+);
+
+const areaOptions = computed(() =>
+    areas.value.map((a) => ({ value: a.id, label: a.name })),
+);
 
 onMounted(async () => {
     updateViewportFlags();
@@ -54,21 +72,21 @@ onMounted(async () => {
         isAdmin.value =
             user?.role === 'admin' ||
             user?.role === 'superadmin' ||
-            user?.is_admin;
+            !!user?.is_admin;
 
-        // Cargar todos los usuarios disponibles para selección/asignación.
+        // Usuarios disponibles para filtro/asignación.
         const usersRes = await axios.get('/users-list');
-        users.value = usersRes.data.map((u: any) => ({
+        users.value = (usersRes.data ?? []).map((u: any) => ({
             id: u.id,
             name: u.name,
             identification: u.identification || '',
             email: u.email || '',
         }));
 
-        // Cargar áreas disponibles
+        // Áreas disponibles
         try {
             const areasRes = await axios.get('/api/areas');
-            areas.value = areasRes.data.areas.map((a: any) => ({
+            areas.value = (areasRes.data?.areas ?? []).map((a: any) => ({
                 id: a.id,
                 name: a.name,
             }));
@@ -76,30 +94,28 @@ onMounted(async () => {
             console.error('Error loading areas:', e);
         }
 
-        // Load countries and holidays
         await loadCountries();
         await loadHolidays(new Date().getFullYear());
-        await nextTick();
-        await initUsersSelect2();
-        await initAreasSelect2();
     } catch (e) {
         console.error('Error loading data:', e);
+        notify.error('No se pudieron cargar los datos del calendario.');
+    } finally {
+        ready.value = true;
     }
 });
 
 onBeforeUnmount(() => {
-    destroyUsersSelect2();
-    destroyAreasSelect2();
     window.removeEventListener('resize', updateViewportFlags);
 });
 
-// Reload holidays when country changes
 watch(selectedCountry, async (newCountry) => {
     if (newCountry) {
         await loadHolidays(new Date().getFullYear());
         refreshCalendar();
     }
 });
+
+watch([selectedUsers, selectedAreas], () => refreshCalendar());
 
 const loadHolidays = async (year: number) => {
     try {
@@ -121,22 +137,19 @@ const loadCountries = async () => {
         }));
     } catch (e) {
         console.error('Error loading countries:', e);
-        // Fallback
         countries.value = [{ code: 'CO', name: 'Colombia' }];
     }
 };
 
-const getColor = (status: string) => {
-    switch (status) {
-        case 'pendiente':
-            return '#f59e0b';
-        case 'aprobado':
-            return '#22c55e';
-        case 'rechazado':
-            return '#ef4444';
-        default:
-            return '#9ca3af';
-    }
+/** Colores de evento a partir de los tokens semánticos (legibles en claro/oscuro). */
+const toneColors = (tone: StatusTone) => {
+    const base = tone === 'neutral' ? 'var(--muted-foreground)' : `var(--${tone})`;
+    return {
+        backgroundColor:
+            tone === 'neutral' ? 'var(--muted)' : `var(--${tone}-soft)`,
+        borderColor: `color-mix(in oklch, ${base} 35%, transparent)`,
+        textColor: base,
+    };
 };
 
 const fetchEvents = async (
@@ -150,9 +163,6 @@ const fetchEvents = async (
             end: info.endStr,
         };
 
-        // Filtrar por usuarios seleccionados.
-        // Si no es admin, siempre mostrar al usuario actual
-        // Si es admin, respetar filtros
         if (selectedUsers.value.length > 0) {
             params.user_ids = selectedUsers.value.join(',');
         } else if (!isAdmin.value && currentUserId.value) {
@@ -160,30 +170,28 @@ const fetchEvents = async (
             params.user_ids = currentUserId.value;
         }
 
-        // Filtrar por áreas seleccionadas.
         if (selectedAreas.value.length > 0) {
             params.area_ids = selectedAreas.value.join(',');
         }
 
         const res = await axios.get('/absences', { params });
 
-        const absences = res.data;
-
-        const absenceEvents = absences.map((item: any) => ({
+        const absenceEvents = (res.data ?? []).map((item: any) => ({
             id: item.id,
-            title: `${item.user?.name ?? ''} - ${item.type?.name ?? ''}`,
+            title: `${item.user?.name ?? ''} · ${item.type?.name ?? ''}`,
             start: item.start_datetime,
             end: item.end_datetime,
-            color: getColor(item.status),
+            ...toneColors(getStatusTone(item.status)),
+            editable: item.status === 'pendiente',
             extendedProps: item,
         }));
 
-        // Add holidays as background events
         const holidayEvents = holidays.value.map((h: any) => ({
             start: h.date,
             allDay: true,
             display: 'background',
-            backgroundColor: '#fde68a',
+            backgroundColor: 'var(--info-soft)',
+            classNames: ['holiday-event'],
             title: h.title,
             extendedProps: { isHoliday: true },
         }));
@@ -191,24 +199,34 @@ const fetchEvents = async (
         successCallback([...absenceEvents, ...holidayEvents]);
     } catch (e) {
         console.error(e);
+        notify.error('No se pudieron cargar las ausencias.');
         failureCallback(e);
     }
 };
 
 const handleDateSelect = (info: any) => {
     modalMode.value = 'create';
+    selectedAbsence.value = null;
     selectedRange.value = info;
     showModal.value = true;
 };
 
+const openCreate = () => {
+    modalMode.value = 'create';
+    selectedAbsence.value = null;
+    selectedRange.value = null;
+    showModal.value = true;
+};
+
 const handleEventClick = async (info: any) => {
+    if (info.event.extendedProps?.isHoliday) return;
     try {
         const res = await axios.get(`/absences/${info.event.id}`);
         modalMode.value = 'view';
         selectedAbsence.value = res.data;
         showModal.value = true;
-    } catch (e) {
-        toast.error('Error al cargar ausencia');
+    } catch {
+        notify.error('No se pudo cargar la ausencia.');
     }
 };
 
@@ -216,211 +234,42 @@ const refreshCalendar = () => {
     calendarRef.value?.getApi()?.refetchEvents();
 };
 
-const handleUserChange = (userIds: number[]) => {
-    selectedUsers.value = userIds;
-    refreshCalendar();
-};
-
-const handleAreaChange = (areaIds: number[]) => {
-    selectedAreas.value = areaIds;
-    refreshCalendar();
-};
-
-const handleUsersSelect2Change = () => {
-    if (!usersSelect2) return;
-
-    const rawValue = usersSelect2.val();
-    const ids = Array.isArray(rawValue)
-        ? rawValue
-              .map((value: string | number) => Number(value))
-              .filter((value: number) => Number.isInteger(value))
-        : [];
-
-    handleUserChange(ids);
-};
-
-const handleAreasSelect2Change = () => {
-    if (!areasSelect2) return;
-
-    const rawValue = areasSelect2.val();
-    const ids = Array.isArray(rawValue)
-        ? rawValue
-              .map((value: string | number) => Number(value))
-              .filter((value: number) => Number.isInteger(value))
-        : [];
-
-    handleAreaChange(ids);
-};
-
-const destroyUsersSelect2 = () => {
-    if (!usersSelect2) return;
-    usersSelect2.off('.calendarUsers');
-    usersSelect2.select2('destroy');
-    usersSelect2 = null;
-};
-
-const destroyAreasSelect2 = () => {
-    if (!areasSelect2) return;
-    areasSelect2.off('.calendarAreas');
-    areasSelect2.select2('destroy');
-    areasSelect2 = null;
-};
-
-const ensureSelect2Loaded = async () => {
-    if (select2Loaded && typeof ($ as any).fn?.select2 === 'function') {
-        return true;
-    }
-
-    // Select2 necesita jQuery en el objeto global.
-    (window as any).$ = $;
-    (window as any).jQuery = $;
-
-    if (typeof ($ as any).fn?.select2 !== 'function') {
-        const select2Module: any = await import('select2');
-        const select2Initializer = select2Module.default ?? select2Module;
-
-        if (typeof select2Initializer === 'function') {
-            select2Initializer(window, $);
+/** Construye el contenido del tooltip con nodos de texto (sin HTML interpolado). */
+const buildTooltip = (rows: Array<[string, string] | string>) => {
+    const root = document.createElement('div');
+    root.className = 'space-y-0.5 px-1 py-0.5';
+    rows.forEach((row, index) => {
+        const line = document.createElement('div');
+        if (typeof row === 'string') {
+            line.textContent = row;
+            if (index === 0) line.style.fontWeight = '600';
+        } else {
+            const label = document.createElement('span');
+            label.style.opacity = '0.7';
+            label.textContent = `${row[0]}: `;
+            line.appendChild(label);
+            line.appendChild(document.createTextNode(row[1]));
         }
-    }
-
-    if (typeof ($ as any).fn?.select2 !== 'function') {
-        const select2FullModule: any = await import('select2/dist/js/select2.full.js');
-        const select2FullInitializer =
-            select2FullModule.default ?? select2FullModule;
-
-        if (typeof select2FullInitializer === 'function') {
-            select2FullInitializer(window, $);
-        }
-    }
-
-    select2Loaded = typeof ($ as any).fn?.select2 === 'function';
-    return select2Loaded;
-};
-
-const initUsersSelect2 = async () => {
-    if (!usersSelectRef.value) return;
-
-    const pluginReady = await ensureSelect2Loaded();
-    if (!pluginReady) {
-        console.error('Select2 no pudo inicializarse');
-        return;
-    }
-
-    destroyUsersSelect2();
-
-    usersSelect2 = $(usersSelectRef.value);
-    usersSelect2.select2({
-        width: '100%',
-        placeholder: 'Todos los usuarios',
-        allowClear: true,
-        closeOnSelect: false,
-        minimumResultsForSearch: 0,
-        matcher: (params: any, data: any) => {
-            const term = normalizeForSearch(params?.term);
-            if (!term) return data;
-
-            const text = normalizeForSearch(data?.text);
-            return text.includes(term) ? data : null;
-        },
-        language: {
-            noResults: () => 'No se encontraron usuarios',
-            searching: () => 'Buscando...',
-        },
+        root.appendChild(line);
     });
+    return root;
+};
 
-    usersSelect2.val(selectedUsers.value.map(String)).trigger('change.select2');
-    usersSelect2.on('change.calendarUsers', handleUsersSelect2Change);
-    usersSelect2.on('select2:open.calendarUsers', () => {
-        const searchField = document.querySelector<HTMLInputElement>(
-            '.select2-container--open .select2-search__field',
-        );
-        searchField?.focus();
+const formatDate = (value: string) =>
+    new Date(value).toLocaleDateString('es-CO', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
     });
-};
-
-const initAreasSelect2 = async () => {
-    if (!areasSelectRef.value) return;
-
-    const pluginReady = await ensureSelect2Loaded();
-    if (!pluginReady) {
-        console.error('Select2 no pudo inicializarse');
-        return;
-    }
-
-    destroyAreasSelect2();
-
-    areasSelect2 = $(areasSelectRef.value);
-    areasSelect2.select2({
-        width: '100%',
-        placeholder: 'Todas las áreas',
-        allowClear: true,
-        closeOnSelect: false,
-        minimumResultsForSearch: 0,
-        matcher: (params: any, data: any) => {
-            const term = normalizeForSearch(params?.term);
-            if (!term) return data;
-
-            const text = normalizeForSearch(data?.text);
-            return text.includes(term) ? data : null;
-        },
-        language: {
-            noResults: () => 'No se encontraron áreas',
-            searching: () => 'Buscando...',
-        },
-    });
-
-    areasSelect2.val(selectedAreas.value.map(String)).trigger('change.select2');
-    areasSelect2.on('change.calendarAreas', handleAreasSelect2Change);
-    areasSelect2.on('select2:open.calendarAreas', () => {
-        const searchField = document.querySelector<HTMLInputElement>(
-            '.select2-container--open .select2-search__field',
-        );
-        searchField?.focus();
-    });
-};
-
-const clearSelectedUsers = () => {
-    if (!usersSelect2) {
-        handleUserChange([]);
-        return;
-    }
-
-    usersSelect2.val(null).trigger('change');
-};
-
-const clearSelectedAreas = () => {
-    if (!areasSelect2) {
-        handleAreaChange([]);
-        return;
-    }
-
-    areasSelect2.val(null).trigger('change');
-};
-
-watch(users, async () => {
-    await nextTick();
-    await initUsersSelect2();
-});
-
-watch(areas, async () => {
-    await nextTick();
-    await initAreasSelect2();
-});
 
 const handleEventDidMount = (info: any) => {
     try {
         const data = info.event.extendedProps;
 
-        // Handle holiday events
         if (data?.isHoliday) {
             tippy(info.el, {
-                content: `
-                    <div style="font-size:18px">
-                        <strong>ðŸŽ‰ ${info.event.title}</strong>
-                    </div>
-                `,
-                allowHTML: true,
+                content: buildTooltip([`Festivo: ${info.event.title}`]),
+                theme: 'app',
             });
             return;
         }
@@ -428,16 +277,14 @@ const handleEventDidMount = (info: any) => {
         if (!data?.user) return;
 
         tippy(info.el, {
-            content: `
-                <div style="font-size:18px">
-                    <strong>${data.user.name}</strong><br/>
-                    Tipo: ${data.type.name}<br/>
-                    Estado: ${data.status}<br/>
-                    Inicio: ${new Date(data.start_datetime).toLocaleDateString('es-CO')}<br/>
-                    Fin: ${new Date(data.end_datetime).toLocaleDateString('es-CO')}
-                </div>
-            `,
-            allowHTML: true,
+            content: buildTooltip([
+                data.user.name ?? '',
+                ['Tipo', data.type?.name ?? '—'],
+                ['Estado', getStatusLabel(data.status)],
+                ['Inicio', formatDate(data.start_datetime)],
+                ['Fin', formatDate(data.end_datetime)],
+            ]),
+            theme: 'app',
         });
     } catch (e) {
         console.error('Tooltip error', e);
@@ -450,10 +297,12 @@ const handleEventDrop = async (info: any) => {
             start_datetime: info.event.start,
             end_datetime: info.event.end,
         });
-        toast.success('Evento actualizado');
-    } catch (e) {
+        notify.success('Fechas de la ausencia actualizadas.');
+    } catch (e: any) {
         info.revert();
-        toast.error('Error al mover');
+        notify.error(
+            e?.response?.data?.message || 'No se pudo mover la ausencia.',
+        );
     }
 };
 
@@ -463,21 +312,30 @@ const handleEventResize = async (info: any) => {
             start_datetime: info.event.start,
             end_datetime: info.event.end,
         });
-        toast.success('Duración actualizada');
-    } catch (e) {
+        notify.success('Duración actualizada.');
+    } catch (e: any) {
         info.revert();
-        toast.error('Error al cambiar tamaño');
+        notify.error(
+            e?.response?.data?.message || 'No se pudo cambiar la duración.',
+        );
     }
 };
 
-const canEditEvent = (event: any) => {
-    if (isAdmin.value) return true;
-    return event.extendedProps.status === 'pendiente';
-};
+// Sólo las ausencias pendientes se pueden mover o redimensionar
+// (el backend responde 422/403 al editar ausencias ya resueltas).
+const canEditEvent = (_dropInfo: any, draggedEvent: any) =>
+    draggedEvent?.extendedProps?.status === 'pendiente';
+
+const legend = [
+    { label: 'Pendiente', tone: 'warning' },
+    { label: 'Aprobado', tone: 'success' },
+    { label: 'Rechazado', tone: 'destructive' },
+    { label: 'Festivo', tone: 'info' },
+] as const;
 
 const calendarOptions = computed(() => ({
     plugins: [dayGridPlugin, timeGridPlugin, interactionPlugin],
-    initialView: isMobile.value ? 'listWeek' : 'dayGridMonth',
+    initialView: isMobile.value ? 'dayGridWeek' : 'dayGridMonth',
     selectable: true,
     editable: true,
     events: fetchEvents,
@@ -487,8 +345,9 @@ const calendarOptions = computed(() => ({
     eventResize: handleEventResize,
     eventDidMount: handleEventDidMount,
     eventAllow: canEditEvent,
+    eventDisplay: 'block',
     height: 'auto',
-    dayMaxEvents: isMobile.value ? 2 : true,
+    dayMaxEvents: isMobile.value ? 2 : 3,
     headerToolbar: isMobile.value
         ? {
               left: 'prev,next',
@@ -498,179 +357,130 @@ const calendarOptions = computed(() => ({
         : {
               left: 'prev,next today',
               center: 'title',
-              right: 'dayGridMonth,timeGridWeek,listWeek',
+              right: 'dayGridMonth,timeGridWeek,timeGridDay',
           },
+    footerToolbar: isMobile.value
+        ? { center: 'dayGridMonth,dayGridWeek,timeGridDay' }
+        : undefined,
     locale: 'es',
+    firstDay: 1,
     buttonText: {
         today: 'Hoy',
         month: 'Mes',
         week: 'Semana',
-        day: 'día',
+        day: 'Día',
         list: 'Lista',
     },
+    moreLinkText: (n: number) => `+${n} más`,
+    allDayText: 'Todo el día',
+    noEventsText: 'No hay ausencias en este periodo',
 }));
 </script>
 
 <template>
+    <Head title="Calendario" />
     <AppLayout>
-        <div class="space-y-4 p-3 sm:p-4">
-            <!-- Header -->
-            <div
-                class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
+        <PageContainer>
+            <PageHeader
+                title="Calendario"
+                description="Ausencias y novedades del equipo. Arrastra sobre los días para registrar una nueva."
             >
-                <div>
-                    <h1
-                        class="text-2xl font-bold text-gray-900 dark:text-gray-100"
-                    >
-                        Calendario de Ausencias/Novedades
-                    </h1>
-                    <p class="text-sm text-gray-500 dark:text-gray-400">
-                        Visualiza y gestiona las ausencias del equipo
-                    </p>
-                </div>
-            </div>
+                <template #actions>
+                    <Button size="sm" @click="openCreate">
+                        <Plus /> Nueva ausencia
+                    </Button>
+                </template>
+            </PageHeader>
 
-            <!-- Filters Row: Feriados + User Select (same level) -->
-            <div class="calendar-filters flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-                <!-- Country selector for holidays -->
-                <div class="flex items-center justify-between gap-2 sm:justify-start">
-                    <label class="text-sm text-gray-600 dark:text-gray-400">
-                        Feriados:
-                    </label>
-                    <select
-                        v-model="selectedCountry"
-                        class="h-10 w-48 rounded-lg border border-gray-300 px-3 py-2 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 focus:outline-none"
-                    >
-                        <option
-                            v-for="country in countries"
-                            :key="country.code"
-                            :value="country.code"
+            <!-- Filtros + leyenda -->
+            <div
+                class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between"
+            >
+                <div
+                    class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center"
+                    role="group"
+                    aria-label="Filtros del calendario"
+                >
+                    <template v-if="ready">
+                        <MultiSelectFilter
+                            v-model="selectedUsers"
+                            label="Personas"
+                            placeholder="Todas"
+                            search-placeholder="Buscar persona…"
+                            empty-text="No se encontraron personas"
+                            :options="userOptions"
+                        />
+                        <MultiSelectFilter
+                            v-if="areaOptions.length"
+                            v-model="selectedAreas"
+                            label="Áreas"
+                            placeholder="Todas"
+                            search-placeholder="Buscar área…"
+                            empty-text="No se encontraron áreas"
+                            :options="areaOptions"
+                        />
+                    </template>
+                    <template v-else>
+                        <Skeleton class="h-9 w-full sm:w-56" />
+                        <Skeleton class="h-9 w-full sm:w-56" />
+                    </template>
+                    <div class="flex items-center gap-2">
+                        <label
+                            for="calendar-holidays-country"
+                            class="text-[13px] whitespace-nowrap text-muted-foreground"
                         >
-                            {{ country.name }}
-                        </option>
-                    </select>
-                </div>
-
-                <!-- User Select Searchable -->
-                <div class="calendar-users-filter flex items-center justify-between gap-2 sm:justify-start">
-                    <label class="text-sm text-gray-600 dark:text-gray-400">
-                        Usuarios:
-                    </label>
-                    <div class="relative w-full sm:w-56">
+                            Festivos de
+                        </label>
                         <select
-                            ref="usersSelectRef"
-                            multiple
-                            class="calendar-users-select"
+                            id="calendar-holidays-country"
+                            v-model="selectedCountry"
+                            class="input h-9 sm:w-44"
                         >
                             <option
-                                v-for="user in users"
-                                :key="user.id"
-                                :value="user.id"
+                                v-for="country in countries"
+                                :key="country.code"
+                                :value="country.code"
                             >
-                                {{ user.name }}
+                                {{ country.name }}
                             </option>
                         </select>
                     </div>
-                    <button
-                        v-if="selectedUsers.length"
-                        @click="clearSelectedUsers"
-                        class="text-sm text-red-500 hover:text-red-700 dark:text-red-400"
-                    >
-                        ✕
-                    </button>
                 </div>
 
-                <!-- Area Select Searchable -->
-                <div class="calendar-areas-filter flex items-center justify-between gap-2 sm:justify-start">
-                    <label class="text-sm text-gray-600 dark:text-gray-400">
-                        Áreas:
-                    </label>
-                    <div class="relative w-full sm:w-56">
-                        <select
-                            ref="areasSelectRef"
-                            multiple
-                            class="calendar-areas-select"
-                        >
-                            <option
-                                v-for="area in areas"
-                                :key="area.id"
-                                :value="area.id"
-                            >
-                                {{ area.name }}
-                            </option>
-                        </select>
-                    </div>
-                    <button
-                        v-if="selectedAreas.length"
-                        @click="clearSelectedAreas"
-                        class="text-sm text-red-500 hover:text-red-700 dark:text-red-400"
+                <ul
+                    class="flex flex-wrap items-center gap-x-4 gap-y-1.5 text-[13px] text-muted-foreground"
+                    aria-label="Leyenda de colores"
+                >
+                    <li
+                        v-for="item in legend"
+                        :key="item.label"
+                        class="flex items-center gap-1.5"
                     >
-                        ✕
-                    </button>
-                </div>
-
-                <!--
-                <div class="flex items-center gap-1 overflow-x-auto">
-                    <button
-                        @click="handleUserChange([])"
-                        class="flex-shrink-0 rounded-full bg-blue-600 px-3 py-1 text-xs font-medium text-white transition-colors"
-                    >
-                        Todos
-                    </button>
-                    <button
-                        v-for="user in users.slice(0, 5)"
-                        :key="user.id"
-                        @click="handleUserChange([user.id])"
-                        class="flex-shrink-0 rounded-full bg-gray-100 px-3 py-1 text-xs font-medium text-gray-600 transition-colors hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-300"
-                    >
-                        {{ user.name.split(' ')[0] }}
-                    </button>
-                </div>
-                -->
+                        <span
+                            class="size-2.5 rounded-[3px] border"
+                            :style="{
+                                backgroundColor: `var(--${item.tone}-soft)`,
+                                borderColor: `var(--${item.tone})`,
+                            }"
+                            aria-hidden="true"
+                        />
+                        {{ item.label }}
+                    </li>
+                </ul>
             </div>
 
-            <!-- Legend -->
-            <div class="grid grid-cols-2 gap-2 text-sm sm:flex sm:flex-wrap sm:items-center sm:gap-4">
-                <div class="flex items-center gap-2">
-                    <div class="h-3 w-3 rounded-full bg-amber-500"></div>
-                    <span class="text-gray-600 dark:text-gray-400"
-                        >Pendiente</span
-                    >
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="h-3 w-3 rounded-full bg-green-500"></div>
-                    <span class="text-gray-600 dark:text-gray-400"
-                        >Aprobado</span
-                    >
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="h-3 w-3 rounded-full bg-red-500"></div>
-                    <span class="text-gray-600 dark:text-gray-400"
-                        >Rechazado</span
-                    >
-                </div>
-                <div class="flex items-center gap-2">
-                    <div class="h-3 w-3 rounded-full bg-amber-200"></div>
-                    <span class="text-gray-600 dark:text-gray-400"
-                        >Festivo</span
-                    >
-                </div>
+            <div class="calendar-shell rounded-xl border bg-card p-2 sm:p-4">
+                <FullCalendar ref="calendarRef" :options="calendarOptions" />
             </div>
+        </PageContainer>
 
-            <!-- Calendar -->
-            <div class="rounded-xl border border-gray-200 bg-white p-2 sm:p-4 dark:border-gray-700 dark:bg-gray-800">
-                <FullCalendar :options="calendarOptions" ref="calendarRef" />
-            </div>
-        </div>
-
-        <!-- Modal -->
         <AbsenceModal
             :show="showModal"
             :mode="modalMode"
             :absence="selectedAbsence"
-            :selectedRange="selectedRange"
+            :selected-range="selectedRange"
             :users="users"
-            :isAdmin="isAdmin"
+            :is-admin="isAdmin"
             @close="showModal = false"
             @saved="refreshCalendar"
         />
@@ -678,58 +488,17 @@ const calendarOptions = computed(() => ({
 </template>
 
 <style>
-.fc {
-    --fc-border-color: #e5e7eb;
-    --fc-button-text-color: #374151;
-    --fc-button-bg-color: #f3f4f6;
-    --fc-button-border-color: #d1d5db;
-    --fc-button-hover-bg-color: #e5e7eb;
-    --fc-button-hover-border-color: #d1d5db;
-    --fc-button-active-bg-color: #d1d5db;
-    --fc-today-bg-color: #eff6ff;
-    --fc-event-border-color: transparent;
+.calendar-shell .fc .holiday-event .fc-event-title {
+    color: var(--info);
 }
 
-.fc .fc-button {
-    font-weight: 500;
-    padding: 0.5rem 1rem;
-    border-radius: 0.375rem;
+.calendar-shell .fc-h-event,
+.calendar-shell .fc-v-event {
+    border-width: 1px;
 }
 
-.fc .fc-toolbar-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
-.fc .fc-daygrid-day-number {
-    padding: 0.5rem;
-}
-
-.fc-event {
-    cursor: pointer;
-    border-radius: 0.25rem;
-    padding: 2px 4px;
-}
-
-@media (max-width: 640px) {
-    .fc .fc-toolbar {
-        gap: 0.5rem;
-    }
-
-    .fc .fc-toolbar.fc-header-toolbar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-
-    .fc .fc-toolbar-title {
-        font-size: 1rem;
-        text-align: center;
-    }
-
-    .fc .fc-button {
-        padding: 0.375rem 0.5rem;
-        font-size: 0.75rem;
-    }
+.calendar-shell .fc-h-event .fc-event-main,
+.calendar-shell .fc-v-event .fc-event-main {
+    color: inherit;
 }
 </style>
-

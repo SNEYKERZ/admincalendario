@@ -1,329 +1,39 @@
-<template>
-    <AppLayout>
-        <template #header>
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Solicitudes</h2>
-                    <p class="text-gray-500 dark:text-gray-400 mt-2">Revisa y aprueba las solicitudes de empleados</p>
-                </div>
-            </div>
-        </template>
-
-        <div class="space-y-6">
-            <!-- Filtros -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <!-- Filtro Estado -->
-                    <div>
-                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Estado
-                        </label>
-                        <select
-                            v-model="selectedStatus"
-                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Todos los estados</option>
-                            <option value="pendiente">Pendiente</option>
-                            <option value="aprobado">Aprobado</option>
-                            <option value="rechazado">Rechazado</option>
-                        </select>
-                    </div>
-
-                    <!-- Filtro Tipo -->
-                    <div>
-                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Tipo de Solicitud
-                        </label>
-                        <select
-                            v-model="selectedType"
-                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="">Todos los tipos</option>
-                            <option v-for="(label, key) in requestTypes" :key="key" :value="key">
-                                {{ label }}
-                            </option>
-                        </select>
-                    </div>
-
-                    <!-- Búsqueda -->
-                    <div>
-                        <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                            Búsqueda
-                        </label>
-                        <input
-                            v-model="searchQuery"
-                            type="text"
-                            placeholder="Nombre o asunto..."
-                            class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        />
-                    </div>
-
-                    <!-- Botón Reset -->
-                    <div class="flex items-end">
-                        <button
-                            @click="resetFilters"
-                            class="w-full px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors"
-                        >
-                            Limpiar Filtros
-                        </button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Estadísticas -->
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
-                    <p class="text-sm text-gray-600 dark:text-gray-400">Total</p>
-                    <p class="text-2xl font-bold text-gray-900 dark:text-white mt-1">{{ requests.data.length }}</p>
-                </div>
-                <div class="bg-yellow-50 dark:bg-yellow-900/20 rounded-lg shadow border border-yellow-200 dark:border-yellow-800 p-4">
-                    <p class="text-sm text-yellow-700 dark:text-yellow-300">Pendientes</p>
-                    <p class="text-2xl font-bold text-yellow-900 dark:text-yellow-100 mt-1">
-                        {{ requests.data.filter((r) => r.status === 'pendiente').length }}
-                    </p>
-                </div>
-                <div class="bg-green-50 dark:bg-green-900/20 rounded-lg shadow border border-green-200 dark:border-green-800 p-4">
-                    <p class="text-sm text-green-700 dark:text-green-300">Aprobadas</p>
-                    <p class="text-2xl font-bold text-green-900 dark:text-green-100 mt-1">
-                        {{ requests.data.filter((r) => r.status === 'aprobado').length }}
-                    </p>
-                </div>
-                <div class="bg-red-50 dark:bg-red-900/20 rounded-lg shadow border border-red-200 dark:border-red-800 p-4">
-                    <p class="text-sm text-red-700 dark:text-red-300">Rechazadas</p>
-                    <p class="text-2xl font-bold text-red-900 dark:text-red-100 mt-1">
-                        {{ requests.data.filter((r) => r.status === 'rechazado').length }}
-                    </p>
-                </div>
-            </div>
-
-            <!-- Tabla de Solicitudes -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                            <tr>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Empleado
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Tipo
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Asunto
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Estado
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Fecha
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr v-for="request in filteredRequests" :key="request.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm">
-                                        <p class="font-medium text-gray-900 dark:text-white">{{ request.user_name }}</p>
-                                        <p class="text-gray-500 dark:text-gray-400">{{ request.user_email }}</p>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="text-sm font-medium text-gray-900 dark:text-white">
-                                        {{ getTypeLabel(request.request_type) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 max-w-xs">
-                                    <p class="text-sm text-gray-900 dark:text-white truncate">{{ request.title }}</p>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span :class="['px-3 py-1 rounded-full text-xs font-semibold', getStatusClass(request.status)]">
-                                        {{ getStatusLabel(request.status) }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                                    {{ formatDate(request.created_at) }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                    <div class="flex gap-2">
-                                        <button
-                                            @click="selectedRequest = request; showModal = true"
-                                            class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium transition-colors text-xs"
-                                        >
-                                            Gestionar
-                                        </button>
-                                    </div>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Empty State -->
-                <div v-if="filteredRequests.length === 0" class="text-center py-12">
-                    <p class="text-gray-500 dark:text-gray-400">No hay solicitudes</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- Modal de Gestión -->
-        <div v-if="showModal" class="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg max-w-2xl w-full max-h-screen overflow-y-auto">
-                <div class="p-6 border-b border-gray-200 dark:border-gray-700 flex items-center justify-between sticky top-0 bg-white dark:bg-gray-800">
-                    <h3 class="text-2xl font-bold text-gray-900 dark:text-white">{{ selectedRequest?.title }}</h3>
-                    <button
-                        @click="showModal = false"
-                        class="text-gray-500 hover:text-gray-700 dark:hover:text-gray-300 text-2xl leading-none"
-                    >
-                        Á—
-                    </button>
-                </div>
-
-                <div v-if="selectedRequest" class="p-6 space-y-6">
-                    <!-- Información de Empleado -->
-                    <div>
-                        <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Empleado</h4>
-                        <div class="bg-gray-50 dark:bg-gray-700 p-4 rounded">
-                            <p class="text-gray-900 dark:text-white font-medium">{{ selectedRequest.user_name }}</p>
-                            <p class="text-gray-600 dark:text-gray-400 text-sm">{{ selectedRequest.user_email }}</p>
-                        </div>
-                    </div>
-
-                    <!-- Detalles de Solicitud -->
-                    <div>
-                        <h4 class="font-semibold text-gray-900 dark:text-white mb-2">Detalles</h4>
-                        <div class="space-y-3">
-                            <div>
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Tipo:</span>
-                                <p class="text-gray-900 dark:text-white">{{ getTypeLabel(selectedRequest.request_type) }}</p>
-                            </div>
-                            <div v-if="selectedRequest.description">
-                                <span class="text-sm text-gray-600 dark:text-gray-400">Descripción:</span>
-                                <p class="text-gray-900 dark:text-white whitespace-pre-wrap mt-1">{{ selectedRequest.description }}</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Acciones -->
-                    <div v-if="selectedRequest.status === 'pendiente'" class="border-t border-gray-200 dark:border-gray-700 pt-6 space-y-4">
-                        <!-- Aprobar -->
-                        <div>
-                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                                Comentario de Aprobación (Opcional)
-                            </label>
-                            <textarea
-                                v-model="approvalComment"
-                                placeholder="Ej: Certificado generado..."
-                                rows="3"
-                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                            />
-                        </div>
-                        <button
-                            @click="approveRequest"
-                            :disabled="approvingLoading"
-                            class="w-full px-4 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                        >
-                            {{ approvingLoading ? 'Aprobando...' : '✓ Aprobar Solicitud' }}
-                        </button>
-
-                        <!-- Rechazar -->
-                        <div>
-                            <label class="text-sm font-medium text-gray-700 dark:text-gray-300 block mb-2">
-                                Razón del Rechazo *
-                            </label>
-                            <textarea
-                                v-model="rejectionReason"
-                                placeholder="Explica por qué se rechaza la solicitud..."
-                                rows="3"
-                                class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                required
-                            />
-                        </div>
-                        <button
-                            @click="rejectRequest"
-                            :disabled="rejectingLoading || !rejectionReason"
-                            class="w-full px-4 py-3 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                        >
-                            {{ rejectingLoading ? 'Rechazando...' : '✗ Rechazar Solicitud' }}
-                        </button>
-                    </div>
-
-                    <!-- Historial de Decisiones -->
-                    <div v-if="selectedRequest.approvals && selectedRequest.approvals.length > 0" class="border-t border-gray-200 dark:border-gray-700 pt-6">
-                        <h4 class="font-semibold text-gray-900 dark:text-white mb-3">Historial de Decisiones</h4>
-                        <div class="space-y-3">
-                            <div
-                                v-for="approval in selectedRequest.approvals"
-                                :key="approval.id"
-                                :class="[
-                                    'p-4 rounded-lg border',
-                                    approval.status === 'aprobado'
-                                        ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
-                                        : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800',
-                                ]"
-                            >
-                                <div class="flex items-start justify-between mb-2">
-                                    <p
-                                        :class="[
-                                            'font-semibold',
-                                            approval.status === 'aprobado'
-                                                ? 'text-green-900 dark:text-green-100'
-                                                : 'text-red-900 dark:text-red-100',
-                                        ]"
-                                    >
-                                        {{ approval.status === 'aprobado' ? '✓ Aprobado' : '✗ Rechazado' }}
-                                    </p>
-                                    <span
-                                        :class="[
-                                            'text-xs',
-                                            approval.status === 'aprobado'
-                                                ? 'text-green-700 dark:text-green-300'
-                                                : 'text-red-700 dark:text-red-300',
-                                        ]"
-                                    >
-                                        {{ formatDate(approval.decided_at) }}
-                                    </span>
-                                </div>
-                                <p
-                                    :class="[
-                                        'text-sm',
-                                        approval.status === 'aprobado' ? 'text-green-800 dark:text-green-200' : 'text-red-800 dark:text-red-200',
-                                    ]"
-                                >
-                                    Decidido por: {{ approval.approver_name }}
-                                </p>
-                                <p
-                                    v-if="approval.comment"
-                                    :class="[
-                                        'text-sm mt-2',
-                                        approval.status === 'aprobado' ? 'text-green-700 dark:text-green-300' : 'text-red-700 dark:text-red-300',
-                                    ]"
-                                >
-                                    {{ approval.comment }}
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </AppLayout>
-</template>
-
 <script setup lang="ts">
+import { Head, router } from '@inertiajs/vue3';
+import { Check, ClipboardCheck, Search, X } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
+import EmptyState from '@/components/app/EmptyState.vue';
+import FormField from '@/components/app/FormField.vue';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
+import SectionCard from '@/components/app/SectionCard.vue';
+import StatusBadge from '@/components/app/StatusBadge.vue';
+import TablePagination from '@/components/app/TablePagination.vue';
+import RequestTimeline from '@/components/requests/RequestTimeline.vue';
+import {
+    formatRequestDate,
+    getTypeLabel,
+    REQUEST_STATUSES,
+    REQUEST_TYPES
+    
+} from '@/components/requests/utils';
+import type {RequestApproval} from '@/components/requests/utils';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { useNotification } from '@/composables/useNotification';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { router } from '@inertiajs/vue3';
-
-interface RequestApproval {
-    id: number;
-    status: string;
-    comment: string | null;
-    decided_at: string;
-    approver_name: string;
-}
+import { normalizeForSearch } from '@/lib/search';
+import { cn } from '@/lib/utils';
 
 interface EmployeeRequest {
     id: number;
@@ -339,91 +49,492 @@ interface EmployeeRequest {
 
 interface PaginatedRequests {
     data: EmployeeRequest[];
+    current_page?: number;
+    last_page?: number;
+    total?: number;
 }
 
 const props = defineProps<{
     requests: PaginatedRequests;
+    status?: string;
+    type?: string;
+    requestTypes?: Record<string, string>;
 }>();
 
-const selectedStatus = ref('');
-const selectedType = ref('');
+const notify = useNotification();
+
+const types = computed<Record<string, string>>(() =>
+    props.requestTypes && Object.keys(props.requestTypes).length
+        ? props.requestTypes
+        : REQUEST_TYPES,
+);
+
+const selectedStatus = ref(props.status ?? '');
+const selectedType = ref(props.type ?? '');
 const searchQuery = ref('');
-const showModal = ref(false);
-const selectedRequest = ref<EmployeeRequest | null>(null);
-const approvalComment = ref('');
-const rejectionReason = ref('');
-const approvingLoading = ref(false);
-const rejectingLoading = ref(false);
+const loadingList = ref(false);
 
-const requestTypes = {
-    certificado: 'Certificado Laboral',
-    permiso_especial: 'Permiso Especial',
-    documento: 'Documento',
-    cambio_datos: 'Cambio de Datos',
-    otro: 'Otra Solicitud',
-};
-
-const typeLabels: Record<string, string> = requestTypes;
-
-const getTypeLabel = (type: string): string => typeLabels[type] || type;
-
-const getStatusLabel = (status: string): string => {
-    return { pendiente: 'Pendiente', aprobado: 'Aprobado', rechazado: 'Rechazado' }[status] || status;
-};
-
-const getStatusClass = (status: string): string => {
-    return {
-        pendiente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-        aprobado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-        rechazado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    }[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-};
-
-const formatDate = (date: string): string => {
-    return new Date(date).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-    });
-};
+const rows = computed(() =>
+    Array.isArray(props.requests?.data) ? props.requests.data : [],
+);
 
 const filteredRequests = computed(() => {
-    return props.requests.data.filter((request) => {
-        const statusMatch = !selectedStatus.value || request.status === selectedStatus.value;
-        const typeMatch = !selectedType.value || request.request_type === selectedType.value;
-        const searchMatch =
-            !searchQuery.value ||
-            request.user_name.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-            request.title.toLowerCase().includes(searchQuery.value.toLowerCase()) ||
-            request.user_email.toLowerCase().includes(searchQuery.value.toLowerCase());
-
-        return statusMatch && typeMatch && searchMatch;
-    });
+    const term = normalizeForSearch(searchQuery.value);
+    if (!term) return rows.value;
+    return rows.value.filter((r) =>
+        normalizeForSearch(`${r.user_name} ${r.user_email} ${r.title}`).includes(
+            term,
+        ),
+    );
 });
+
+const hasActiveFilters = computed(
+    () => !!selectedStatus.value || !!selectedType.value || !!searchQuery.value,
+);
+
+const visit = (extra: Record<string, string | number> = {}) => {
+    const params: Record<string, string | number> = { ...extra };
+    if (selectedStatus.value) params.status = selectedStatus.value;
+    if (selectedType.value) params.type = selectedType.value;
+    router.get('/admin/solicitudes', params, {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        onStart: () => (loadingList.value = true),
+        onFinish: () => (loadingList.value = false),
+    });
+};
+
+const setStatus = (value: string) => {
+    selectedStatus.value = value;
+    visit();
+};
 
 const resetFilters = () => {
     selectedStatus.value = '';
     selectedType.value = '';
     searchQuery.value = '';
+    visit();
+};
+
+// --- Gestión
+type Mode = 'view' | 'approve' | 'reject';
+const selectedRequest = ref<EmployeeRequest | null>(null);
+const mode = ref<Mode>('view');
+const approvalComment = ref('');
+const rejectionReason = ref('');
+const rejectError = ref('');
+const submitting = ref(false);
+
+const dialogOpen = computed({
+    get: () => selectedRequest.value !== null,
+    set: (v: boolean) => {
+        if (!v && !submitting.value) selectedRequest.value = null;
+    },
+});
+
+const openManage = (request: EmployeeRequest) => {
+    selectedRequest.value = request;
+    mode.value = 'view';
+    approvalComment.value = '';
+    rejectionReason.value = '';
+    rejectError.value = '';
 };
 
 const approveRequest = () => {
     if (!selectedRequest.value) return;
-
-    approvingLoading.value = true;
-    router.post(`/admin/solicitudes/${selectedRequest.value.id}/aprobar`, {
-        comment: approvalComment.value || null,
-    });
+    router.post(
+        `/admin/solicitudes/${selectedRequest.value.id}/aprobar`,
+        { comment: approvalComment.value.trim() || null },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onStart: () => (submitting.value = true),
+            onFinish: () => (submitting.value = false),
+            onSuccess: () => {
+                selectedRequest.value = null;
+                notify.success('Solicitud aprobada.');
+            },
+            onError: () => notify.error('No se pudo aprobar la solicitud.'),
+        },
+    );
 };
 
 const rejectRequest = () => {
-    if (!selectedRequest.value || !rejectionReason.value.trim()) return;
-
-    rejectingLoading.value = true;
-    router.post(`/admin/solicitudes/${selectedRequest.value.id}/rechazar`, {
-        reason: rejectionReason.value,
-    });
+    if (!selectedRequest.value) return;
+    if (!rejectionReason.value.trim()) {
+        rejectError.value = 'Indica el motivo del rechazo.';
+        return;
+    }
+    router.post(
+        `/admin/solicitudes/${selectedRequest.value.id}/rechazar`,
+        { reason: rejectionReason.value.trim() },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onStart: () => (submitting.value = true),
+            onFinish: () => (submitting.value = false),
+            onSuccess: () => {
+                selectedRequest.value = null;
+                notify.success('Solicitud rechazada.');
+            },
+            onError: (errors) => {
+                rejectError.value =
+                    (errors as Record<string, string>).reason ??
+                    'No se pudo rechazar la solicitud.';
+            },
+        },
+    );
 };
 </script>
 
+<template>
+    <Head title="Solicitudes del equipo" />
+    <AppLayout
+        :breadcrumbs="[
+            { title: 'Solicitudes del equipo', href: '/admin/solicitudes' },
+        ]"
+    >
+        <PageContainer>
+            <PageHeader
+                title="Solicitudes del equipo"
+                description="Revisa y resuelve las solicitudes que los colaboradores envían a Recursos Humanos."
+                :icon="ClipboardCheck"
+            />
 
+            <SectionCard flush>
+                <template #header>
+                    <div class="flex w-full flex-col gap-3">
+                        <div
+                            role="tablist"
+                            aria-label="Filtrar por estado"
+                            class="inline-flex w-full gap-1 self-start overflow-x-auto rounded-lg bg-muted p-1 sm:w-auto"
+                        >
+                            <button
+                                v-for="s in REQUEST_STATUSES"
+                                :key="s.value"
+                                type="button"
+                                role="tab"
+                                :aria-selected="selectedStatus === s.value"
+                                :class="
+                                    cn(
+                                        'inline-flex h-7 items-center rounded-md px-3 text-[13px] font-medium whitespace-nowrap transition-colors',
+                                        selectedStatus === s.value
+                                            ? 'bg-card text-foreground shadow-xs'
+                                            : 'text-muted-foreground hover:text-foreground',
+                                    )
+                                "
+                                @click="setStatus(s.value)"
+                            >
+                                {{ s.label }}
+                            </button>
+                        </div>
+                        <div class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_220px_auto]">
+                            <div class="relative">
+                                <Search
+                                    class="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <Input
+                                    v-model="searchQuery"
+                                    type="search"
+                                    class="pl-9"
+                                    placeholder="Buscar por empleado, correo o asunto"
+                                    aria-label="Buscar solicitudes"
+                                />
+                            </div>
+                            <div>
+                                <label class="sr-only" for="ar-type">Tipo</label>
+                                <select
+                                    id="ar-type"
+                                    v-model="selectedType"
+                                    class="input"
+                                    @change="visit()"
+                                >
+                                    <option value="">Todos los tipos</option>
+                                    <option
+                                        v-for="(label, key) in types"
+                                        :key="key"
+                                        :value="key"
+                                    >
+                                        {{ label }}
+                                    </option>
+                                </select>
+                            </div>
+                            <Button
+                                variant="ghost"
+                                :disabled="!hasActiveFilters"
+                                @click="resetFilters"
+                            >
+                                Limpiar filtros
+                            </Button>
+                        </div>
+                    </div>
+                </template>
+
+                <div
+                    class="transition-opacity"
+                    :class="loadingList ? 'pointer-events-none opacity-60' : ''"
+                    :aria-busy="loadingList"
+                >
+                    <EmptyState
+                        v-if="!filteredRequests.length"
+                        :icon="ClipboardCheck"
+                        :title="
+                            hasActiveFilters
+                                ? 'Ninguna solicitud coincide con los filtros'
+                                : 'No hay solicitudes'
+                        "
+                        :description="
+                            hasActiveFilters
+                                ? 'Prueba a cambiar el estado, el tipo o la búsqueda.'
+                                : 'Cuando un colaborador envíe una solicitud aparecerá aquí.'
+                        "
+                    >
+                        <Button
+                            v-if="hasActiveFilters"
+                            variant="outline"
+                            size="sm"
+                            @click="resetFilters"
+                        >
+                            Limpiar filtros
+                        </Button>
+                    </EmptyState>
+
+                    <template v-else>
+                        <div class="hidden overflow-x-auto md:block">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Empleado</th>
+                                        <th>Asunto</th>
+                                        <th>Tipo</th>
+                                        <th>Estado</th>
+                                        <th>Fecha</th>
+                                        <th class="text-right">
+                                            <span class="sr-only">Acciones</span>
+                                        </th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr
+                                        v-for="request in filteredRequests"
+                                        :key="request.id"
+                                    >
+                                        <td>
+                                            <p class="font-medium whitespace-nowrap">
+                                                {{ request.user_name }}
+                                            </p>
+                                            <p class="text-xs text-muted-foreground">
+                                                {{ request.user_email }}
+                                            </p>
+                                        </td>
+                                        <td class="max-w-xs">
+                                            <p class="truncate" :title="request.title">
+                                                {{ request.title }}
+                                            </p>
+                                        </td>
+                                        <td class="whitespace-nowrap text-muted-foreground">
+                                            {{ getTypeLabel(request.request_type) }}
+                                        </td>
+                                        <td>
+                                            <StatusBadge :status="request.status" />
+                                        </td>
+                                        <td class="whitespace-nowrap text-muted-foreground">
+                                            {{ formatRequestDate(request.created_at) }}
+                                        </td>
+                                        <td class="text-right">
+                                            <Button
+                                                size="sm"
+                                                :variant="
+                                                    request.status === 'pendiente'
+                                                        ? 'default'
+                                                        : 'outline'
+                                                "
+                                                @click="openManage(request)"
+                                            >
+                                                {{
+                                                    request.status === 'pendiente'
+                                                        ? 'Revisar'
+                                                        : 'Ver'
+                                                }}
+                                            </Button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <ul class="divide-y md:hidden">
+                            <li v-for="request in filteredRequests" :key="request.id">
+                                <button
+                                    type="button"
+                                    class="flex w-full items-center gap-3 px-4 py-3 text-left hover:bg-muted/40"
+                                    @click="openManage(request)"
+                                >
+                                    <div class="min-w-0 flex-1 space-y-1">
+                                        <p class="truncate text-sm font-medium">
+                                            {{ request.title }}
+                                        </p>
+                                        <p class="truncate text-xs text-muted-foreground">
+                                            {{ request.user_name }} ·
+                                            {{ getTypeLabel(request.request_type) }} ·
+                                            {{ formatRequestDate(request.created_at) }}
+                                        </p>
+                                    </div>
+                                    <StatusBadge :status="request.status" />
+                                </button>
+                            </li>
+                        </ul>
+                    </template>
+                </div>
+
+                <template v-if="(requests.last_page ?? 1) > 1" #footer>
+                    <TablePagination
+                        class="w-full"
+                        :page="requests.current_page ?? 1"
+                        :last-page="requests.last_page ?? 1"
+                        :total="requests.total"
+                        label="solicitudes"
+                        @change="(p: number) => visit({ page: p })"
+                    />
+                </template>
+            </SectionCard>
+        </PageContainer>
+
+        <Dialog v-model:open="dialogOpen">
+            <DialogContent v-if="selectedRequest" class="sm:max-w-xl">
+                <DialogHeader>
+                    <div class="flex flex-wrap items-center gap-2 pr-6">
+                        <DialogTitle>{{ selectedRequest.title }}</DialogTitle>
+                        <StatusBadge :status="selectedRequest.status" />
+                    </div>
+                    <DialogDescription>
+                        {{ getTypeLabel(selectedRequest.request_type) }} · enviada el
+                        {{ formatRequestDate(selectedRequest.created_at, true) }}
+                    </DialogDescription>
+                </DialogHeader>
+
+                <div class="grid gap-4 text-sm">
+                    <div class="rounded-lg border bg-muted/40 px-3 py-2.5">
+                        <p class="font-medium">{{ selectedRequest.user_name }}</p>
+                        <p class="text-muted-foreground">
+                            {{ selectedRequest.user_email }}
+                        </p>
+                    </div>
+
+                    <div>
+                        <p class="text-[13px] text-muted-foreground">Descripción</p>
+                        <p
+                            class="mt-1 whitespace-pre-wrap"
+                            :class="
+                                selectedRequest.description
+                                    ? ''
+                                    : 'text-muted-foreground'
+                            "
+                        >
+                            {{ selectedRequest.description || 'Sin descripción.' }}
+                        </p>
+                    </div>
+
+                    <div v-if="selectedRequest.approvals?.length">
+                        <p class="mb-2 text-[13px] text-muted-foreground">
+                            Historial de decisiones
+                        </p>
+                        <RequestTimeline :approvals="selectedRequest.approvals" />
+                    </div>
+
+                    <form
+                        v-if="mode === 'approve'"
+                        id="ar-approve-form"
+                        @submit.prevent="approveRequest"
+                    >
+                        <FormField
+                            label="Comentario para el colaborador"
+                            for="ar-approve-comment"
+                            hint="Opcional. Ej.: «El certificado está disponible en Documentos»."
+                        >
+                            <Textarea
+                                id="ar-approve-comment"
+                                v-model="approvalComment"
+                                rows="3"
+                            />
+                        </FormField>
+                    </form>
+
+                    <form
+                        v-if="mode === 'reject'"
+                        id="ar-reject-form"
+                        @submit.prevent="rejectRequest"
+                    >
+                        <FormField
+                            label="Motivo del rechazo"
+                            for="ar-reject-reason"
+                            required
+                            hint="El colaborador verá este motivo."
+                            :error="rejectError"
+                        >
+                            <Textarea
+                                id="ar-reject-reason"
+                                v-model="rejectionReason"
+                                rows="3"
+                                maxlength="500"
+                                required
+                            />
+                        </FormField>
+                    </form>
+                </div>
+
+                <DialogFooter v-if="selectedRequest.status === 'pendiente'">
+                    <template v-if="mode === 'view'">
+                        <Button
+                            variant="outline"
+                            class="text-destructive hover:bg-destructive-soft hover:text-destructive"
+                            @click="mode = 'reject'"
+                        >
+                            <X />
+                            Rechazar
+                        </Button>
+                        <Button @click="mode = 'approve'">
+                            <Check />
+                            Aprobar
+                        </Button>
+                    </template>
+                    <template v-else>
+                        <Button
+                            variant="outline"
+                            :disabled="submitting"
+                            @click="mode = 'view'"
+                        >
+                            Atrás
+                        </Button>
+                        <Button
+                            v-if="mode === 'approve'"
+                            type="submit"
+                            form="ar-approve-form"
+                            :disabled="submitting"
+                        >
+                            <Spinner v-if="submitting" />
+                            {{ submitting ? 'Aprobando…' : 'Confirmar aprobación' }}
+                        </Button>
+                        <Button
+                            v-else
+                            type="submit"
+                            form="ar-reject-form"
+                            variant="destructive"
+                            :disabled="submitting"
+                        >
+                            <Spinner v-if="submitting" />
+                            {{ submitting ? 'Rechazando…' : 'Confirmar rechazo' }}
+                        </Button>
+                    </template>
+                </DialogFooter>
+                <DialogFooter v-else>
+                    <Button variant="outline" @click="selectedRequest = null">
+                        Cerrar
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </AppLayout>
+</template>

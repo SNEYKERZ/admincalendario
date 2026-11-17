@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\OvertimeHours;
 use App\Services\OvertimeHoursService;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -20,14 +21,14 @@ class OvertimeHoursController extends Controller
         $query = OvertimeHours::with(['user', 'approver']);
 
         // Non-admin users can only see their own records
-        if (!auth()->user()->isAdmin()) {
+        if (! auth()->user()->isAdmin()) {
             $query->where('user_id', auth()->id());
         } elseif ($request->filled('user_id')) {
-            $query->where('user_id', $request->user_id);
+            $query->where('user_id', (int) $request->user_id);
         }
 
         if ($request->filled('status')) {
-            $query->where('status', $request->status);
+            $query->where('status', (string) $request->status);
         }
 
         if ($request->filled('start_date') && $request->filled('end_date')) {
@@ -43,16 +44,16 @@ class OvertimeHoursController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'user_id' => 'sometimes|exists:users,id',
+            'user_id' => ['sometimes', 'integer', TenantRule::exists('users')],
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
             'client' => 'sometimes|string|max:255',
             'project' => 'sometimes|string|max:255',
-            'reason' => 'required|string|min:10',
+            'reason' => 'required|string|min:10|max:1000',
         ]);
 
-        $targetUser = $data['user_id'] ? \App\Models\User::find($data['user_id']) : auth()->user();
+        $targetUser = ! empty($data['user_id']) ? \App\Models\User::findOrFail($data['user_id']) : auth()->user();
         $this->authorize('store', [OvertimeHours::class, $targetUser]);
 
         $overtime = $this->overtimeService->create($data);
@@ -63,19 +64,20 @@ class OvertimeHoursController extends Controller
     public function storeBatch(Request $request): JsonResponse
     {
         $records = $request->validate([
-            'records' => 'required|array|min:1',
-            'records.*.user_id' => 'sometimes|exists:users,id',
+            'records' => 'required|array|min:1|max:31',
+            'records.*.user_id' => ['sometimes', 'integer', TenantRule::exists('users')],
             'records.*.date' => 'required|date',
             'records.*.start_time' => 'required|date_format:H:i',
             'records.*.end_time' => 'required|date_format:H:i',
             'records.*.client' => 'sometimes|string|max:255',
             'records.*.project' => 'sometimes|string|max:255',
-            'records.*.reason' => 'required|string|min:10',
+            'records.*.reason' => 'required|string|min:10|max:1000',
         ]);
 
         // Check authorization for each batch record's target user
         foreach ($records['records'] as $record) {
-            $targetUser = $record['user_id'] ? \App\Models\User::find($record['user_id']) : auth()->user();
+            // Antes: "Undefined array key user_id" (500) cuando el registro no traía usuario.
+            $targetUser = ! empty($record['user_id']) ? \App\Models\User::findOrFail($record['user_id']) : auth()->user();
             $this->authorize('store', [OvertimeHours::class, $targetUser]);
         }
 
@@ -97,7 +99,7 @@ class OvertimeHoursController extends Controller
             'end_time' => 'required|date_format:H:i',
             'client' => 'sometimes|string|max:255',
             'project' => 'sometimes|string|max:255',
-            'reason' => 'required|string|min:10',
+            'reason' => 'required|string|min:10|max:1000',
         ]);
 
         $overtime = $this->overtimeService->update($overtimeHours, $data);

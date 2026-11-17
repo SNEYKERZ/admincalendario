@@ -18,6 +18,8 @@ class ApprovalController extends Controller
     {
         $chains = AbsenceApprovalChain::where('assigned_to', auth()->id())
             ->where('status', 'pendiente')
+            // Solo cadenas de ausencias visibles en el tenant actual.
+            ->whereHas('absence')
             ->with(['absence', 'absence.user', 'absence.type'])
             ->orderBy('created_at', 'desc')
             ->paginate(15);
@@ -35,7 +37,9 @@ class ApprovalController extends Controller
 
         $updated = $this->absenceService->approve(
             $chain->absence,
-            auth()->user()
+            auth()->user(),
+            $chain,
+            $data['notes'] ?? null
         );
 
         return response()->json([
@@ -55,7 +59,8 @@ class ApprovalController extends Controller
         $updated = $this->absenceService->reject(
             $chain->absence,
             auth()->user(),
-            $data['reason']
+            $data['reason'],
+            $chain
         );
 
         return response()->json([

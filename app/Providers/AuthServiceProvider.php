@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Auth\TenantAgnosticUserProvider;
 use App\Models\User;
 use Illuminate\Foundation\Support\Providers\AuthServiceProvider as ServiceProvider;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Gate;
 
 class AuthServiceProvider extends ServiceProvider
@@ -23,6 +25,11 @@ class AuthServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->registerPolicies();
+
+        // Carga del usuario autenticado sin TenantScope (ver TenantAgnosticUserProvider).
+        Auth::provider('tenant-agnostic-eloquent', function ($app, array $config) {
+            return new TenantAgnosticUserProvider($app['hash'], $config['model']);
+        });
 
         // Gate for superadmin access
         Gate::define('superadmin', function (User $user) {

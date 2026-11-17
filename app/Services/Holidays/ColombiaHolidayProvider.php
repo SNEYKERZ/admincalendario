@@ -9,7 +9,7 @@ class ColombiaHolidayProvider implements HolidayProvider
 {
     public function forYear(int $year): array
     {
-        $easter = CarbonImmutable::create($year, 3, 21)->addDays(easter_days($year));
+        $easter = $this->easterSunday($year);
 
         $holidays = collect([
             ['date' => CarbonImmutable::create($year, 1, 1), 'name' => 'Año Nuevo'],
@@ -21,6 +21,8 @@ class ColombiaHolidayProvider implements HolidayProvider
             ['date' => $this->moveToNextMonday($easter->addDays(39)), 'name' => 'Ascensión'],
             ['date' => $this->moveToNextMonday($easter->addDays(60)), 'name' => 'Corpus Christi'],
             ['date' => $this->moveToNextMonday($easter->addDays(68)), 'name' => 'Sagrado Corazón'],
+            // Faltaba: festivo trasladable (Ley 51 de 1983).
+            ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 6, 29)), 'name' => 'San Pedro y San Pablo'],
             ['date' => CarbonImmutable::create($year, 7, 20), 'name' => 'Día de la Independencia'],
             ['date' => CarbonImmutable::create($year, 8, 7), 'name' => 'Batalla de Boyacá'],
             ['date' => $this->moveToNextMonday(CarbonImmutable::create($year, 8, 15)), 'name' => 'Asunción'],
@@ -41,6 +43,30 @@ class ColombiaHolidayProvider implements HolidayProvider
         return [
             'CO' => 'Colombia',
         ];
+    }
+
+    /**
+     * Domingo de Pascua (algoritmo anónimo gregoriano). No depende de la
+     * extensión "calendar" de PHP (easter_days), que no siempre está instalada.
+     */
+    private function easterSunday(int $year): CarbonImmutable
+    {
+        $a = $year % 19;
+        $b = intdiv($year, 100);
+        $c = $year % 100;
+        $d = intdiv($b, 4);
+        $e = $b % 4;
+        $f = intdiv($b + 8, 25);
+        $g = intdiv($b - $f + 1, 3);
+        $h = (19 * $a + $b - $d - $g + 15) % 30;
+        $i = intdiv($c, 4);
+        $k = $c % 4;
+        $l = (32 + 2 * $e + 2 * $i - $h - $k) % 7;
+        $m = intdiv($a + 11 * $h + 22 * $l, 451);
+        $month = intdiv($h + $l - 7 * $m + 114, 31);
+        $day = (($h + $l - 7 * $m + 114) % 31) + 1;
+
+        return CarbonImmutable::create($year, $month, $day)->startOfDay();
     }
 
     private function moveToNextMonday(CarbonImmutable $date): CarbonImmutable

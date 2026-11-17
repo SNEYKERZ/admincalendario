@@ -60,6 +60,11 @@ class AbsenceCalculationService
         ];
     }
 
+    public function isHourlyType(AbsenceType $type): bool
+    {
+        return $this->isHourlyAbsenceType($type);
+    }
+
     private function isHourlyAbsenceType(AbsenceType $type): bool
     {
         $normalizedName = mb_strtolower(trim((string) $type->name));

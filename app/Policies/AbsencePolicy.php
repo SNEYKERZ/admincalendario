@@ -37,23 +37,23 @@ class AbsencePolicy
 
     public function approve(User $user, Absence $absence): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() && $this->view($user, $absence);
     }
 
     public function reject(User $user, Absence $absence): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() && $this->view($user, $absence);
     }
 
     public function pending(User $user, Absence $absence): bool
     {
-        return $user->isAdmin();
+        return $user->isAdmin() && $this->view($user, $absence);
     }
 
     public function delete(User $user, Absence $absence): bool
     {
         if ($user->isAdmin()) {
-            return true;
+            return $this->view($user, $absence);
         }
 
         return $user->id === $absence->user_id
@@ -62,8 +62,16 @@ class AbsencePolicy
 
     public function update(User $user, Absence $absence): bool
     {
-        return $user->id === $absence->user_id
-            && $absence->status === AbsenceStatus::PENDING;
+        if (! $absence->isPending()) {
+            return false;
+        }
+
+        if ($user->id === $absence->user_id) {
+            return true;
+        }
+
+        // Un admin puede corregir solicitudes pendientes de su empresa
+        // (excepto las de un superadmin).
+        return $user->isAdmin() && $this->view($user, $absence);
     }
 }
-

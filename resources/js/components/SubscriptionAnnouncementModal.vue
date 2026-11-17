@@ -1,5 +1,15 @@
 ﻿<script setup lang="ts">
-import { ref, computed } from 'vue';
+import { AlertTriangle, CreditCard } from 'lucide-vue-next';
+import { computed } from 'vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Props {
     show: boolean;
@@ -17,111 +27,72 @@ interface Emits {
 const props = defineProps<Props>();
 const emit = defineEmits<Emits>();
 
-const title = computed(() => {
-    if (props.type === 'expiring') {
-        return 'Tu suscripción está por vencer';
-    }
-    return 'Pago requerido';
-});
+const isExpiring = computed(() => props.type === 'expiring');
+
+const title = computed(() =>
+    isExpiring.value ? 'Tu suscripción está por vencer' : 'Suscripción inactiva',
+);
+
+const subtitle = computed(() =>
+    props.expiresAt
+        ? `Vence el ${new Date(props.expiresAt).toLocaleDateString('es-CO')}`
+        : 'Sin suscripción activa',
+);
 
 const message = computed(() => {
-    if (props.type === 'expiring') {
-        return `Tu suscripción ${props.planName} vence en ${props.daysRemaining} días. Para seguir usando todas las funciones, renueva pronto.`;
+    if (isExpiring.value) {
+        const days = props.daysRemaining ?? 0;
+        return `Tu plan ${props.planName ?? ''} vence en ${days} ${days === 1 ? 'día' : 'días'}. Renuévalo para seguir usando todas las funciones sin interrupciones.`;
     }
-    return 'Tu suscripción ha vencido o no tienes una suscripción activa. Por favor, contacta al administrador del sistema para continuar usando las funciones completas.';
+    return 'Tu suscripción venció o no tienes una suscripción activa. Contacta al administrador del sistema para recuperar el acceso completo.';
 });
 
-const iconColor = computed(() => {
-    if (props.type === 'expiring') return 'text-amber-600';
-    return 'text-red-600';
-});
+const onOpenChange = (open: boolean) => {
+    if (!open) emit('close');
+};
 </script>
 
 <template>
-    <div
-        v-if="show"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-        @click.self="emit('close')"
-    >
-        <div class="w-full max-w-md rounded-xl bg-white p-6 dark:bg-gray-800">
-            <div class="flex items-center gap-4">
-                <div
-                    :class="[
-                        'flex h-12 w-12 items-center justify-center rounded-full',
-                        type === 'expiring'
-                            ? 'bg-amber-100 dark:bg-amber-900/30'
-                            : 'bg-red-100 dark:bg-red-900/30',
-                    ]"
-                >
-                    <svg
-                        v-if="type === 'expiring'"
-                        class="h-6 w-6 text-amber-600 dark:text-amber-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
+    <Dialog :open="show" @update:open="onOpenChange">
+        <DialogContent class="sm:max-w-md">
+            <DialogHeader>
+                <div class="flex items-start gap-3">
+                    <div
+                        :class="[
+                            'flex size-10 shrink-0 items-center justify-center rounded-full',
+                            isExpiring
+                                ? 'bg-warning-soft text-warning'
+                                : 'bg-destructive-soft text-destructive',
+                        ]"
+                        aria-hidden="true"
                     >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                        />
-                    </svg>
-                    <svg
-                        v-else
-                        class="h-6 w-6 text-red-600 dark:text-red-400"
-                        fill="none"
-                        stroke="currentColor"
-                        viewBox="0 0 24 24"
-                    >
-                        <path
-                            stroke-linecap="round"
-                            stroke-linejoin="round"
-                            stroke-width="2"
-                            d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"
-                        />
-                    </svg>
+                        <AlertTriangle v-if="isExpiring" class="size-5" />
+                        <CreditCard v-else class="size-5" />
+                    </div>
+                    <div class="grid gap-1 text-left">
+                        <DialogTitle>{{ title }}</DialogTitle>
+                        <p class="text-xs text-muted-foreground">
+                            {{ subtitle }}
+                        </p>
+                    </div>
                 </div>
-                <div>
-                    <h3
-                        class="text-lg font-semibold text-gray-900 dark:text-gray-100"
-                    >
-                        {{ title }}
-                    </h3>
-                    <p class="text-sm text-gray-500">
-                        {{
-                            expiresAt
-                                ? `Vence: ${new Date(expiresAt).toLocaleDateString('es-CO')}`
-                                : 'Sin suscripción activa'
-                        }}
-                    </p>
-                </div>
-            </div>
+            </DialogHeader>
 
-            <p class="mt-4 text-gray-600 dark:text-gray-300">
+            <DialogDescription class="text-sm leading-relaxed">
                 {{ message }}
-            </p>
+            </DialogDescription>
 
-            <div class="mt-6 flex justify-end gap-2">
-                <button
-                    v-if="type === 'expiring'"
-                    @click="emit('close')"
-                    class="btn-secondary"
-                >
-                    Más tarde
-                </button>
-                <button
-                    v-if="type === 'expiring'"
-                    @click="emit('renew')"
-                    class="btn-primary"
-                >
-                    Renovar ahora
-                </button>
-                <button v-else @click="emit('close')" class="btn-secondary">
+            <DialogFooter>
+                <template v-if="isExpiring">
+                    <Button variant="outline" @click="emit('close')">
+                        Más tarde
+                    </Button>
+                    <Button @click="emit('renew')">Renovar ahora</Button>
+                </template>
+                <Button v-else variant="outline" @click="emit('close')">
                     Entendido
-                </button>
-            </div>
-        </div>
-    </div>
+                </Button>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>
-

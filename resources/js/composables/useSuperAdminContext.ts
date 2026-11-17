@@ -1,5 +1,6 @@
-import { computed, Ref, ref } from 'vue';
 import axios from 'axios';
+import type { Ref} from 'vue';
+import { computed, ref } from 'vue';
 import { useNotification } from './useNotification';
 
 interface SuperAdminContext {

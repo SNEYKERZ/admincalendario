@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
+import { Check } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
 import DeleteUser from '@/components/DeleteUser.vue';
 import Heading from '@/components/Heading.vue';
@@ -8,9 +9,10 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { getInitials } from '@/composables/useInitials';
 import AppLayout from '@/layouts/AppLayout.vue';
 import SettingsLayout from '@/layouts/settings/Layout.vue';
-import { getInitials } from '@/composables/useInitials';
 import { edit } from '@/routes/profile';
 import { send } from '@/routes/verification';
 import type { BreadcrumbItem } from '@/types';
@@ -20,7 +22,7 @@ type Props = {
     status?: string;
 };
 
-const props = defineProps<Props>();
+defineProps<Props>();
 
 const breadcrumbItems: BreadcrumbItem[] = [
     {
@@ -30,8 +32,10 @@ const breadcrumbItems: BreadcrumbItem[] = [
 ];
 
 const page = usePage();
-const user = computed(() => page.props.auth.user);
-const avatarPreview = ref<string | null>(user.value.avatar ?? user.value.photo_url ?? null);
+const user = computed(() => page.props.auth.user as any);
+const avatarPreview = ref<string | null>(
+    user.value.avatar ?? user.value.photo_url ?? null,
+);
 
 const form = useForm({
     first_name: user.value.first_name ?? user.value.name?.split(' ')[0] ?? '',
@@ -49,16 +53,19 @@ const tenureLabel = computed(() => {
 
     const start = new Date(form.hire_date);
     const now = new Date();
-    const months = (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+    const months =
+        (now.getFullYear() - start.getFullYear()) * 12 +
+        (now.getMonth() - start.getMonth());
 
     if (months < 12) {
-        return `${Math.max(months, 0)} mes(es) en la empresa`;
+        const m = Math.max(months, 0);
+        return `${m} ${m === 1 ? 'mes' : 'meses'} en la empresa`;
     }
 
     const years = Math.floor(months / 12);
     const remainingMonths = months % 12;
 
-    return `${years} año(s) y ${remainingMonths} mes(es) en la empresa`;
+    return `${years} ${years === 1 ? 'año' : 'años'} y ${remainingMonths} ${remainingMonths === 1 ? 'mes' : 'meses'} en la empresa`;
 });
 
 const handlePhotoChange = (event: Event) => {
@@ -66,20 +73,20 @@ const handlePhotoChange = (event: Event) => {
     const file = target.files?.[0] ?? null;
 
     form.photo = file;
-    avatarPreview.value = file ? URL.createObjectURL(file) : (user.value.avatar ?? user.value.photo_url ?? null);
+    avatarPreview.value = file
+        ? URL.createObjectURL(file)
+        : (user.value.avatar ?? user.value.photo_url ?? null);
 };
 
 const submit = () => {
-    form
-        .transform((data) => ({
-            ...data,
-            name: `${data.first_name} ${data.last_name}`.trim(),
-            _method: 'patch',
-        }))
-        .post('/settings/profile', {
-            forceFormData: true,
-            preserveScroll: true,
-        });
+    form.transform((data) => ({
+        ...data,
+        name: `${data.first_name} ${data.last_name}`.trim(),
+        _method: 'patch',
+    })).post('/settings/profile', {
+        forceFormData: true,
+        preserveScroll: true,
+    });
 };
 </script>
 
@@ -92,110 +99,174 @@ const submit = () => {
                 <Heading
                     variant="small"
                     title="Mi perfil"
-                    description="Actualiza tu foto, tus datos personales y tu informacion laboral"
+                    description="Actualiza tu foto, tus datos personales y tu información laboral."
                 />
 
                 <form class="space-y-6" @submit.prevent="submit">
-                    <div class="rounded-2xl border border-gray-200 p-5 dark:border-gray-800">
-                        <div class="flex flex-col gap-4 sm:flex-row sm:items-center">
-                            <Avatar class="h-24 w-24 rounded-2xl">
-                                <AvatarImage v-if="avatarPreview" :src="avatarPreview" :alt="user.name" />
-                                <AvatarFallback class="rounded-2xl text-xl">
+                    <div class="rounded-xl border bg-card p-4">
+                        <div
+                            class="flex flex-col gap-4 sm:flex-row sm:items-center"
+                        >
+                            <Avatar class="size-20 rounded-xl">
+                                <AvatarImage
+                                    v-if="avatarPreview"
+                                    :src="avatarPreview"
+                                    :alt="user.name"
+                                />
+                                <AvatarFallback class="rounded-xl text-xl">
                                     {{ getInitials(user.name) }}
                                 </AvatarFallback>
                             </Avatar>
 
-                            <div class="flex-1 space-y-2">
-                                <div>
-                                    <Label for="photo">Foto de perfil</Label>
-                                    <Input id="photo" type="file" accept="image/*" class="mt-2" @change="handlePhotoChange" />
-                                    <InputError class="mt-2" :message="form.errors.photo" />
-                                </div>
-                                <p class="text-sm text-muted-foreground">
-                                    Usa una imagen clara. Tamaño Máximo: 2 MB.
+                            <div class="flex-1 space-y-1.5">
+                                <Label for="photo">Foto de perfil</Label>
+                                <Input
+                                    id="photo"
+                                    type="file"
+                                    accept="image/*"
+                                    @change="handlePhotoChange"
+                                />
+                                <InputError :message="form.errors.photo" />
+                                <p class="text-xs text-muted-foreground">
+                                    Usa una imagen clara. Tamaño máximo: 2 MB.
                                 </p>
                             </div>
                         </div>
                     </div>
 
                     <div class="grid gap-4 md:grid-cols-2">
-                        <div class="grid gap-2">
+                        <div class="grid gap-1.5">
                             <Label for="first_name">Nombres</Label>
-                            <Input id="first_name" v-model="form.first_name" placeholder="Nombres" />
+                            <Input
+                                id="first_name"
+                                v-model="form.first_name"
+                                autocomplete="given-name"
+                                :aria-invalid="!!form.errors.first_name"
+                            />
                             <InputError :message="form.errors.first_name" />
                         </div>
 
-                        <div class="grid gap-2">
+                        <div class="grid gap-1.5">
                             <Label for="last_name">Apellidos</Label>
-                            <Input id="last_name" v-model="form.last_name" placeholder="Apellidos" />
+                            <Input
+                                id="last_name"
+                                v-model="form.last_name"
+                                autocomplete="family-name"
+                                :aria-invalid="!!form.errors.last_name"
+                            />
                             <InputError :message="form.errors.last_name" />
                         </div>
 
-                        <div class="grid gap-2">
-                            <Label for="identification">Identificacion</Label>
-                            <Input id="identification" v-model="form.identification" placeholder="Numero de identificacion" />
+                        <div class="grid gap-1.5">
+                            <Label for="identification">Identificación</Label>
+                            <Input
+                                id="identification"
+                                v-model="form.identification"
+                                placeholder="Número de identificación"
+                                :aria-invalid="!!form.errors.identification"
+                            />
                             <InputError :message="form.errors.identification" />
                         </div>
 
-                        <div class="grid gap-2">
-                            <Label for="phone">Numero de celular</Label>
-                            <Input id="phone" v-model="form.phone" placeholder="Celular" />
+                        <div class="grid gap-1.5">
+                            <Label for="phone">Número de celular</Label>
+                            <Input
+                                id="phone"
+                                v-model="form.phone"
+                                type="tel"
+                                autocomplete="tel"
+                                :aria-invalid="!!form.errors.phone"
+                            />
                             <InputError :message="form.errors.phone" />
                         </div>
 
-                        <div class="grid gap-2 md:col-span-2">
-                            <Label for="email">Email</Label>
-                            <Input id="email" v-model="form.email" type="email" placeholder="Email" />
+                        <div class="grid gap-1.5 md:col-span-2">
+                            <Label for="email">Correo electrónico</Label>
+                            <Input
+                                id="email"
+                                v-model="form.email"
+                                type="email"
+                                autocomplete="email"
+                                :aria-invalid="!!form.errors.email"
+                            />
                             <InputError :message="form.errors.email" />
                         </div>
 
-                        <div class="grid gap-2">
+                        <div class="grid gap-1.5">
                             <Label for="birth_date">Fecha de nacimiento</Label>
-                            <Input id="birth_date" v-model="form.birth_date" type="date" />
+                            <Input
+                                id="birth_date"
+                                v-model="form.birth_date"
+                                type="date"
+                            />
                             <InputError :message="form.errors.birth_date" />
                         </div>
 
-                        <div class="grid gap-2">
-                            <Label for="hire_date">Fecha de ingreso a la empresa</Label>
-                            <Input id="hire_date" v-model="form.hire_date" type="date" />
+                        <div class="grid gap-1.5">
+                            <Label for="hire_date"
+                                >Fecha de ingreso a la empresa</Label
+                            >
+                            <Input
+                                id="hire_date"
+                                v-model="form.hire_date"
+                                type="date"
+                            />
                             <InputError :message="form.errors.hire_date" />
-                            <p class="text-xs text-muted-foreground">{{ tenureLabel }}</p>
+                            <p class="text-xs text-muted-foreground">
+                                {{ tenureLabel }}
+                            </p>
                         </div>
                     </div>
 
-                    <div v-if="mustVerifyEmail && !user.email_verified_at">
-                        <p class="text-sm text-muted-foreground">
-                            Tu correo aun no esta verificado.
+                    <div
+                        v-if="mustVerifyEmail && !user.email_verified_at"
+                        class="rounded-lg border border-warning/25 bg-warning-soft p-3 text-sm text-warning"
+                    >
+                        <p>
+                            Tu correo aún no está verificado.
                             <Link
                                 :href="send()"
                                 as="button"
-                                class="underline decoration-neutral-300 underline-offset-4 transition-colors duration-300 ease-out hover:decoration-current dark:decoration-neutral-500"
+                                class="font-medium underline underline-offset-4"
                             >
-                                Reenviar correo de verificacion.
+                                Reenviar correo de verificación
                             </Link>
                         </p>
 
-                        <div
+                        <p
                             v-if="status === 'verification-link-sent'"
-                            class="mt-2 text-sm font-medium text-green-600"
+                            class="mt-2 font-medium text-success"
                         >
-                            Se envio un nuevo enlace de verificacion a tu correo.
-                        </div>
+                            Se envió un nuevo enlace de verificación a tu
+                            correo.
+                        </p>
                     </div>
 
-                    <div class="flex items-center gap-4">
-                        <Button :disabled="form.processing" data-test="update-profile-button">
-                            Guardar perfil
+                    <div class="flex items-center gap-3">
+                        <Button
+                            :disabled="form.processing"
+                            data-test="update-profile-button"
+                        >
+                            <Spinner v-if="form.processing" />
+                            {{
+                                form.processing
+                                    ? 'Guardando…'
+                                    : 'Guardar perfil'
+                            }}
                         </Button>
 
                         <Transition
-                            enter-active-class="transition ease-in-out"
+                            enter-active-class="transition ease-out"
                             enter-from-class="opacity-0"
-                            leave-active-class="transition ease-in-out"
+                            leave-active-class="transition ease-in"
                             leave-to-class="opacity-0"
                         >
-                            <p v-show="form.recentlySuccessful" class="text-sm text-neutral-600">
-                                Guardado.
+                            <p
+                                v-show="form.recentlySuccessful"
+                                class="flex items-center gap-1 text-sm text-success"
+                                role="status"
+                            >
+                                <Check class="size-4" /> Guardado
                             </p>
                         </Transition>
                     </div>
@@ -206,6 +277,3 @@ const submit = () => {
         </SettingsLayout>
     </AppLayout>
 </template>
-
-
-

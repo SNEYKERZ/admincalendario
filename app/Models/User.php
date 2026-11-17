@@ -10,10 +10,11 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Illuminate\Support\Facades\Storage;
+use Laravel\Fortify\TwoFactorAuthenticatable;
 
 class User extends Authenticatable
 {
-    use HasFactory, Notifiable, Tenantable;
+    use HasFactory, Notifiable, Tenantable, TwoFactorAuthenticatable;
 
     protected $fillable = [
         'tenant_id',
@@ -55,6 +56,7 @@ class User extends Authenticatable
         'birth_date' => 'date',
         'hire_date' => 'date',
         'email_verified_at' => 'datetime',
+        'password' => 'hashed',
         'legal_accepted_at' => 'datetime',
         'is_active' => 'boolean',
         'is_area_manager' => 'boolean',
@@ -188,7 +190,7 @@ class User extends Authenticatable
 
     public function belongsToTenant(): bool
     {
-        return $this->tenant_id !== null && !$this->is_superadmin_only;
+        return $this->tenant_id !== null && ! $this->is_superadmin_only;
     }
 
     /*
@@ -200,17 +202,18 @@ class User extends Authenticatable
     public function canAccessModule(string $moduleSlug): bool
     {
         // SuperAdmin global (sin tenant) tiene acceso a todo excepto módulos de tenant
-        if ($this->isSuperAdmin() && !$this->tenant_id) {
+        if ($this->isSuperAdmin() && ! $this->tenant_id) {
             return false; // SuperAdmin global no accede a módulos normales
         }
 
         // User debe ser admin y tener tenant
-        if (!$this->isAdmin() || !$this->tenant_id) {
+        if (! $this->isAdmin() || ! $this->tenant_id) {
             return false;
         }
 
         // Verificar módulo
         $tenant = $this->tenant;
+
         return $tenant && $tenant->hasModule($moduleSlug);
     }
 

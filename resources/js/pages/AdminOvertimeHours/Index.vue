@@ -1,207 +1,515 @@
-<template>
-  <AppLayout>
-    <div class="w-full px-4 py-8">
-      <div class="max-w-7xl mx-auto">
-        <div class="flex justify-between items-center mb-8">
-          <h1 class="text-3xl font-bold text-gray-900 dark:text-white">Administración Horas Extra</h1>
-          <a :href="exportUrl" class="px-6 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium">
-            Exportar Excel
-          </a>
-        </div>
-
-        <!-- Filtros -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 mb-8 border border-gray-200 dark:border-gray-700">
-          <div class="grid grid-cols-4 gap-4">
-            <select v-model="filters.area_id" @change="applyFilters" class="border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700 dark:text-white">
-              <option value="">Todas las áreas</option>
-              <option v-for="area in areas" :key="area.id" :value="area.id">{{ area.name }}</option>
-            </select>
-            <select v-model="filters.user_id" @change="applyFilters" class="border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700 dark:text-white">
-              <option value="">Todos los empleados</option>
-              <option v-for="emp in employees" :key="emp.id" :value="emp.id">{{ emp.name }}</option>
-            </select>
-            <select v-model="filters.month" @change="applyFilters" class="border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700 dark:text-white">
-              <option value="">Todos los meses</option>
-              <option v-for="m in 12" :key="m" :value="String(m).padStart(2, '0')">
-                {{ new Date(2000, m - 1).toLocaleString('es-ES', { month: 'long' }) }}
-              </option>
-            </select>
-            <select v-model="filters.year" @change="applyFilters" class="border border-gray-300 dark:border-gray-600 rounded-lg p-3 dark:bg-gray-700 dark:text-white">
-              <option v-for="y in 5" :key="y" :value="String(new Date().getFullYear() - y + 1)">
-                {{ new Date().getFullYear() - y + 1 }}
-              </option>
-            </select>
-          </div>
-        </div>
-
-        <!-- Tabla -->
-        <div class="bg-white dark:bg-gray-800 rounded-lg shadow p-6 border border-gray-200 dark:border-gray-700">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
-              <thead>
-                <tr class="border-b bg-gray-50 dark:bg-gray-700/50">
-                  <th class="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-300">Empleado</th>
-                  <th class="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-300">Área</th>
-                  <th class="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-300">Fecha</th>
-                  <th class="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-300">Horas</th>
-                  <th class="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-300">Proyecto</th>
-                  <th class="px-4 py-3 text-left font-medium text-gray-900 dark:text-gray-300">Motivo</th>
-                  <th class="px-4 py-3 text-center font-medium text-gray-900 dark:text-gray-300">Estado</th>
-                  <th class="px-4 py-3 text-center font-medium text-gray-900 dark:text-gray-300">Acción</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                <tr v-for="ot in overtimes.data" :key="ot.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50">
-                  <td class="px-4 py-3 text-gray-900 dark:text-white">{{ ot.user.name }}</td>
-                  <td class="px-4 py-3 text-gray-900 dark:text-white">{{ ot.user.area?.name || '-' }}</td>
-                  <td class="px-4 py-3 text-gray-900 dark:text-white">{{ ot.date }}</td>
-                  <td class="px-4 py-3 font-semibold text-gray-900 dark:text-white">{{ ot.hours }}h</td>
-                  <td class="px-4 py-3 text-gray-900 dark:text-white">{{ ot.project || '-' }}</td>
-                  <td class="px-4 py-3 text-gray-900 dark:text-white">{{ (ot.reason || '').substring(0, 20) }}...</td>
-                  <td class="px-4 py-3 text-center">
-                    <span :class="{
-                      'px-2 py-1 rounded text-xs font-medium': true,
-                      'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300': ot.status === 'pending',
-                      'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300': ot.status === 'approved',
-                      'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300': ot.status === 'rejected',
-                    }">
-                      {{ { pending: 'Pendiente', approved: 'Aprobado', rejected: 'Rechazado' }[ot.status] }}
-                    </span>
-                  </td>
-                  <td class="px-4 py-3 text-center">
-                    <div class="flex gap-2 justify-center">
-                      <button @click="openEdit(ot)" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 text-xs font-medium">Editar</button>
-                      <button v-if="ot.status === 'pending'" @click="openApprove(ot)" class="text-green-600 hover:text-green-800 dark:text-green-400 dark:hover:text-green-300 text-xs font-medium">Aprobar</button>
-                      <button v-if="ot.status === 'pending'" @click="openReject(ot)" class="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 text-xs font-medium">Rechazar</button>
-                    </div>
-                  </td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-
-          <!-- Paginación simple -->
-          <div v-if="overtimes.last_page > 1" class="mt-6 flex justify-between items-center">
-            <span class="text-sm text-gray-600 dark:text-gray-400">Página {{ overtimes.current_page }} de {{ overtimes.last_page }}</span>
-            <div class="flex gap-2">
-              <button v-if="overtimes.current_page > 1" @click="goToPage(overtimes.current_page - 1)" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white">Anterior</button>
-              <button v-if="overtimes.current_page < overtimes.last_page" @click="goToPage(overtimes.current_page + 1)" class="px-4 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white">Siguiente</button>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal Editar -->
-    <Teleport to="body" v-if="editingOT">
-      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="editingOT = null">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700">
-          <h3 class="text-lg font-bold mb-6 text-gray-900 dark:text-white">Editar Registro</h3>
-          <form @submit.prevent="saveEdit" class="space-y-4">
-            <input v-model="editForm.date" type="date" class="w-full border border-gray-300 dark:border-gray-600 rounded p-2 dark:bg-gray-700 dark:text-white" required />
-            <div class="grid grid-cols-2 gap-2">
-              <input v-model="editForm.start_time" type="time" class="border border-gray-300 dark:border-gray-600 rounded p-2 dark:bg-gray-700 dark:text-white" required />
-              <input v-model="editForm.end_time" type="time" class="border border-gray-300 dark:border-gray-600 rounded p-2 dark:bg-gray-700 dark:text-white" required />
-            </div>
-            <input v-model="editForm.project" type="text" placeholder="Proyecto" class="w-full border border-gray-300 dark:border-gray-600 rounded p-2 dark:bg-gray-700 dark:text-white" />
-            <textarea v-model="editForm.reason" placeholder="Motivo" class="w-full border border-gray-300 dark:border-gray-600 rounded p-2 dark:bg-gray-700 dark:text-white h-16" required></textarea>
-            <div class="flex gap-2 pt-4">
-              <button type="submit" class="flex-1 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">Guardar</button>
-              <button type="button" @click="editingOT = null" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white">Cancelar</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- Modal Aprobar -->
-    <Teleport to="body" v-if="approvingOT">
-      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="approvingOT = null">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700">
-          <h3 class="text-lg font-bold mb-6 text-gray-900 dark:text-white">Aprobar Registro</h3>
-          <p class="text-gray-700 dark:text-gray-300 mb-6">¿Deseas aprobar este registro?</p>
-          <div class="flex gap-2">
-            <button @click="approve" class="flex-1 px-4 py-2 bg-green-500 text-white rounded hover:bg-green-600">Sí, Aprobar</button>
-            <button @click="approvingOT = null" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white">Cancelar</button>
-          </div>
-        </div>
-      </div>
-    </Teleport>
-
-    <!-- Modal Rechazar -->
-    <Teleport to="body" v-if="rejectingOT">
-      <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" @click.self="rejectingOT = null">
-        <div class="bg-white dark:bg-gray-800 rounded-lg p-8 max-w-md w-full mx-4 border border-gray-200 dark:border-gray-700">
-          <h3 class="text-lg font-bold mb-6 text-gray-900 dark:text-white">Rechazar Registro</h3>
-          <form @submit.prevent="reject" class="space-y-4">
-            <textarea v-model="rejectReason" placeholder="Motivo del rechazo" class="w-full border border-gray-300 dark:border-gray-600 rounded p-2 dark:bg-gray-700 dark:text-white h-16" required></textarea>
-            <div class="flex gap-2">
-              <button type="submit" class="flex-1 px-4 py-2 bg-red-500 text-white rounded hover:bg-red-600">Rechazar</button>
-              <button type="button" @click="rejectingOT = null" class="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded hover:bg-gray-50 dark:hover:bg-gray-700 text-gray-900 dark:text-white">Cancelar</button>
-            </div>
-          </form>
-        </div>
-      </div>
-    </Teleport>
-  </AppLayout>
-</template>
-
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import AppLayout from '@/layouts/AppLayout.vue'
-import { usePage, router } from '@inertiajs/vue3'
+import { Head, router } from '@inertiajs/vue3';
+import { Check, Download, Pencil, Timer, X } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import EmptyState from '@/components/app/EmptyState.vue';
+import FormField from '@/components/app/FormField.vue';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
+import SectionCard from '@/components/app/SectionCard.vue';
+import StatusBadge from '@/components/app/StatusBadge.vue';
+import TablePagination from '@/components/app/TablePagination.vue';
+import OvertimeEditDialog from '@/components/overtime/OvertimeEditDialog.vue';
+import {
+    formatDate,
+    formatHours,
+    formatTimeRange,
+    MONTHS,
+    YEARS
+    
+    
+} from '@/components/overtime/utils';
+import type {OvertimeFormValues, OvertimeRecord} from '@/components/overtime/utils';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { useConfirm } from '@/composables/useConfirm';
+import { useNotification } from '@/composables/useNotification';
+import AppLayout from '@/layouts/AppLayout.vue';
 
-const page = usePage()
-const overtimes = ref(page.props.overtimes)
-const areas = ref(page.props.areas)
-const employees = ref(page.props.employees)
+type Paginated<T> = {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    total: number;
+};
 
-const filters = ref(page.props.filters)
-const editingOT = ref(null)
-const editForm = ref({ date: '', start_time: '', end_time: '', project: '', reason: '' })
-const approvingOT = ref(null)
-const rejectingOT = ref(null)
-const rejectReason = ref('')
+type Filters = {
+    area_id: string | number;
+    user_id: string | number;
+    month: string;
+    year: string | number;
+};
 
-const exportUrl = computed(() => {
-  const params = new URLSearchParams(filters.value)
-  return `/admin/overtime-hours/export?${params.toString()}`
-})
+const props = defineProps<{
+    overtimes: Paginated<OvertimeRecord>;
+    areas: Array<{ id: number; name: string }>;
+    employees: Array<{ id: number; name: string }>;
+    filters: Filters;
+}>();
 
-const applyFilters = () => {
-  const params = new URLSearchParams(filters.value)
-  router.get(`/admin/overtime-hours?${params.toString()}`, {}, { preserveState: true })
-}
+const notify = useNotification();
+const confirm = useConfirm();
 
-const goToPage = (page) => {
-  const params = new URLSearchParams({ ...filters.value, page })
-  router.get(`/admin/overtime-hours?${params.toString()}`, {}, { preserveState: true })
-}
+const filters = ref<Filters>({
+    area_id: props.filters?.area_id ?? '',
+    user_id: props.filters?.user_id ?? '',
+    month: props.filters?.month ?? '',
+    year: String(props.filters?.year ?? new Date().getFullYear()),
+});
 
-const openEdit = (ot) => {
-  editingOT.value = ot
-  editForm.value = { date: ot.date, start_time: ot.start_time.substring(0, 5), end_time: ot.end_time.substring(0, 5), project: ot.project || '', reason: ot.reason }
-}
+const rows = computed<OvertimeRecord[]>(() =>
+    Array.isArray(props.overtimes?.data) ? props.overtimes.data : [],
+);
 
-const saveEdit = async () => {
-  router.put(`/admin/overtime-hours/${editingOT.value.id}`, editForm.value, {
-    onSuccess: () => { editingOT.value = null }
-  })
-}
+const hasActiveFilters = computed(
+    () =>
+        !!filters.value.area_id ||
+        !!filters.value.user_id ||
+        !!filters.value.month,
+);
 
-const openApprove = (ot) => { approvingOT.value = ot }
+const queryParams = (extra: Record<string, string | number> = {}) => {
+    const params: Record<string, string> = {};
+    Object.entries({ ...filters.value, ...extra }).forEach(([k, v]) => {
+        if (v !== '' && v !== null && v !== undefined) params[k] = String(v);
+    });
+    return params;
+};
 
-const approve = () => {
-  router.post(`/admin/overtime-hours/${approvingOT.value.id}/approve`, {}, {
-    onSuccess: () => { approvingOT.value = null }
-  })
-}
+const exportUrl = computed(
+    () =>
+        `/admin/overtime-hours/export?${new URLSearchParams(queryParams()).toString()}`,
+);
 
-const openReject = (ot) => { rejectingOT.value = ot; rejectReason.value = '' }
+const loadingList = ref(false);
+
+const visit = (extra: Record<string, string | number> = {}) => {
+    router.get('/admin/overtime-hours', queryParams(extra), {
+        preserveState: true,
+        preserveScroll: true,
+        replace: true,
+        onStart: () => (loadingList.value = true),
+        onFinish: () => (loadingList.value = false),
+    });
+};
+
+const applyFilters = () => visit();
+const goToPage = (p: number) => visit({ page: p });
+const resetFilters = () => {
+    filters.value = {
+        area_id: '',
+        user_id: '',
+        month: '',
+        year: String(new Date().getFullYear()),
+    };
+    visit();
+};
+
+// --- Edición
+const editingOT = ref<OvertimeRecord | null>(null);
+const editErrors = ref<Record<string, string>>({});
+const savingEdit = ref(false);
+
+const openEdit = (ot: OvertimeRecord) => {
+    editErrors.value = {};
+    editingOT.value = ot;
+};
+
+const saveEdit = (values: OvertimeFormValues) => {
+    if (!editingOT.value) return;
+    router.put(
+        `/admin/overtime-hours/${editingOT.value.id}`,
+        {
+            date: values.date,
+            start_time: values.start_time,
+            end_time: values.end_time,
+            project: values.project || null,
+            client: values.client || null,
+            reason: values.reason,
+        },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onStart: () => (savingEdit.value = true),
+            onFinish: () => (savingEdit.value = false),
+            onSuccess: () => {
+                editingOT.value = null;
+                notify.success('Registro actualizado.');
+            },
+            onError: (errors) => {
+                editErrors.value = errors as Record<string, string>;
+            },
+        },
+    );
+};
+
+// --- Aprobación
+const processingId = ref<number | null>(null);
+
+const approve = async (ot: OvertimeRecord) => {
+    const ok = await confirm({
+        title: 'Aprobar horas extra',
+        description: `${ot.user?.name ?? 'Empleado'} · ${formatDate(ot.date)} · ${formatHours(ot.hours)}`,
+        confirmText: 'Aprobar',
+    });
+    if (!ok) return;
+    router.post(
+        `/admin/overtime-hours/${ot.id}/approve`,
+        {},
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onStart: () => (processingId.value = ot.id),
+            onFinish: () => (processingId.value = null),
+            onSuccess: () => notify.success('Registro aprobado.'),
+            onError: () => notify.error('No se pudo aprobar el registro.'),
+        },
+    );
+};
+
+// --- Rechazo con motivo
+const rejectingOT = ref<OvertimeRecord | null>(null);
+const rejectReason = ref('');
+const rejectError = ref('');
+const rejecting = ref(false);
+
+const rejectOpen = computed({
+    get: () => rejectingOT.value !== null,
+    set: (v: boolean) => {
+        if (!v) rejectingOT.value = null;
+    },
+});
+
+const openReject = (ot: OvertimeRecord) => {
+    rejectReason.value = '';
+    rejectError.value = '';
+    rejectingOT.value = ot;
+};
 
 const reject = () => {
-  router.post(`/admin/overtime-hours/${rejectingOT.value.id}/reject`, { reason: rejectReason.value }, {
-    onSuccess: () => { rejectingOT.value = null }
-  })
-}
+    if (!rejectingOT.value) return;
+    if (!rejectReason.value.trim()) {
+        rejectError.value = 'Indica el motivo del rechazo.';
+        return;
+    }
+    router.post(
+        `/admin/overtime-hours/${rejectingOT.value.id}/reject`,
+        { reason: rejectReason.value.trim() },
+        {
+            preserveScroll: true,
+            preserveState: true,
+            onStart: () => (rejecting.value = true),
+            onFinish: () => (rejecting.value = false),
+            onSuccess: () => {
+                rejectingOT.value = null;
+                notify.success('Registro rechazado.');
+            },
+            onError: (errors) => {
+                rejectError.value =
+                    (errors as Record<string, string>).reason ??
+                    'No se pudo rechazar el registro.';
+            },
+        },
+    );
+};
 </script>
+
+<template>
+    <Head title="Horas extra del equipo" />
+    <AppLayout
+        :breadcrumbs="[
+            { title: 'Horas extra del equipo', href: '/admin/overtime-hours' },
+        ]"
+    >
+        <PageContainer>
+            <PageHeader
+                title="Horas extra del equipo"
+                description="Revisa, edita y aprueba las horas extra registradas por los colaboradores."
+                :icon="Timer"
+            >
+                <template #actions>
+                    <Button as-child variant="outline">
+                        <a :href="exportUrl">
+                            <Download />
+                            Exportar a Excel
+                        </a>
+                    </Button>
+                </template>
+            </PageHeader>
+
+            <SectionCard flush>
+                <template #header>
+                    <div
+                        class="grid w-full gap-2 sm:grid-cols-2 lg:grid-cols-[repeat(4,minmax(0,1fr))_auto]"
+                    >
+                        <div>
+                            <label class="sr-only" for="aot-area">Área</label>
+                            <select
+                                id="aot-area"
+                                v-model="filters.area_id"
+                                class="input"
+                                @change="applyFilters"
+                            >
+                                <option value="">Todas las áreas</option>
+                                <option
+                                    v-for="area in areas"
+                                    :key="area.id"
+                                    :value="area.id"
+                                >
+                                    {{ area.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="sr-only" for="aot-user">Empleado</label>
+                            <select
+                                id="aot-user"
+                                v-model="filters.user_id"
+                                class="input"
+                                @change="applyFilters"
+                            >
+                                <option value="">Todos los empleados</option>
+                                <option
+                                    v-for="emp in employees"
+                                    :key="emp.id"
+                                    :value="emp.id"
+                                >
+                                    {{ emp.name }}
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="sr-only" for="aot-month">Mes</label>
+                            <select
+                                id="aot-month"
+                                v-model="filters.month"
+                                class="input capitalize"
+                                @change="applyFilters"
+                            >
+                                <option value="">Todos los meses</option>
+                                <option
+                                    v-for="m in MONTHS"
+                                    :key="m.value"
+                                    :value="m.value"
+                                >
+                                    {{ m.label }}
+                                </option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="sr-only" for="aot-year">Año</label>
+                            <select
+                                id="aot-year"
+                                v-model="filters.year"
+                                class="input"
+                                @change="applyFilters"
+                            >
+                                <option v-for="y in YEARS" :key="y" :value="y">
+                                    {{ y }}
+                                </option>
+                            </select>
+                        </div>
+                        <Button
+                            variant="ghost"
+                            :disabled="!hasActiveFilters"
+                            @click="resetFilters"
+                        >
+                            Limpiar filtros
+                        </Button>
+                    </div>
+                </template>
+
+                <div
+                    class="relative transition-opacity"
+                    :class="loadingList ? 'pointer-events-none opacity-60' : ''"
+                    :aria-busy="loadingList"
+                >
+                    <EmptyState
+                        v-if="!rows.length"
+                        :icon="Timer"
+                        title="No hay registros de horas extra"
+                        :description="
+                            hasActiveFilters
+                                ? 'Ningún registro coincide con los filtros seleccionados.'
+                                : 'Cuando el equipo registre horas extra aparecerán aquí.'
+                        "
+                    >
+                        <Button
+                            v-if="hasActiveFilters"
+                            variant="outline"
+                            size="sm"
+                            @click="resetFilters"
+                        >
+                            Limpiar filtros
+                        </Button>
+                    </EmptyState>
+
+                    <div v-else class="overflow-x-auto">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    <th>Empleado</th>
+                                    <th>Fecha</th>
+                                    <th class="text-right">Horas</th>
+                                    <th>Proyecto</th>
+                                    <th>Motivo</th>
+                                    <th>Estado</th>
+                                    <th class="text-right">Acciones</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr v-for="ot in rows" :key="ot.id">
+                                    <td>
+                                        <p class="font-medium whitespace-nowrap">
+                                            {{ ot.user?.name ?? '—' }}
+                                        </p>
+                                        <p class="text-xs text-muted-foreground">
+                                            {{ ot.user?.area?.name || 'Sin área' }}
+                                        </p>
+                                    </td>
+                                    <td class="whitespace-nowrap">
+                                        {{ formatDate(ot.date) }}
+                                        <p
+                                            class="text-xs text-muted-foreground tabular-nums"
+                                        >
+                                            {{
+                                                formatTimeRange(
+                                                    ot.start_time,
+                                                    ot.end_time,
+                                                )
+                                            }}
+                                        </p>
+                                    </td>
+                                    <td class="text-right font-medium tabular-nums">
+                                        {{ formatHours(ot.hours) }}
+                                    </td>
+                                    <td>{{ ot.project || '—' }}</td>
+                                    <td class="max-w-[260px]">
+                                        <p class="truncate" :title="ot.reason || ''">
+                                            {{ ot.reason || '—' }}
+                                        </p>
+                                    </td>
+                                    <td><StatusBadge :status="ot.status" /></td>
+                                    <td class="text-right whitespace-nowrap">
+                                        <div class="inline-flex items-center gap-1">
+                                            <template v-if="ot.status === 'pending'">
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    class="text-success hover:bg-success-soft hover:text-success"
+                                                    :disabled="processingId === ot.id"
+                                                    @click="approve(ot)"
+                                                >
+                                                    <Spinner
+                                                        v-if="processingId === ot.id"
+                                                    />
+                                                    <Check v-else />
+                                                    Aprobar
+                                                </Button>
+                                                <Button
+                                                    size="sm"
+                                                    variant="outline"
+                                                    class="text-destructive hover:bg-destructive-soft hover:text-destructive"
+                                                    :disabled="processingId === ot.id"
+                                                    @click="openReject(ot)"
+                                                >
+                                                    <X />
+                                                    Rechazar
+                                                </Button>
+                                            </template>
+                                            <Button
+                                                variant="ghost"
+                                                size="icon-sm"
+                                                :aria-label="`Editar registro de ${ot.user?.name ?? 'empleado'}`"
+                                                title="Editar"
+                                                @click="openEdit(ot)"
+                                            >
+                                                <Pencil />
+                                            </Button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <template v-if="overtimes.last_page > 1" #footer>
+                    <TablePagination
+                        class="w-full"
+                        :page="overtimes.current_page"
+                        :last-page="overtimes.last_page"
+                        :total="overtimes.total"
+                        @change="goToPage"
+                    />
+                </template>
+            </SectionCard>
+        </PageContainer>
+
+        <OvertimeEditDialog
+            :record="editingOT"
+            :processing="savingEdit"
+            :errors="editErrors"
+            description="Los cambios recalculan las horas del registro."
+            @close="editingOT = null"
+            @submit="saveEdit"
+        />
+
+        <Dialog v-model:open="rejectOpen">
+            <DialogContent class="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Rechazar horas extra</DialogTitle>
+                    <DialogDescription v-if="rejectingOT">
+                        {{ rejectingOT.user?.name ?? 'Empleado' }} ·
+                        {{ formatDate(rejectingOT.date) }} ·
+                        {{ formatHours(rejectingOT.hours) }}
+                    </DialogDescription>
+                </DialogHeader>
+                <form id="aot-reject-form" @submit.prevent="reject">
+                    <FormField
+                        label="Motivo del rechazo"
+                        for="aot-reject-reason"
+                        required
+                        hint="El colaborador verá este motivo."
+                        :error="rejectError"
+                    >
+                        <Textarea
+                            id="aot-reject-reason"
+                            v-model="rejectReason"
+                            rows="3"
+                            maxlength="500"
+                            required
+                        />
+                    </FormField>
+                </form>
+                <DialogFooter>
+                    <Button
+                        variant="outline"
+                        :disabled="rejecting"
+                        @click="rejectingOT = null"
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        type="submit"
+                        form="aot-reject-form"
+                        variant="destructive"
+                        :disabled="rejecting"
+                    >
+                        <Spinner v-if="rejecting" />
+                        {{ rejecting ? 'Rechazando…' : 'Rechazar' }}
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
+    </AppLayout>
+</template>

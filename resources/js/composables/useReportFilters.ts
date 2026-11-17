@@ -1,5 +1,5 @@
-import { ref, Ref } from 'vue';
 import axios from 'axios';
+import { ref } from 'vue';
 import { useNotification } from './useNotification';
 
 interface User {

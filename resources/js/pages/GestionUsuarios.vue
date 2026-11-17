@@ -1,13 +1,15 @@
 ﻿<script setup lang="ts">
-import AppLayout from '@/layouts/AppLayout.vue'
-import UsuariosManager from '@/components/UsuariosManager.vue'
-
+import { Head } from '@inertiajs/vue3';
+import PageContainer from '@/components/app/PageContainer.vue';
+import UsuariosManager from '@/components/UsuariosManager.vue';
+import AppLayout from '@/layouts/AppLayout.vue';
 </script>
 
 <template>
+    <Head title="Usuarios y vacaciones" />
     <AppLayout>
-        <div class="p-4">
+        <PageContainer>
             <UsuariosManager />
-        </div>
+        </PageContainer>
     </AppLayout>
 </template>

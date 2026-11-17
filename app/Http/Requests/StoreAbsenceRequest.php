@@ -2,11 +2,13 @@
 
 namespace App\Http\Requests;
 
+use App\Managers\TenantManager;
 use App\Models\Absence;
 use App\Models\AbsenceType;
 use App\Models\User;
-use App\Managers\TenantManager;
 use App\Services\AbsenceCalculationService;
+use App\Services\AbsenceService;
+use App\Support\TenantRule;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -29,7 +31,7 @@ class StoreAbsenceRequest extends FormRequest
     public function rules(): array
     {
         $userRules = $this->user()?->isAdmin()
-            ? ['required', 'exists:users,id']
+            ? ['required', 'integer', TenantRule::exists('users')]
             : ['nullable'];
 
         return [
@@ -41,7 +43,7 @@ class StoreAbsenceRequest extends FormRequest
             'include_sunday' => ['nullable', 'boolean'],
             'include_holidays' => ['nullable', 'boolean'],
             'holiday_country' => ['nullable', 'string', 'size:2'],
-            'reason' => ['nullable', 'string'],
+            'reason' => ['nullable', 'string', 'max:1000'],
         ];
     }
 
@@ -102,6 +104,12 @@ class StoreAbsenceRequest extends FormRequest
                 return;
             }
 
+            if ($start->copy()->startOfDay()->diffInDays($end->copy()->startOfDay()) > AbsenceService::MAX_RANGE_DAYS) {
+                $validator->errors()->add('end_datetime', 'El rango de la ausencia no puede superar '.AbsenceService::MAX_RANGE_DAYS.' días.');
+
+                return;
+            }
+
             $sameDay = $start->toDateString() === $end->toDateString();
 
             if (! $sameDay && $this->isHourlyAbsenceType($type)) {
@@ -131,17 +139,8 @@ class StoreAbsenceRequest extends FormRequest
                 }
             }
 
-            $overlap = Absence::where('user_id', $user->id)
-                ->whereIn('status', ['pendiente', 'aprobado'])
-                ->where(function ($q) use ($start, $end) {
-                    $q->whereBetween('start_datetime', [$start, $end])
-                        ->orWhereBetween('end_datetime', [$start, $end])
-                        ->orWhere(function ($q2) use ($start, $end) {
-                            $q2->where('start_datetime', '<=', $start)
-                                ->where('end_datetime', '>=', $end);
-                        });
-                })
-                ->exists();
+            // Mismo criterio de solapamiento que AbsenceService (antes divergían).
+            $overlap = app(AbsenceService::class)->hasOverlap($user, $type, $start, $end);
 
             if ($overlap) {
                 $validator->errors()->add('start_datetime', 'Ya tienes una solicitud en ese rango de fechas');

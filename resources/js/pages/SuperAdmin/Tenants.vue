@@ -1,146 +1,20 @@
-<template>
-    <AppLayout>
-        <template #header>
-            <div class="flex items-center justify-between">
-                <div>
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">
-                        Gestión de Tenants
-                    </h2>
-                    <p class="text-gray-500 dark:text-gray-400 mt-2">
-                        Administra todas las empresas en la plataforma
-                    </p>
-                </div>
-                <Link
-                    href="/superadmin/dashboard"
-                    class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors"
-                >
-                    ← Volver
-                </Link>
-            </div>
-        </template>
-
-        <div class="space-y-6">
-            <!-- Search -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-4">
-                <input
-                    v-model="searchQuery"
-                    type="text"
-                    placeholder="Buscar por nombre, dominio o administrador..."
-                    class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
-            </div>
-
-            <!-- Tenants Table -->
-            <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 overflow-hidden">
-                <div class="overflow-x-auto">
-                    <table class="w-full">
-                        <thead class="bg-gray-50 dark:bg-gray-700/50 border-b border-gray-200 dark:border-gray-700">
-                            <tr>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Empresa
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Dominio
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Administrador
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Usuarios
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Estado
-                                </th>
-                                <th class="px-6 py-4 text-left text-xs font-semibold text-gray-600 dark:text-gray-300 uppercase tracking-wider">
-                                    Acciones
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-gray-200 dark:divide-gray-700">
-                            <tr v-for="tenant in filteredTenants" :key="tenant.id" class="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="flex items-center">
-                                        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
-                                            <span class="text-white font-bold text-sm">
-                                                {{ tenant.name.charAt(0).toUpperCase() }}
-                                            </span>
-                                        </div>
-                                        <div class="ml-3">
-                                            <p class="text-sm font-medium text-gray-900 dark:text-white">
-                                                {{ tenant.name }}
-                                            </p>
-                                            <p class="text-xs text-gray-500 dark:text-gray-400">
-                                                @{{ tenant.slug }}
-                                            </p>
-                                        </div>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600 dark:text-gray-400">
-                                    {{ tenant.domain || `${tenant.slug}.ausentra.com` }}
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <div class="text-sm">
-                                        <p class="text-gray-900 dark:text-white font-medium">
-                                            {{ tenant.admin_name }}
-                                        </p>
-                                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                                            {{ tenant.admin_email }}
-                                        </p>
-                                    </div>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span class="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 rounded-full text-xs font-semibold">
-                                        {{ tenant.user_count }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap">
-                                    <span
-                                        :class="[
-                                            'px-3 py-1 rounded-full text-xs font-semibold',
-                                            tenant.is_active
-                                                ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300'
-                                                : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-                                        ]"
-                                    >
-                                        {{ tenant.is_active ? '✓ Activo' : '✗ Inactivo' }}
-                                    </span>
-                                </td>
-                                <td class="px-6 py-4 whitespace-nowrap text-sm space-x-3">
-                                    <Link
-                                        :href="`/superadmin/tenants/${tenant.id}`"
-                                        class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 font-medium"
-                                    >
-                                        Ver
-                                    </Link>
-                                    <button
-                                        @click="impersonate(tenant.admin_id)"
-                                        :disabled="loading"
-                                        class="text-purple-600 hover:text-purple-800 dark:text-purple-400 dark:hover:text-purple-300 font-medium disabled:opacity-50 transition-colors"
-                                    >
-                                        {{ loading ? 'Impersonando...' : 'Impersonar' }}
-                                    </button>
-                                </td>
-                            </tr>
-                        </tbody>
-                    </table>
-                </div>
-
-                <!-- Empty State -->
-                <div v-if="filteredTenants.length === 0" class="text-center py-12">
-                    <p class="text-gray-500 dark:text-gray-400">
-                        No se encontraron tenants
-                    </p>
-                </div>
-            </div>
-        </div>
-    </AppLayout>
-</template>
-
 <script setup lang="ts">
+import { Head, Link } from '@inertiajs/vue3';
+import { ArrowLeft, Building2, Eye, Search, UserRoundCog } from 'lucide-vue-next';
 import { computed, ref } from 'vue';
-import AppLayout from '@/layouts/AppLayout.vue';
-import { Link } from '@inertiajs/vue3';
+import EmptyState from '@/components/app/EmptyState.vue';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
+import SectionCard from '@/components/app/SectionCard.vue';
+import StatusBadge from '@/components/app/StatusBadge.vue';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { useConfirm } from '@/composables/useConfirm';
+import { useNotification } from '@/composables/useNotification';
 import { useSuperAdminContext } from '@/composables/useSuperAdminContext';
+import AppLayout from '@/layouts/AppLayout.vue';
+import { normalizeForSearch } from '@/lib/search';
 
 interface Tenant {
     id: number;
@@ -162,31 +36,208 @@ const props = defineProps<{
 }>();
 
 const searchQuery = ref('');
+const impersonatingId = ref<number | null>(null);
 const { startImpersonation, loading } = useSuperAdminContext();
+const confirm = useConfirm();
+const notify = useNotification();
 
 const filteredTenants = computed(() => {
-    if (!searchQuery.value) return props.tenants;
-
-    const query = searchQuery.value.toLowerCase();
-    return props.tenants.filter(
-        (t) =>
-            t.name.toLowerCase().includes(query) ||
-            t.slug.toLowerCase().includes(query) ||
-            t.admin_name.toLowerCase().includes(query) ||
-            t.admin_email.toLowerCase().includes(query)
+    const query = normalizeForSearch(searchQuery.value);
+    if (!query) return props.tenants;
+    return props.tenants.filter((t) =>
+        normalizeForSearch(
+            `${t.name} ${t.slug} ${t.domain ?? ''} ${t.admin_name ?? ''} ${t.admin_email ?? ''}`,
+        ).includes(query),
     );
 });
 
-const impersonate = (adminId: number | null) => {
-    if (!adminId) {
-        alert('Este tenant no tiene administrador asignado');
+const impersonate = async (tenant: Tenant) => {
+    if (!tenant.admin_id) {
+        notify.warning('Esta empresa no tiene un administrador asignado.');
         return;
     }
-
-    if (confirm('¿Impersonar a este administrador?')) {
-        startImpersonation(adminId);
-    }
+    const ok = await confirm({
+        title: 'Entrar como administrador',
+        description: `Verás la aplicación como ${tenant.admin_name} (${tenant.name}). Podrás salir en cualquier momento desde el aviso superior.`,
+        confirmText: 'Entrar como admin',
+    });
+    if (!ok) return;
+    impersonatingId.value = tenant.id;
+    await startImpersonation(tenant.admin_id);
+    impersonatingId.value = null;
 };
 </script>
 
+<template>
+    <Head title="Empresas" />
+    <AppLayout>
+        <PageContainer>
+            <PageHeader
+                title="Empresas (tenants)"
+                description="Administra todas las empresas registradas en la plataforma."
+                :icon="Building2"
+            >
+                <template #actions>
+                    <Button variant="outline" as-child>
+                        <Link href="/superadmin/dashboard">
+                            <ArrowLeft /> Volver al resumen
+                        </Link>
+                    </Button>
+                </template>
+            </PageHeader>
 
+            <SectionCard flush>
+                <template #header>
+                    <div class="relative w-full sm:max-w-sm">
+                        <Search
+                            class="pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2 text-muted-foreground"
+                            aria-hidden="true"
+                        />
+                        <Input
+                            v-model="searchQuery"
+                            type="search"
+                            placeholder="Buscar por nombre, dominio o administrador…"
+                            aria-label="Buscar empresas"
+                            class="pl-8"
+                        />
+                    </div>
+                </template>
+                <template #actions>
+                    <span class="text-[13px] text-muted-foreground tabular-nums">
+                        {{ filteredTenants.length }} de {{ tenants.length }}
+                    </span>
+                </template>
+
+                <EmptyState
+                    v-if="filteredTenants.length === 0"
+                    :icon="Building2"
+                    :title="
+                        tenants.length
+                            ? 'No se encontraron empresas'
+                            : 'Aún no hay empresas'
+                    "
+                    :description="
+                        tenants.length
+                            ? 'Prueba con otro término de búsqueda.'
+                            : undefined
+                    "
+                >
+                    <Button
+                        v-if="searchQuery"
+                        variant="outline"
+                        @click="searchQuery = ''"
+                    >
+                        Limpiar búsqueda
+                    </Button>
+                </EmptyState>
+
+                <div v-else class="overflow-x-auto">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Empresa</th>
+                                <th>Dominio</th>
+                                <th>Administrador</th>
+                                <th class="text-right">Usuarios</th>
+                                <th>Estado</th>
+                                <th class="text-right">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr v-for="tenant in filteredTenants" :key="tenant.id">
+                                <td>
+                                    <div class="flex items-center gap-3">
+                                        <div
+                                            class="flex size-8 shrink-0 items-center justify-center rounded-md bg-primary-soft text-sm font-semibold text-primary"
+                                            aria-hidden="true"
+                                        >
+                                            {{
+                                                tenant.name
+                                                    .charAt(0)
+                                                    .toUpperCase()
+                                            }}
+                                        </div>
+                                        <div class="min-w-0">
+                                            <p class="font-medium">
+                                                {{ tenant.name }}
+                                                <span
+                                                    v-if="tenant.is_main"
+                                                    class="ml-1 text-xs font-normal text-muted-foreground"
+                                                    >(principal)</span
+                                                >
+                                            </p>
+                                            <p
+                                                class="text-xs text-muted-foreground"
+                                            >
+                                                @{{ tenant.slug }}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="whitespace-nowrap text-muted-foreground">
+                                    {{
+                                        tenant.domain ||
+                                        `${tenant.slug}.ausentra.com`
+                                    }}
+                                </td>
+                                <td>
+                                    <p class="font-medium">
+                                        {{ tenant.admin_name || '—' }}
+                                    </p>
+                                    <p class="text-xs text-muted-foreground">
+                                        {{ tenant.admin_email }}
+                                    </p>
+                                </td>
+                                <td class="text-right tabular-nums">
+                                    {{ tenant.user_count }}
+                                </td>
+                                <td>
+                                    <StatusBadge
+                                        :status="
+                                            tenant.is_active
+                                                ? 'activo'
+                                                : 'inactivo'
+                                        "
+                                    />
+                                </td>
+                                <td>
+                                    <div class="flex justify-end gap-1">
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            as-child
+                                        >
+                                            <Link
+                                                :href="`/superadmin/tenants/${tenant.id}`"
+                                                :aria-label="`Ver detalle de ${tenant.name}`"
+                                            >
+                                                <Eye /> Ver
+                                            </Link>
+                                        </Button>
+                                        <Button
+                                            variant="ghost"
+                                            size="sm"
+                                            :disabled="loading || !tenant.admin_id"
+                                            :title="
+                                                tenant.admin_id
+                                                    ? 'Entrar como el administrador de esta empresa'
+                                                    : 'Sin administrador asignado'
+                                            "
+                                            @click="impersonate(tenant)"
+                                        >
+                                            <Spinner
+                                                v-if="impersonatingId === tenant.id"
+                                            />
+                                            <UserRoundCog v-else />
+                                            Entrar como admin
+                                        </Button>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </SectionCard>
+        </PageContainer>
+    </AppLayout>
+</template>

@@ -1,141 +1,23 @@
-<template>
-    <AppLayout>
-        <template #header>
-            <div class="flex items-center gap-4">
-                <Link href="/solicitudes" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium">
-                    ← Volver
-                </Link>
-                <div class="flex-1">
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">{{ request.title }}</h2>
-                    <p class="text-gray-500 dark:text-gray-400 mt-2">{{ getTypeLabel(request.request_type) }}</p>
-                </div>
-            </div>
-        </template>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <!-- Contenido Principal -->
-            <div class="lg:col-span-2 space-y-6">
-                <!-- Estado -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <div class="flex items-center justify-between mb-4">
-                        <h3 class="text-lg font-semibold text-gray-900 dark:text-white">Estado Actual</h3>
-                        <span :class="['px-4 py-2 rounded-full font-semibold text-sm', getStatusClass(request.status)]">
-                            {{ getStatusLabel(request.status) }}
-                        </span>
-                    </div>
-
-                    <div class="space-y-3 text-sm">
-                        <div class="flex justify-between">
-                            <span class="text-gray-600 dark:text-gray-400">Creada el:</span>
-                            <span class="text-gray-900 dark:text-white font-medium">{{ formatDate(request.created_at) }}</span>
-                        </div>
-                        <div class="flex justify-between">
-                            <span class="text-gray-600 dark:text-gray-400">Última actualización:</span>
-                            <span class="text-gray-900 dark:text-white font-medium">{{ formatDate(request.updated_at) }}</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Detalles de la Solicitud -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Detalles</h3>
-
-                    <div class="space-y-4">
-                        <div>
-                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Tipo de Solicitud</label>
-                            <p class="mt-1 text-gray-900 dark:text-white">{{ getTypeLabel(request.request_type) }}</p>
-                        </div>
-
-                        <div>
-                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Asunto</label>
-                            <p class="mt-1 text-gray-900 dark:text-white">{{ request.title }}</p>
-                        </div>
-
-                        <div v-if="request.description">
-                            <label class="text-sm font-medium text-gray-600 dark:text-gray-400">Descripción</label>
-                            <p class="mt-1 text-gray-900 dark:text-white whitespace-pre-wrap break-words">
-                                {{ request.description }}
-                            </p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Información de Rechazo -->
-                <div v-if="request.status === 'rechazado' && request.rejection_reason" class="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-red-900 dark:text-red-100 mb-2">Razón del Rechazo</h3>
-                    <p class="text-red-800 dark:text-red-200">{{ request.rejection_reason }}</p>
-                </div>
-
-                <!-- Información de Aprobación -->
-                <div v-if="request.status === 'aprobado' && latestApproval" class="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg p-6">
-                    <h3 class="text-lg font-semibold text-green-900 dark:text-green-100 mb-4">Aprobado por</h3>
-                    <div class="space-y-2 text-sm">
-                        <div>
-                            <span class="text-green-800 dark:text-green-300 font-medium">Aprobador:</span>
-                            <p class="text-green-700 dark:text-green-200">{{ latestApproval.approver_name }}</p>
-                        </div>
-                        <div>
-                            <span class="text-green-800 dark:text-green-300 font-medium">Fecha:</span>
-                            <p class="text-green-700 dark:text-green-200">{{ formatDate(latestApproval.decided_at) }}</p>
-                        </div>
-                        <div v-if="latestApproval.comment">
-                            <span class="text-green-800 dark:text-green-300 font-medium">Comentario:</span>
-                            <p class="text-green-700 dark:text-green-200">{{ latestApproval.comment }}</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Sidebar -->
-            <div class="space-y-6">
-                <!-- Metadatos -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Información</h3>
-                    <div class="space-y-3 text-sm">
-                        <div>
-                            <p class="text-gray-600 dark:text-gray-400">ID Solicitud</p>
-                            <p class="text-gray-900 dark:text-white font-mono text-xs mt-1">{{ request.id }}</p>
-                        </div>
-                        <div>
-                            <p class="text-gray-600 dark:text-gray-400">Estado</p>
-                            <p class="text-gray-900 dark:text-white font-medium mt-1">{{ getStatusLabel(request.status) }}</p>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Acciones -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <h3 class="text-lg font-semibold text-gray-900 dark:text-white mb-4">Acciones</h3>
-                    <div class="space-y-2">
-                        <button
-                            v-if="request.status === 'pendiente'"
-                            @click="deleteRequest"
-                            class="w-full px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors text-sm"
-                        >
-                            Eliminar Solicitud
-                        </button>
-                        <p v-else class="text-sm text-gray-500 dark:text-gray-400 text-center py-4">
-                            No hay acciones disponibles
-                        </p>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </AppLayout>
-</template>
-
 <script setup lang="ts">
-import { computed } from 'vue';
+import { Head, Link, router } from '@inertiajs/vue3';
+import { ArrowLeft, Trash2 } from 'lucide-vue-next';
+import { computed, ref } from 'vue';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
+import SectionCard from '@/components/app/SectionCard.vue';
+import StatusBadge from '@/components/app/StatusBadge.vue';
+import RequestTimeline from '@/components/requests/RequestTimeline.vue';
+import {
+    formatRequestDate,
+    getTypeLabel
+    
+} from '@/components/requests/utils';
+import type {RequestApproval} from '@/components/requests/utils';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { useConfirm } from '@/composables/useConfirm';
+import { useNotification } from '@/composables/useNotification';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Link, router } from '@inertiajs/vue3';
-
-interface RequestApproval {
-    id: number;
-    status: string;
-    comment: string | null;
-    decided_at: string;
-    approver_name: string;
-}
 
 interface EmployeeRequest {
     id: number;
@@ -153,52 +35,159 @@ const props = defineProps<{
     request: EmployeeRequest;
 }>();
 
-const typeLabels: Record<string, string> = {
-    certificado: 'Certificado Laboral',
-    permiso_especial: 'Permiso Especial',
-    documento: 'Documento',
-    cambio_datos: 'Cambio de Datos',
-    otro: 'Otra Solicitud',
-};
+const confirm = useConfirm();
+const notify = useNotification();
+const deleting = ref(false);
 
-const getTypeLabel = (type: string): string => typeLabels[type] || type;
+const approvals = computed(() =>
+    Array.isArray(props.request.approvals) ? props.request.approvals : [],
+);
 
-const getStatusLabel = (status: string): string => {
-    return { pendiente: 'Pendiente', aprobado: 'Aprobado', rechazado: 'Rechazado' }[status] || status;
-};
-
-const getStatusClass = (status: string): string => {
-    return {
-        pendiente: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300',
-        aprobado: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-        rechazado: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
-    }[status] || 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-};
-
-const formatDate = (date: string): string => {
-    return new Date(date).toLocaleDateString('es-ES', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
+const deleteRequest = async () => {
+    const ok = await confirm({
+        title: 'Eliminar solicitud',
+        description:
+            'Se eliminará esta solicitud pendiente. Esta acción no se puede deshacer.',
+        variant: 'destructive',
     });
-};
-
-const latestApproval = computed(() => {
-    const approved = props.request.approvals.filter((a) => a.status === 'aprobado');
-    return approved.length > 0 ? approved[approved.length - 1] : null;
-});
-
-const deleteRequest = () => {
-    if (confirm('¿Estás seguro de que deseas eliminar esta solicitud? Esta acción no se puede deshacer.')) {
-        router.delete(`/solicitudes/${props.request.id}`, {
-            onSuccess: () => {
-                router.visit('/solicitudes');
-            },
-        });
-    }
+    if (!ok) return;
+    router.delete(`/solicitudes/${props.request.id}`, {
+        onStart: () => (deleting.value = true),
+        onFinish: () => (deleting.value = false),
+        onSuccess: () => notify.success('Solicitud eliminada.'),
+        onError: () => notify.error('No se pudo eliminar la solicitud.'),
+    });
 };
 </script>
 
+<template>
+    <Head :title="request.title" />
+    <AppLayout
+        :breadcrumbs="[
+            { title: 'Mis solicitudes', href: '/solicitudes' },
+            { title: request.title, href: `/solicitudes/${request.id}` },
+        ]"
+    >
+        <PageContainer>
+            <div>
+                <Button as-child variant="ghost" size="sm" class="-ml-2">
+                    <Link href="/solicitudes">
+                        <ArrowLeft />
+                        Volver a mis solicitudes
+                    </Link>
+                </Button>
+            </div>
 
+            <PageHeader
+                :title="request.title"
+                :description="getTypeLabel(request.request_type)"
+            >
+                <template #actions>
+                    <StatusBadge :status="request.status" class="h-6 px-2.5" />
+                    <Button
+                        v-if="request.status === 'pendiente'"
+                        variant="outline"
+                        class="text-destructive hover:bg-destructive-soft hover:text-destructive"
+                        :disabled="deleting"
+                        @click="deleteRequest"
+                    >
+                        <Spinner v-if="deleting" />
+                        <Trash2 v-else />
+                        Eliminar
+                    </Button>
+                </template>
+            </PageHeader>
+
+            <div class="grid gap-6 lg:grid-cols-3">
+                <div class="space-y-6 lg:col-span-2">
+                    <div
+                        v-if="request.status === 'rechazado' && request.rejection_reason"
+                        class="rounded-xl border border-destructive/20 bg-destructive-soft p-4"
+                        role="note"
+                    >
+                        <h2 class="text-sm font-semibold text-destructive">
+                            Motivo del rechazo
+                        </h2>
+                        <p class="mt-1 text-sm whitespace-pre-wrap text-foreground">
+                            {{ request.rejection_reason }}
+                        </p>
+                    </div>
+
+                    <SectionCard title="Detalles">
+                        <dl class="grid gap-4 text-sm">
+                            <div>
+                                <dt class="text-[13px] text-muted-foreground">
+                                    Tipo de solicitud
+                                </dt>
+                                <dd class="mt-0.5 font-medium">
+                                    {{ getTypeLabel(request.request_type) }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-[13px] text-muted-foreground">
+                                    Asunto
+                                </dt>
+                                <dd class="mt-0.5 font-medium">
+                                    {{ request.title }}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt class="text-[13px] text-muted-foreground">
+                                    Descripción
+                                </dt>
+                                <dd
+                                    class="mt-0.5 max-w-[70ch] break-words whitespace-pre-wrap"
+                                    :class="
+                                        request.description
+                                            ? ''
+                                            : 'text-muted-foreground'
+                                    "
+                                >
+                                    {{ request.description || 'Sin descripción.' }}
+                                </dd>
+                            </div>
+                        </dl>
+                    </SectionCard>
+
+                    <SectionCard title="Historial de decisiones">
+                        <RequestTimeline :approvals="approvals" />
+                        <p
+                            v-if="!approvals.length"
+                            class="text-sm text-muted-foreground"
+                        >
+                            Todavía no hay decisiones. Te avisaremos cuando
+                            Recursos Humanos la revise.
+                        </p>
+                    </SectionCard>
+                </div>
+
+                <SectionCard title="Información" class="self-start">
+                    <dl class="grid gap-3 text-sm">
+                        <div class="flex justify-between gap-4">
+                            <dt class="text-muted-foreground">Estado</dt>
+                            <dd><StatusBadge :status="request.status" /></dd>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <dt class="text-muted-foreground">Creada</dt>
+                            <dd class="text-right">
+                                {{ formatRequestDate(request.created_at, true) }}
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <dt class="text-muted-foreground">
+                                Última actualización
+                            </dt>
+                            <dd class="text-right">
+                                {{ formatRequestDate(request.updated_at, true) }}
+                            </dd>
+                        </div>
+                        <div class="flex justify-between gap-4">
+                            <dt class="text-muted-foreground">N.º de solicitud</dt>
+                            <dd class="tabular-nums">#{{ request.id }}</dd>
+                        </div>
+                    </dl>
+                </SectionCard>
+            </div>
+        </PageContainer>
+    </AppLayout>
+</template>

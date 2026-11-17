@@ -1,6 +1,6 @@
 ﻿<script setup lang="ts">
 import { Link, router } from '@inertiajs/vue3';
-import { IdCard, LogOut, Settings } from 'lucide-vue-next';
+import { IdCard, KeyRound, LogOut } from 'lucide-vue-next';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -40,8 +40,8 @@ defineProps<Props>();
         </DropdownMenuItem>
         <DropdownMenuItem :as-child="true">
             <Link class="block w-full cursor-pointer" :href="editPassword()" prefetch>
-                <Settings class="mr-2 h-4 w-4" />
-                Configuracion
+                <KeyRound class="mr-2 h-4 w-4" />
+                Contraseña y seguridad
             </Link>
         </DropdownMenuItem>
     </DropdownMenuGroup>
@@ -55,7 +55,7 @@ defineProps<Props>();
             data-test="logout-button"
         >
             <LogOut class="mr-2 h-4 w-4" />
-            Cerrar sesion
+            Cerrar sesión
         </Link>
     </DropdownMenuItem>
 </template>

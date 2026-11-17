@@ -13,6 +13,7 @@ class Absence extends Model
     use HasFactory, Tenantable;
 
     protected $fillable = [
+        'tenant_id',
         'user_id',
         'absence_type_id',
         'start_datetime',
@@ -26,6 +27,7 @@ class Absence extends Model
         'status',
         'approved_by',
         'approved_at',
+        'rejected_at',
         'notes',
         'rejection_reason',
         'internal_notes',
@@ -101,15 +103,19 @@ class Absence extends Model
         $visibilityDays = 3;
         $currentUserId = auth()->id();
 
-        return $query->where('status', AbsenceStatus::APPROVED->value)
-            ->orWhere(function ($q) use ($visibilityDays) {
-                $q->where('status', AbsenceStatus::REJECTED->value)
-                  ->where('rejected_at', '>', now()->subDays($visibilityDays));
-            })
-            ->orWhere(function ($q) use ($currentUserId) {
-                $q->where('status', AbsenceStatus::PENDING->value)
-                  ->where('user_id', $currentUserId);
-            });
+        // Agrupado: sin el where() envolvente los OR anulaban los demás filtros
+        // de la consulta (rango de fechas, usuario, área...).
+        return $query->where(function ($visible) use ($visibilityDays, $currentUserId) {
+            $visible->where('status', AbsenceStatus::APPROVED->value)
+                ->orWhere(function ($q) use ($visibilityDays) {
+                    $q->where('status', AbsenceStatus::REJECTED->value)
+                        ->where('rejected_at', '>', now()->subDays($visibilityDays));
+                })
+                ->orWhere(function ($q) use ($currentUserId) {
+                    $q->where('status', AbsenceStatus::PENDING->value)
+                        ->where('user_id', $currentUserId);
+                });
+        });
     }
 
     /*

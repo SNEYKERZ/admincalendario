@@ -1,7 +1,7 @@
 ﻿<script setup lang="ts">
 import { computed } from 'vue';
-import { SidebarInset } from '@/components/ui/sidebar';
 import ImpersonationBadge from '@/components/ImpersonationBadge.vue';
+import { SidebarInset } from '@/components/ui/sidebar';
 
 type Props = {
     variant?: 'header' | 'sidebar';
@@ -14,9 +14,6 @@ const className = computed(() => props.class);
 
 <template>
     <SidebarInset v-if="props.variant === 'sidebar'" :class="className">
-        <div class="p-4">
-            <ImpersonationBadge />
-        </div>
         <slot />
     </SidebarInset>
     <main
@@ -24,10 +21,7 @@ const className = computed(() => props.class);
         class="mx-auto flex h-full w-full max-w-7xl flex-1 flex-col gap-4 rounded-xl"
         :class="className"
     >
-        <div class="p-4">
-            <ImpersonationBadge />
-        </div>
+        <ImpersonationBadge />
         <slot />
     </main>
 </template>
-

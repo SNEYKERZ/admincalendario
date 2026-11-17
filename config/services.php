@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    // Checkout simulado (sin pasarela real). Mantener en false en producción.
+    'checkout' => [
+        'mock_enabled' => (bool) env('CHECKOUT_MOCK_ENABLED', false),
+    ],
+
 ];

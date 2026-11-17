@@ -63,7 +63,8 @@ return [
 
     'providers' => [
         'users' => [
-            'driver' => 'eloquent',
+            // Igual que 'eloquent' pero sin TenantScope al cargar el usuario autenticado.
+            'driver' => 'tenant-agnostic-eloquent',
             'model' => env('AUTH_MODEL', User::class),
         ],
 

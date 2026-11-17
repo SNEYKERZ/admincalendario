@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\EmployeeRequest;
-use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class AdminRequestController extends Controller
@@ -36,6 +35,7 @@ class AdminRequestController extends Controller
             $request->approvals->each(function ($approval) {
                 $approval->approver_name = $approval->approver->name;
             });
+
             return $request;
         });
 
@@ -62,11 +62,13 @@ class AdminRequestController extends Controller
     {
         $this->authorize('admin');
 
-        if (!$employeeRequest->isPending()) {
+        if (! $employeeRequest->isPending()) {
             return back()->with('error', 'Solo se pueden aprobar solicitudes pendientes');
         }
 
-        $comment = request('comment');
+        $comment = request()->validate([
+            'comment' => ['nullable', 'string', 'max:1000'],
+        ])['comment'] ?? null;
 
         $employeeRequest->approve(auth()->user(), $comment);
 
@@ -81,7 +83,7 @@ class AdminRequestController extends Controller
             'reason' => 'required|string|max:500',
         ]);
 
-        if (!$employeeRequest->isPending()) {
+        if (! $employeeRequest->isPending()) {
             return back()->with('error', 'Solo se pueden rechazar solicitudes pendientes');
         }
 

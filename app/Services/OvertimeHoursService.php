@@ -51,60 +51,60 @@ class OvertimeHoursService
             $user = $authUser;
         }
 
-            $date = Carbon::parse($data['date']);
-            $startTime = Carbon::createFromFormat('H:i', $data['start_time']);
-            $endTime = Carbon::createFromFormat('H:i', $data['end_time']);
+        $date = Carbon::parse($data['date']);
+        $startTime = Carbon::createFromFormat('H:i', $data['start_time']);
+        $endTime = Carbon::createFromFormat('H:i', $data['end_time']);
 
-            // Validar que end_time > start_time
-            if ($endTime->lte($startTime)) {
-                throw ValidationException::withMessages([
-                    'end_time' => 'La hora de fin debe ser posterior a la hora de inicio.',
-                ]);
-            }
+        // Validar que end_time > start_time
+        if ($endTime->lte($startTime)) {
+            throw ValidationException::withMessages([
+                'end_time' => 'La hora de fin debe ser posterior a la hora de inicio.',
+            ]);
+        }
 
-            // Calcular automáticamente las horas
-            $calculatedHours = $startTime->floatDiffInHours($endTime);
+        // Calcular automáticamente las horas
+        $calculatedHours = $startTime->floatDiffInHours($endTime);
 
-            // Extraer componentes de fecha
-            $dayOfWeek = $date->translatedFormat('l'); // Día de la semana en español
-            $dayOfMonth = $date->day;
-            $month = $date->translatedFormat('F'); // Nombre del mes en español
+        // Extraer componentes de fecha
+        $dayOfWeek = $date->translatedFormat('l'); // Día de la semana en español
+        $dayOfMonth = $date->day;
+        $month = $date->translatedFormat('F'); // Nombre del mes en español
 
-            // Validaciones
-            $exceedsDailyLimit = $calculatedHours > 2;
-            $exceedsWeeklyLimit = $this->checkWeeklyLimit($user, $date, $calculatedHours);
-            $respectsSchedule = $this->checkCompanySchedule($user, $startTime, $endTime);
+        // Validaciones
+        $exceedsDailyLimit = $calculatedHours > 2;
+        $exceedsWeeklyLimit = $this->checkWeeklyLimit($user, $date, $calculatedHours);
+        $respectsSchedule = $this->checkCompanySchedule($user, $startTime, $endTime);
 
-            // Si hay validaciones que fallan, lanzar excepciones
-            if ($exceedsDailyLimit) {
-                throw ValidationException::withMessages([
-                    'hours' => 'El límite máximo de horas extra diarias es 2 horas (Ley colombiana).',
-                ]);
-            }
+        // Si hay validaciones que fallan, lanzar excepciones
+        if ($exceedsDailyLimit) {
+            throw ValidationException::withMessages([
+                'hours' => 'El límite máximo de horas extra diarias es 2 horas (Ley colombiana).',
+            ]);
+        }
 
-            if ($exceedsWeeklyLimit) {
-                throw ValidationException::withMessages([
-                    'hours' => 'El total de horas extra semanales no puede exceder 12 horas (Ley colombiana).',
-                ]);
-            }
+        if ($exceedsWeeklyLimit) {
+            throw ValidationException::withMessages([
+                'hours' => 'El total de horas extra semanales no puede exceder 12 horas (Ley colombiana).',
+            ]);
+        }
 
-            if (!$respectsSchedule) {
-                throw ValidationException::withMessages([
-                    'start_time' => 'Las horas extra deben registrarse después de la jornada laboral.',
-                ]);
-            }
+        if (! $respectsSchedule) {
+            throw ValidationException::withMessages([
+                'start_time' => 'Las horas extra deben registrarse después de la jornada laboral.',
+            ]);
+        }
 
-            // Verificar que no exista otro registro para la misma fecha
-            $existing = OvertimeHours::where('tenant_id', $user->tenant_id)
-                ->where('user_id', $user->id)
-                ->where('date', $date)
-                ->first();
+        // Verificar que no exista otro registro para la misma fecha
+        $existing = OvertimeHours::where('tenant_id', $user->tenant_id)
+            ->where('user_id', $user->id)
+            ->whereDate('date', $date->toDateString())
+            ->first();
 
-            if ($existing) {
-                throw ValidationException::withMessages([
-                    'date' => 'Ya existe un registro de horas extra para esta fecha.',
-                ]);
-            }
+        if ($existing) {
+            throw ValidationException::withMessages([
+                'date' => 'Ya existe un registro de horas extra para esta fecha.',
+            ]);
+        }
 
         return OvertimeHours::create([
             'tenant_id' => $user->tenant_id,
@@ -129,9 +129,15 @@ class OvertimeHoursService
     public function update(OvertimeHours $overtime, array $data): OvertimeHours
     {
         return DB::transaction(function () use ($overtime, $data) {
-            if ($overtime->tenant_id !== auth()->user()->tenant_id) {
+            if (! auth()->user()->isSuperAdmin() && (int) $overtime->tenant_id !== (int) auth()->user()->tenant_id) {
                 throw ValidationException::withMessages([
                     'unauthorized' => 'No tienes permiso para actualizar este registro.',
+                ]);
+            }
+
+            if ($overtime->isRejected()) {
+                throw ValidationException::withMessages([
+                    'status' => 'No se pueden editar horas extra rechazadas.',
                 ]);
             }
 
@@ -166,7 +172,7 @@ class OvertimeHoursService
                 ]);
             }
 
-            if (!$respectsSchedule) {
+            if (! $respectsSchedule) {
                 throw ValidationException::withMessages([
                     'start_time' => 'Las horas extra deben registrarse después de la jornada laboral.',
                 ]);
@@ -174,7 +180,7 @@ class OvertimeHoursService
 
             $existing = OvertimeHours::where('tenant_id', $overtime->tenant_id)
                 ->where('user_id', $overtime->user_id)
-                ->where('date', $date)
+                ->whereDate('date', $date->toDateString())
                 ->where('id', '!=', $overtime->id)
                 ->first();
 
@@ -205,6 +211,21 @@ class OvertimeHoursService
     public function approve(OvertimeHours $overtime, User $approver): OvertimeHours
     {
         return DB::transaction(function () use ($overtime, $approver) {
+            $overtime = OvertimeHours::query()->lockForUpdate()->findOrFail($overtime->id);
+
+            if (! $overtime->isPending()) {
+                throw ValidationException::withMessages([
+                    'status' => 'Solo se pueden aprobar registros pendientes.',
+                ]);
+            }
+
+            // Re-validar el tope semanal legal (12 h) contra lo ya aprobado.
+            if ($this->checkWeeklyLimit($overtime->user, $overtime->date->copy(), (float) $overtime->hours, $overtime->id, ['approved'])) {
+                throw ValidationException::withMessages([
+                    'hours' => 'Aprobar este registro supera el máximo legal de 12 horas extra semanales.',
+                ]);
+            }
+
             $overtime->update([
                 'status' => 'approved',
                 'approved_by' => $approver->id,
@@ -229,15 +250,21 @@ class OvertimeHoursService
         });
     }
 
-    protected function checkWeeklyLimit(User $user, Carbon $date, float $hours, ?int $excludeId = null): bool
+    /**
+     * Tope semanal (Ley colombiana: 12 h). Por defecto cuenta pendientes y
+     * aprobadas: antes solo contaba aprobadas y se podían registrar decenas de
+     * horas pendientes en la misma semana.
+     */
+    protected function checkWeeklyLimit(User $user, Carbon $date, float $hours, ?int $excludeId = null, array $statuses = ['pending', 'approved']): bool
     {
-        $weekStart = $date->copy()->startOfWeek();
-        $weekEnd = $date->copy()->endOfWeek();
+        $weekStart = $date->copy()->startOfWeek()->toDateString();
+        $weekEnd = $date->copy()->endOfWeek()->toDateString();
 
         $query = OvertimeHours::where('tenant_id', $user->tenant_id)
             ->where('user_id', $user->id)
-            ->whereBetween('date', [$weekStart, $weekEnd])
-            ->where('status', 'approved');
+            ->whereDate('date', '>=', $weekStart)
+            ->whereDate('date', '<=', $weekEnd)
+            ->whereIn('status', $statuses);
 
         if ($excludeId) {
             $query->where('id', '!=', $excludeId);
@@ -252,12 +279,13 @@ class OvertimeHoursService
     {
         $settings = CompanySettings::where('tenant_id', $user->tenant_id)->first();
 
-        if (!$settings) {
+        if (! $settings) {
             return true; // Si no hay configuración, permitir
         }
 
-        $workdayEnd = Carbon::createFromFormat('H:i:s', $settings->workday_end);
-        $overtimeStart = Carbon::createFromFormat('H:i:s', $settings->overtime_start ?? '18:00:00');
+        // TIME puede llegar como "H:i" o "H:i:s" según el motor/origen.
+        $workdayEnd = Carbon::createFromFormat('H:i', substr((string) ($settings->workday_end ?: '17:00'), 0, 5));
+        $overtimeStart = Carbon::createFromFormat('H:i', substr((string) ($settings->overtime_start ?: '18:00'), 0, 5));
 
         // Las horas extra deben comenzar después de la jornada laboral (workday_end)
         return $startTime->gte($workdayEnd) || $startTime->gte($overtimeStart);

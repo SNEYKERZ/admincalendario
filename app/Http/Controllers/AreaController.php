@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Enums\UserRole;
 use App\Models\Area;
 use App\Models\User;
+use App\Support\TenantRule;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -49,7 +50,7 @@ class AreaController extends Controller
                     'color' => $area->color,
                     'display_order' => $area->display_order,
                     'is_active' => $area->is_active,
-                    'employee_count' => $area->employee_count,
+                    'employee_count' => $area->users_count,
                     'created_at' => $area->created_at,
                 ];
             }),
@@ -63,13 +64,13 @@ class AreaController extends Controller
     public function store(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'required|string|max:255|unique:areas,name',
+            'name' => ['required', 'string', 'max:255', TenantRule::unique('areas', 'name')],
             'description' => 'nullable|string|max:500',
             'color' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
             'display_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
             'leader_ids' => 'nullable|array',
-            'leader_ids.*' => 'integer|exists:users,id',
+            'leader_ids.*' => ['integer', TenantRule::exists('users')],
         ]);
 
         $validated['created_by'] = $request->user()->id;
@@ -81,7 +82,7 @@ class AreaController extends Controller
 
         $area = Area::create($validated);
 
-        if (!empty($leaderIds)) {
+        if (! empty($leaderIds)) {
             $area->leaders()->attach($leaderIds);
             $this->promoteLeadersToAdmin($leaderIds);
         }
@@ -124,7 +125,7 @@ class AreaController extends Controller
                 'color' => $area->color,
                 'display_order' => $area->display_order,
                 'is_active' => $area->is_active,
-                'employee_count' => $area->employee_count,
+                'employee_count' => $area->users_count,
                 'employees' => $area->users->map(function ($user) {
                     return [
                         'id' => $user->id,
@@ -153,13 +154,13 @@ class AreaController extends Controller
     public function update(Request $request, Area $area): JsonResponse
     {
         $validated = $request->validate([
-            'name' => 'sometimes|string|max:255|unique:areas,name,'.$area->id,
+            'name' => ['sometimes', 'string', 'max:255', TenantRule::unique('areas', 'name', $area->id)],
             'description' => 'nullable|string|max:500',
             'color' => 'nullable|string|max:7|regex:/^#[0-9A-Fa-f]{6}$/',
             'display_order' => 'nullable|integer|min:0',
             'is_active' => 'nullable|boolean',
             'leader_ids' => 'nullable|array',
-            'leader_ids.*' => 'integer|exists:users,id',
+            'leader_ids.*' => ['integer', TenantRule::exists('users')],
         ]);
 
         $leaderIds = $validated['leader_ids'] ?? null;
@@ -227,6 +228,7 @@ class AreaController extends Controller
      */
     protected function promoteLeadersToAdmin(array $leaderIds): void
     {
+        // User aplica TenantScope: solo se promueven usuarios del tenant actual.
         User::whereIn('id', $leaderIds)
             ->where('role', UserRole::COLLABORATOR->value)
             ->update(['role' => UserRole::ADMIN->value]);
@@ -240,27 +242,31 @@ class AreaController extends Controller
     {
         $areas = Area::withCount('users')->ordered()->get();
 
-        $metrics = $areas->map(function ($area) {
-            // Obtener ausencias actuales del mes
-            $currentMonth = now()->month;
-            $currentYear = now()->year;
+        // Antes usaba columnas/estados inexistentes ('start', 'approved') y
+        // una consulta por área. Ahora: una sola consulta agrupada.
+        $monthStart = now()->startOfMonth();
+        $monthEnd = now()->endOfMonth();
 
-            $absencesThisMonth = \App\Models\Absence::whereHas('user', function ($query) use ($area) {
-                $query->where('area_id', $area->id);
-            })
-                ->whereMonth('start', $currentMonth)
-                ->whereYear('start', $currentYear)
-                ->where('status', 'approved')
-                ->count();
+        $absencesByArea = \App\Models\Absence::query()
+            ->join('users', 'users.id', '=', 'absences.user_id')
+            ->where('absences.status', \App\Enums\AbsenceStatus::APPROVED->value)
+            ->whereBetween('absences.start_datetime', [$monthStart, $monthEnd])
+            ->whereIn('users.area_id', $areas->pluck('id'))
+            ->groupBy('users.area_id')
+            ->selectRaw('users.area_id as area_id, COUNT(DISTINCT absences.user_id) as total')
+            ->pluck('total', 'area_id');
+
+        $metrics = $areas->map(function ($area) use ($absencesByArea) {
+            $absencesThisMonth = (int) ($absencesByArea[$area->id] ?? 0);
 
             return [
                 'id' => $area->id,
                 'name' => $area->name,
                 'color' => $area->color,
-                'total_employees' => $area->employee_count,
+                'total_employees' => $area->users_count,
                 'absences_this_month' => $absencesThisMonth,
-                'availability_percentage' => $area->employee_count > 0
-                    ? round((($area->employee_count - $absencesThisMonth) / $area->employee_count) * 100, 1)
+                'availability_percentage' => $area->users_count > 0
+                    ? round((($area->users_count - $absencesThisMonth) / $area->users_count) * 100, 1)
                     : 100,
             ];
         });
@@ -269,7 +275,7 @@ class AreaController extends Controller
             'metrics' => $metrics,
             'summary' => [
                 'total_areas' => $areas->count(),
-                'total_employees' => $areas->sum('employee_count'),
+                'total_employees' => $areas->sum('users_count'),
             ],
         ]);
     }

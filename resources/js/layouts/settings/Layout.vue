@@ -1,10 +1,10 @@
 ﻿<script setup lang="ts">
 import { Link } from '@inertiajs/vue3';
-import Heading from '@/components/Heading.vue';
-import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
+import { KeyRound, Palette, ShieldCheck, UserRound } from 'lucide-vue-next';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
-import { toUrl } from '@/lib/utils';
+import { cn, toUrl } from '@/lib/utils';
 import { edit as editAppearance } from '@/routes/appearance';
 import { edit as editProfile } from '@/routes/profile';
 import { show } from '@/routes/two-factor';
@@ -12,67 +12,64 @@ import { edit as editPassword } from '@/routes/user-password';
 import type { NavItem } from '@/types';
 
 const sidebarNavItems: NavItem[] = [
-    {
-        title: 'Mi perfil',
-        href: editProfile(),
-    },
-    {
-        title: 'Configuracion',
-        href: editPassword(),
-    },
-    {
-        title: 'Doble factor',
-        href: show(),
-    },
-    {
-        title: 'Apariencia',
-        href: editAppearance(),
-    },
+    { title: 'Mi perfil', href: editProfile(), icon: UserRound },
+    { title: 'Contraseña', href: editPassword(), icon: KeyRound },
+    { title: 'Doble factor (2FA)', href: show(), icon: ShieldCheck },
+    { title: 'Apariencia', href: editAppearance(), icon: Palette },
 ];
 
 const { isCurrentOrParentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <div class="px-4 py-6">
-        <Heading
-            title="Configuracion"
-            description="Administra tu perfil y ajustes de cuenta"
+    <PageContainer class="max-w-5xl">
+        <PageHeader
+            title="Configuración de la cuenta"
+            description="Administra tu perfil, la seguridad de tu cuenta y la apariencia."
         />
 
-        <div class="flex flex-col lg:flex-row lg:space-x-12">
-            <aside class="w-full max-w-xl lg:w-48">
+        <div class="flex flex-col gap-6 lg:flex-row lg:gap-10">
+            <aside class="lg:w-52 lg:shrink-0">
                 <nav
-                    class="flex flex-col space-y-1 space-x-0"
-                    aria-label="Settings"
+                    class="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1 lg:flex-col lg:overflow-visible"
+                    aria-label="Secciones de configuración"
                 >
-                    <Button
+                    <Link
                         v-for="item in sidebarNavItems"
                         :key="toUrl(item.href)"
-                        variant="ghost"
-                        :class="[
-                            'w-full justify-start',
-                            { 'bg-muted': isCurrentOrParentUrl(item.href) },
-                        ]"
-                        as-child
+                        :href="item.href"
+                        :aria-current="
+                            isCurrentOrParentUrl(item.href) ? 'page' : undefined
+                        "
+                        :class="
+                            cn(
+                                'flex shrink-0 items-center gap-2 rounded-md px-3 py-2 text-sm font-medium whitespace-nowrap transition-colors focus-visible:ring-[3px] focus-visible:ring-ring/40 focus-visible:outline-none',
+                                isCurrentOrParentUrl(item.href)
+                                    ? 'bg-accent text-foreground'
+                                    : 'text-muted-foreground hover:bg-accent/60 hover:text-foreground',
+                            )
+                        "
                     >
-                        <Link :href="item.href">
-                            <component :is="item.icon" class="h-4 w-4" />
-                            {{ item.title }}
-                        </Link>
-                    </Button>
+                        <component
+                            :is="item.icon"
+                            :class="
+                                cn(
+                                    'size-4',
+                                    isCurrentOrParentUrl(item.href) &&
+                                        'text-primary',
+                                )
+                            "
+                        />
+                        {{ item.title }}
+                    </Link>
                 </nav>
             </aside>
 
-            <Separator class="my-6 lg:hidden" />
-
-            <div class="flex-1 md:max-w-2xl">
-                <section class="max-w-3xl space-y-12">
+            <div class="min-w-0 flex-1">
+                <section class="max-w-2xl space-y-10">
                     <slot />
                 </section>
             </div>
         </div>
-    </div>
+    </PageContainer>
 </template>
-
-

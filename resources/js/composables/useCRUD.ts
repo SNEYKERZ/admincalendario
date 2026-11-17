@@ -1,7 +1,8 @@
 import axios from 'axios';
-import { ref, Ref, computed } from 'vue';
-import { useNotification } from './useNotification';
+import { ref } from 'vue';
+import type { Ref } from 'vue';
 import { useLoadingState } from './useLoadingState';
+import { useNotification } from './useNotification';
 
 interface CRUDOptions {
     baseUrl: string;
@@ -15,8 +16,8 @@ export const useCRUD = <T extends { id?: number }>(options: CRUDOptions) => {
     const baseUrl = options.baseUrl;
     const showMessages = options.showMessages !== false;
 
-    const items = ref<T[]>([]);
-    const selectedItem = ref<T | null>(null);
+    const items = ref([]) as Ref<T[]>;
+    const selectedItem = ref(null) as Ref<T | null>;
 
     // CREATE
     const create = async (data: Partial<T>): Promise<T | null> => {

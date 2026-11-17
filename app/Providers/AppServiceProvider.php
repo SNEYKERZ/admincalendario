@@ -2,6 +2,7 @@
 
 namespace App\Providers;
 
+use App\Managers\TenantManager;
 use App\Services\Holidays\ColombiaHolidayProvider;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;

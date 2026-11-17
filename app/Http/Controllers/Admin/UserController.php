@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Area;
 use App\Models\User;
 use App\Models\VacationYear;
+use App\Support\TenantRule;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -13,15 +14,17 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use PhpOffice\PhpSpreadsheet\IOFactory;
-use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Shared\Date as ExcelDate;
+use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Writer\Xlsx;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class UserController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $this->authorize('viewAny', User::class);
+
         return response()->json(
             User::select(
                 'id',
@@ -38,12 +41,18 @@ class UserController extends Controller
                 'hire_date',
                 'photo_path',
                 'area_id'
-            )->with('area')->get()
+            )
+                // Un admin de empresa no debe ver (ni poder tocar) cuentas de superadmin.
+                ->when(! $request->user()->isSuperAdmin(), fn ($query) => $query->where('role', '!=', 'superadmin'))
+                ->with('area')
+                ->get()
         );
     }
 
     public function store(Request $request)
     {
+        $this->authorize('create', User::class);
+
         $data = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
@@ -57,7 +66,7 @@ class UserController extends Controller
             'birth_date' => 'nullable|date',
             'hire_date' => 'nullable|date',
             'photo' => 'nullable|image|max:2048',
-            'area_id' => 'nullable|exists:areas,id',
+            'area_id' => ['nullable', TenantRule::exists('areas')],
         ]);
 
         $data['name'] = trim($data['first_name'].' '.$data['last_name']);
@@ -81,6 +90,8 @@ class UserController extends Controller
 
     public function show(User $user)
     {
+        $this->authorize('view', $user);
+
         $user->load(['vacationYears', 'area']);
 
         $allocated = $user->vacationYears->sum('allocated_days');
@@ -111,6 +122,8 @@ class UserController extends Controller
 
     public function update(Request $request, User $user)
     {
+        $this->authorize('update', $user);
+
         $data = $request->validate([
             'first_name' => 'sometimes|string|max:255',
             'last_name' => 'sometimes|string|max:255',
@@ -123,7 +136,7 @@ class UserController extends Controller
             'birth_date' => 'nullable|date',
             'hire_date' => 'nullable|date',
             'photo' => 'nullable|image|max:2048',
-            'area_id' => 'nullable|exists:areas,id',
+            'area_id' => ['nullable', TenantRule::exists('areas')],
         ]);
 
         $firstName = $data['first_name'] ?? $user->first_name;
@@ -147,6 +160,8 @@ class UserController extends Controller
 
     public function destroy(User $user)
     {
+        $this->authorize('delete', $user);
+
         if ($user->photo_path) {
             Storage::disk('public')->delete($user->photo_path);
         }
@@ -279,6 +294,7 @@ class UserController extends Controller
             if (! empty($requiredMissing)) {
                 $errors[] = "Fila {$rowNumber}: faltan/invalidos -> ".implode(', ', $requiredMissing);
                 $skipped++;
+
                 continue;
             }
 
@@ -286,6 +302,7 @@ class UserController extends Controller
             if (! $areaId) {
                 $errors[] = "Fila {$rowNumber}: area '{$areaName}' no existe.";
                 $skipped++;
+
                 continue;
             }
 
@@ -300,6 +317,10 @@ class UserController extends Controller
                 }
 
                 $user = $userByIdentification ?? $userByEmail;
+
+                if ($user && $user->isSuperAdmin()) {
+                    throw new \RuntimeException("Fila {$rowNumber}: no se puede modificar una cuenta de superadministrador desde el cargue masivo.");
+                }
                 $payload = [
                     'tenant_id' => $tenantId,
                     'name' => trim($firstName.' '.$lastName),
@@ -382,6 +403,7 @@ class UserController extends Controller
         }
 
         $ascii = Str::ascii($value);
+
         return trim((string) preg_replace('/\s+/', ' ', $ascii));
     }
 

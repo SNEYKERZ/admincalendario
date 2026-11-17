@@ -33,7 +33,7 @@ const updatedAt = computed(() => {
     <div class="min-h-svh bg-background text-foreground">
         <a
             href="#contenido"
-            class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-gray-900"
+            class="sr-only focus:not-sr-only focus:absolute focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-card focus:px-3 focus:py-2 focus:text-foreground focus:shadow"
         >
             Saltar al contenido
         </a>
@@ -56,7 +56,7 @@ const updatedAt = computed(() => {
                 </Link>
                 <Link
                     :href="isLoggedIn ? '/dashboard' : '/login'"
-                    class="rounded-md text-sm font-medium text-blue-700 underline underline-offset-4 hover:text-blue-900 focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none dark:text-blue-300 dark:hover:text-blue-200"
+                    class="rounded-md text-sm font-medium text-primary underline underline-offset-4 hover:text-primary/80"
                 >
                     {{ isLoggedIn ? 'Volver al panel' : 'Iniciar sesión' }}
                 </Link>
@@ -69,9 +69,9 @@ const updatedAt = computed(() => {
                     <li v-for="link in links" :key="link.href">
                         <Link
                             :href="link.href"
-                            class="rounded text-gray-700 underline-offset-4 hover:underline focus-visible:ring-2 focus-visible:ring-blue-600 focus-visible:outline-none dark:text-gray-300"
+                            class="rounded text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                             :class="{
-                                'font-semibold text-gray-900 underline dark:text-white':
+                                'font-semibold text-foreground underline':
                                     page.url === link.href,
                             }"
                             :aria-current="
@@ -86,16 +86,16 @@ const updatedAt = computed(() => {
         </header>
 
         <main id="contenido" class="mx-auto max-w-4xl px-4 py-10">
-            <h1 class="text-3xl font-bold text-gray-900 dark:text-gray-50">
+            <h1 class="text-3xl font-semibold tracking-[-0.02em] text-balance text-foreground">
                 {{ title }}
             </h1>
-            <p class="mt-2 text-sm text-gray-700 dark:text-gray-300">
+            <p class="mt-2 text-sm text-muted-foreground">
                 Última actualización: {{ updatedAt }} · Versión
                 {{ legal.version }}
             </p>
 
             <div
-                class="legal-content mt-8 space-y-8 text-base leading-relaxed text-gray-800 dark:text-gray-200"
+                class="legal-content mt-8 space-y-8 text-base leading-relaxed text-foreground/90"
             >
                 <slot />
             </div>
@@ -103,7 +103,7 @@ const updatedAt = computed(() => {
 
         <footer class="border-t border-border">
             <div
-                class="mx-auto max-w-4xl px-4 py-6 text-sm text-gray-700 dark:text-gray-300"
+                class="mx-auto max-w-4xl px-4 py-6 text-sm text-muted-foreground"
             >
                 © {{ new Date().getFullYear() }}
                 {{ legal.company_name || legal.product_name }}. Todos los

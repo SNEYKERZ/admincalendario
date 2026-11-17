@@ -1,38 +1,24 @@
 <?php
 
-use App\Models\User;
+use Illuminate\Support\Facades\Route;
 
-test('registration screen can be rendered', function () {
-    $response = $this->get(route('register'));
+/*
+ * El registro público está deshabilitado por defecto (FORTIFY_REGISTRATION=false):
+ * un usuario auto-registrado no pertenece a ninguna empresa y quedaba asociado
+ * al tenant principal, con acceso a sus datos. Las cuentas las crea el admin.
+ */
+test('public registration is disabled by default', function () {
+    expect(Route::has('register'))->toBeFalse();
+    expect(Route::has('register.store'))->toBeFalse();
 
-    $response->assertOk();
-});
-
-test('new users can register', function () {
-    $response = $this->post(route('register.store'), [
-        'name' => 'Test User',
-        'email' => 'test@example.com',
+    $this->get('/register')->assertNotFound();
+    $this->post('/register', [
+        'name' => 'Intruso',
+        'email' => 'intruso@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
         'accept_legal' => 'on',
-    ]);
+    ])->assertStatus(404);
 
-    $this->assertAuthenticated();
-    $response->assertRedirect(route('dashboard', absolute: false));
-
-    $user = User::where('email', 'test@example.com')->first();
-    expect($user->legal_accepted_at)->not->toBeNull();
-    expect($user->legal_version)->toBe(config('legal.version'));
-});
-
-test('registration requires accepting the legal terms', function () {
-    $response = $this->post(route('register.store'), [
-        'name' => 'Test User',
-        'email' => 'test@example.com',
-        'password' => 'password',
-        'password_confirmation' => 'password',
-    ]);
-
-    $response->assertSessionHasErrors('accept_legal');
     $this->assertGuest();
 });

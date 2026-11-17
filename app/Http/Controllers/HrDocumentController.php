@@ -2,16 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Barryvdh\DomPDF\Facade\Pdf;
 use App\Enums\UserRole;
 use App\Models\Area;
 use App\Models\CompanySettings;
 use App\Models\HrDocument;
 use App\Models\HrDocumentAudit;
 use App\Models\User;
-use Illuminate\Http\UploadedFile;
+use App\Support\TenantRule;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -20,6 +21,12 @@ use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class HrDocumentController extends Controller
 {
+    /**
+     * Extensiones permitidas para documentos subidos (antes se aceptaba
+     * cualquier archivo, incluidos .html/.svg/.php).
+     */
+    public const ALLOWED_UPLOAD_EXTENSIONS = 'pdf,doc,docx,xls,xlsx,csv,ppt,pptx,odt,ods,txt,rtf,jpg,jpeg,png,webp,zip';
+
     protected array $auditedFields = [
         'title',
         'document_type',
@@ -220,9 +227,9 @@ class HrDocumentController extends Controller
                 Rule::in($isAdmin ? ['template', 'derived', 'user'] : ['user']),
             ],
             'status' => ['nullable', 'in:activo,borrador,vencido,pendiente,firmado,rechazado'],
-            'user_id' => ['nullable', 'exists:users,id'],
-            'template_id' => ['nullable', 'exists:hr_documents,id'],
-            'area_id' => ['nullable', 'exists:areas,id'],
+            'user_id' => ['nullable', 'integer', TenantRule::exists('users')],
+            'template_id' => ['nullable', 'integer', TenantRule::exists('hr_documents')],
+            'area_id' => ['nullable', 'integer', TenantRule::exists('areas')],
             'signature_status' => ['nullable', 'in:not_required,pending,signed,rejected'],
             'start_date' => ['nullable', 'date'],
             'end_date' => ['nullable', 'date', 'after_or_equal:start_date'],
@@ -230,7 +237,7 @@ class HrDocumentController extends Controller
             'notes' => ['nullable', 'string'],
             'template_content' => ['nullable', 'string'],
             'is_personal_upload' => ['nullable', 'boolean'],
-            'file' => ['nullable', 'file', 'max:10240'],
+            'file' => ['nullable', 'file', 'max:10240', 'mimes:'.self::ALLOWED_UPLOAD_EXTENSIONS],
         ]);
 
         if (! $isAdmin) {
@@ -391,9 +398,9 @@ class HrDocumentController extends Controller
             'document_type' => ['sometimes', 'string', 'max:40'],
             'document_mode' => ['sometimes', 'in:template,derived,user'],
             'status' => ['sometimes', 'in:activo,borrador,vencido,pendiente,firmado,rechazado'],
-            'user_id' => ['nullable', 'exists:users,id'],
-            'template_id' => ['nullable', 'exists:hr_documents,id'],
-            'area_id' => ['nullable', 'exists:areas,id'],
+            'user_id' => ['nullable', 'integer', TenantRule::exists('users')],
+            'template_id' => ['nullable', 'integer', TenantRule::exists('hr_documents')],
+            'area_id' => ['nullable', 'integer', TenantRule::exists('areas')],
             'signature_status' => ['sometimes', 'in:not_required,pending,signed,rejected'],
             'is_personal_upload' => ['sometimes', 'boolean'],
             'start_date' => ['nullable', 'date'],
@@ -401,7 +408,7 @@ class HrDocumentController extends Controller
             'expires_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
             'template_content' => ['nullable', 'string'],
-            'file' => ['nullable', 'file', 'max:10240'],
+            'file' => ['nullable', 'file', 'max:10240', 'mimes:'.self::ALLOWED_UPLOAD_EXTENSIONS],
         ]);
 
         if (array_key_exists('document_mode', $data) && $data['document_mode'] === 'template' && ! $this->isSuperAdmin($authUser)) {
@@ -589,7 +596,9 @@ class HrDocumentController extends Controller
 
         $data = $request->validate([
             'signature_method' => ['required', 'in:draw,type'],
-            'signature_data' => ['nullable', 'string', 'max:2000000'],
+            // Solo imágenes embebidas (data URI). Evita que dompdf cargue rutas
+            // locales o URLs arbitrarias al generar el PDF firmado.
+            'signature_data' => ['nullable', 'string', 'max:2000000', 'regex:/^data:image\/(png|jpeg|jpg|webp);base64,[A-Za-z0-9+\/=\r\n]+$/'],
             'signature_name' => ['nullable', 'string', 'max:255'],
         ]);
 
@@ -719,16 +728,22 @@ class HrDocumentController extends Controller
         ]);
 
         if (! empty($document->file_path) && Storage::exists($document->file_path)) {
-            return Storage::download($document->file_path, $document->original_name);
+            return Storage::download($document->file_path, $document->original_name, [
+                'X-Content-Type-Options' => 'nosniff',
+            ]);
         }
 
         $content = $document->rendered_content ?: $document->template_content;
         abort_if($content === null || trim($content) === '', 404, 'Archivo no encontrado');
 
+        // Siempre como adjunto y con CSP restrictiva: el HTML de plantilla no
+        // debe ejecutarse en el origen de la aplicación.
         return response()->streamDownload(function () use ($content) {
             echo $content;
         }, $document->original_name ?: 'documento_generado.html', [
-            'Content-Type' => $document->mime_type ?: 'text/html; charset=UTF-8',
+            'Content-Type' => 'text/html; charset=UTF-8',
+            'X-Content-Type-Options' => 'nosniff',
+            'Content-Security-Policy' => "default-src 'none'; style-src 'unsafe-inline'; img-src data:",
         ]);
     }
 
@@ -955,9 +970,12 @@ class HrDocumentController extends Controller
             'template.title' => $templateDocument?->title ?? '',
         ];
 
+        // Los valores se escapan: provienen de datos editables por usuarios
+        // (nombre, teléfono, fechas del request) y se insertan en HTML.
         return preg_replace_callback('/\{\{\s*([a-zA-Z0-9_.]+)\s*\}\}/', function ($matches) use ($values) {
             $key = $matches[1];
-            return array_key_exists($key, $values) ? (string) $values[$key] : $matches[0];
+
+            return array_key_exists($key, $values) ? e((string) $values[$key]) : $matches[0];
         }, $templateContent) ?? $templateContent;
     }
 

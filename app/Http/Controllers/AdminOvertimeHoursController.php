@@ -6,12 +6,11 @@ use App\Models\Area;
 use App\Models\OvertimeHours;
 use App\Models\User;
 use App\Services\OvertimeHoursService;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PhpOffice\PhpSpreadsheet\Spreadsheet;
 use PhpOffice\PhpSpreadsheet\Style\Fill;
-use PhpOffice\PhpSpreadsheet\Style\Font;
-use Illuminate\Http\Request;
 
 class AdminOvertimeHoursController extends Controller
 {
@@ -31,7 +30,7 @@ class AdminOvertimeHoursController extends Controller
         $year = $request->get('year', date('Y'));
         $userId = $request->get('user_id', '');
 
-        $query = auth()->user()->tenant
+        $query = $this->currentTenant()
             ->overtimeHours()
             ->with(['user.area', 'approver'])
             ->orderBy('date', 'desc');
@@ -55,7 +54,7 @@ class AdminOvertimeHoursController extends Controller
 
         $overtimes = $query->paginate(20);
 
-        $tenant = auth()->user()->tenant;
+        $tenant = $this->currentTenant();
         $areas = Area::where('tenant_id', $tenant->id)
             ->orderBy('display_order')
             ->orderBy('name')
@@ -78,6 +77,17 @@ class AdminOvertimeHoursController extends Controller
         ]);
     }
 
+    /**
+     * Tenant efectivo (respeta la impersonación del superadmin).
+     */
+    protected function currentTenant(): \App\Models\Tenant
+    {
+        $tenant = app(\App\Managers\TenantManager::class)->getTenant();
+        abort_unless($tenant, 403, 'No hay una empresa seleccionada.');
+
+        return $tenant;
+    }
+
     public function update(OvertimeHours $overtimeHours)
     {
         $this->authorize('admin');
@@ -86,9 +96,9 @@ class AdminOvertimeHoursController extends Controller
             'date' => 'required|date',
             'start_time' => 'required|date_format:H:i',
             'end_time' => 'required|date_format:H:i',
-            'client' => 'nullable|string',
-            'project' => 'nullable|string',
-            'reason' => 'required|string|min:10',
+            'client' => 'nullable|string|max:255',
+            'project' => 'nullable|string|max:255',
+            'reason' => 'required|string|min:10|max:1000',
         ]);
 
         $updated = $this->service->update($overtimeHours, $validated);
@@ -100,7 +110,7 @@ class AdminOvertimeHoursController extends Controller
     {
         $this->authorize('admin');
 
-        if (!$overtimeHours->isPending()) {
+        if (! $overtimeHours->isPending()) {
             return back()->with('error', 'Solo se pueden aprobar registros pendientes');
         }
 
@@ -117,7 +127,7 @@ class AdminOvertimeHoursController extends Controller
             'reason' => 'required|string|max:500',
         ]);
 
-        if (!$overtimeHours->isPending()) {
+        if (! $overtimeHours->isPending()) {
             return back()->with('error', 'Solo se pueden rechazar registros pendientes');
         }
 
@@ -135,7 +145,7 @@ class AdminOvertimeHoursController extends Controller
         $year = $request->get('year', date('Y'));
         $userId = $request->get('user_id', '');
 
-        $query = auth()->user()->tenant
+        $query = $this->currentTenant()
             ->overtimeHours()
             ->with(['user.area', 'approver'])
             ->orderBy('date', 'asc');
@@ -159,7 +169,7 @@ class AdminOvertimeHoursController extends Controller
 
         $overtimes = $query->get();
 
-        $spreadsheet = new Spreadsheet();
+        $spreadsheet = new Spreadsheet;
         $sheet = $spreadsheet->getActiveSheet();
         $sheet->setTitle('Horas Extra');
 
@@ -186,22 +196,23 @@ class AdminOvertimeHoursController extends Controller
         ];
 
         foreach (range('A', 'K') as $column) {
-            $sheet->getStyle($column . '1')->applyFromArray($headerStyle);
+            $sheet->getStyle($column.'1')->applyFromArray($headerStyle);
         }
 
         $row = 2;
         foreach ($overtimes as $overtime) {
-            $sheet->setCellValue('A' . $row, $overtime->user->name);
-            $sheet->setCellValue('B' . $row, $overtime->user->area?->name ?? '-');
-            $sheet->setCellValue('C' . $row, $overtime->date->format('Y-m-d'));
-            $sheet->setCellValue('D' . $row, $overtime->day_of_week);
-            $sheet->setCellValue('E' . $row, $overtime->month);
-            $sheet->setCellValue('F' . $row, $overtime->hours);
-            $sheet->setCellValue('G' . $row, $overtime->project ?? '-');
-            $sheet->setCellValue('H' . $row, $overtime->client ?? '-');
-            $sheet->setCellValue('I' . $row, $overtime->reason);
-            $sheet->setCellValue('J' . $row, ucfirst($overtime->status));
-            $sheet->setCellValue('K' . $row, $overtime->approver?->name ?? '-');
+            $sheet->setCellValue('A'.$row, $overtime->user->name);
+            $sheet->setCellValue('B'.$row, $overtime->user->area?->name ?? '-');
+            $sheet->setCellValue('C'.$row, $overtime->date->format('Y-m-d'));
+            $sheet->setCellValue('D'.$row, $overtime->day_of_week);
+            $sheet->setCellValue('E'.$row, $overtime->month);
+            $sheet->setCellValue('F'.$row, $overtime->hours);
+            // setCellValueExplicit(string): un texto que empiece por "=" no se evalúa como fórmula.
+            $sheet->setCellValueExplicit('G'.$row, (string) ($overtime->project ?? '-'), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('H'.$row, (string) ($overtime->client ?? '-'), \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValueExplicit('I'.$row, (string) $overtime->reason, \PhpOffice\PhpSpreadsheet\Cell\DataType::TYPE_STRING);
+            $sheet->setCellValue('J'.$row, ucfirst($overtime->status));
+            $sheet->setCellValue('K'.$row, $overtime->approver?->name ?? '-');
             $row++;
         }
 
@@ -209,13 +220,16 @@ class AdminOvertimeHoursController extends Controller
             $sheet->getColumnDimension($column)->setAutoSize(true);
         }
 
-        $filename = 'horas_extra_' . date('Y-m-d_His') . '.xlsx';
+        $filename = 'horas_extra_'.date('Y-m-d_His').'.xlsx';
 
-        header('Content-Type: application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-        header('Content-Disposition: attachment; filename="' . $filename . '"');
-
+        // streamDownload en lugar de header()+exit: respeta el ciclo de vida de
+        // Laravel (middleware, sesión, logs) y es testeable.
         $writer = IOFactory::createWriter($spreadsheet, 'Xlsx');
-        $writer->save('php://output');
-        exit;
+
+        return response()->streamDownload(function () use ($writer) {
+            $writer->save('php://output');
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        ]);
     }
 }

@@ -1,9 +1,23 @@
 <script setup lang="ts">
-import { computed, ref, watch, onMounted } from 'vue';
 import { usePage } from '@inertiajs/vue3';
 import axios from 'axios';
-import { useToast } from 'vue-toastification';
-import ConfirmDialog from './ConfirmDialog.vue';
+import { Check, RotateCcw, Trash2, X } from 'lucide-vue-next';
+import { computed, ref, watch } from 'vue';
+import FormField from '@/components/app/FormField.vue';
+import StatusBadge from '@/components/app/StatusBadge.vue';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Spinner } from '@/components/ui/spinner';
+import { useConfirm } from '@/composables/useConfirm';
+import { useNotification } from '@/composables/useNotification';
+import { formatDays, formatHours } from '@/lib/format';
 
 type ModalUser = {
     id: number;
@@ -54,7 +68,10 @@ type AbsenceRecord = {
     approved_at?: string;
 };
 
-const toast = useToast();
+type FormErrors = Partial<Record<string, string>>;
+
+const notify = useNotification();
+const confirm = useConfirm();
 const page = usePage();
 
 const formatToDatetimeLocal = (dateStr: string | Date) => {
@@ -78,8 +95,8 @@ const props = defineProps<{
 const emit = defineEmits(['close', 'saved']);
 
 const getInitialForm = () => ({
-    user_id: '',
-    absence_type_id: '',
+    user_id: '' as string | number,
+    absence_type_id: '' as string | number,
     start_datetime: '',
     end_datetime: '',
     include_saturday: true,
@@ -90,10 +107,19 @@ const getInitialForm = () => ({
 });
 
 const form = ref(getInitialForm());
+const errors = ref<FormErrors>({});
 const types = ref<TypeOption[]>([]);
 const countries = ref<CountryOption[]>([]);
-const loading = ref(false);
-const currentUserId = computed(() => String(page.props.auth?.user?.id ?? ''));
+const loadingOptions = ref(false);
+/** Acción en curso (para mostrar el spinner en el botón correcto). */
+const busy = ref<
+    null | 'save' | 'update' | 'pendiente' | 'aprobado' | 'rechazado' | 'delete'
+>(null);
+const loading = computed(() => busy.value !== null);
+
+const currentUserId = computed(() =>
+    String((page.props as any).auth?.user?.id ?? ''),
+);
 const currentStatus = computed(() => props.absence?.status ?? 'pendiente');
 const selectedType = computed(() =>
     types.value.find(
@@ -101,9 +127,7 @@ const selectedType = computed(() =>
     ),
 );
 const showBusinessRules = computed(
-    () =>
-        props.isAdmin &&
-        !selectedType.value?.counts_as_hours,
+    () => props.isAdmin && !selectedType.value?.counts_as_hours,
 );
 
 const canEdit = computed(() => {
@@ -118,7 +142,7 @@ const loadTypes = async () => {
         const res = await axios.get('/absence-types');
         types.value = res.data;
     } catch {
-        toast.error('Error cargando tipos');
+        notify.error('No se pudieron cargar los tipos de ausencia.');
     }
 };
 
@@ -130,16 +154,9 @@ const loadCountries = async () => {
             name: name as string,
         }));
     } catch {
-        toast.error('Error cargando países');
+        notify.error('No se pudo cargar la lista de países.');
     }
 };
-
-watch(
-    () => form.value.absence_type_id,
-    () => {
-        // Ya no se aplican los defaults del tipo
-    },
-);
 
 watch(
     () => props.show,
@@ -147,7 +164,10 @@ watch(
         if (!val) return;
 
         form.value = getInitialForm();
+        errors.value = {};
+        loadingOptions.value = true;
         await Promise.all([loadTypes(), loadCountries()]);
+        loadingOptions.value = false;
 
         if (!props.isAdmin) {
             form.value.user_id = currentUserId.value;
@@ -165,8 +185,8 @@ watch(
 
         if (props.mode === 'view' && props.absence) {
             Object.assign(form.value, {
-                user_id: props.absence.user?.id,
-                absence_type_id: props.absence.type?.id,
+                user_id: props.absence.user?.id ?? '',
+                absence_type_id: props.absence.type?.id ?? '',
                 start_datetime: formatToDatetimeLocal(
                     props.absence.start_datetime,
                 ),
@@ -182,317 +202,395 @@ watch(
 );
 
 const validateForm = () => {
-    if (props.isAdmin && !form.value.user_id) {
-        toast.error('Selecciona un usuario');
-        return false;
+    const next: FormErrors = {};
+
+    if (props.isAdmin && props.mode === 'create' && !form.value.user_id) {
+        next.user_id = 'Selecciona un colaborador.';
     }
 
     if (!form.value.absence_type_id) {
-        toast.error('Selecciona un tipo');
-        return false;
+        next.absence_type_id = 'Selecciona el tipo de ausencia.';
     }
 
-    const start = new Date(form.value.start_datetime);
-    const end = new Date(form.value.end_datetime);
-
-    if (end <= start) {
-        toast.error('Fechas invalidas');
-        return false;
+    if (!form.value.start_datetime) {
+        next.start_datetime = 'Indica la fecha de inicio.';
     }
 
-    return true;
+    if (!form.value.end_datetime) {
+        next.end_datetime = 'Indica la fecha de fin.';
+    } else if (
+        form.value.start_datetime &&
+        new Date(form.value.end_datetime) <= new Date(form.value.start_datetime)
+    ) {
+        next.end_datetime = 'La fecha de fin debe ser posterior al inicio.';
+    }
+
+    errors.value = next;
+    return Object.keys(next).length === 0;
+};
+
+const handleError = (e: any, fallback: string) => {
+    const serverErrors = e?.response?.data?.errors;
+    if (serverErrors && typeof serverErrors === 'object') {
+        const mapped: FormErrors = {};
+        Object.entries(serverErrors).forEach(([key, value]) => {
+            mapped[key] = Array.isArray(value)
+                ? String(value[0])
+                : String(value);
+        });
+        errors.value = mapped;
+        // Errores que no corresponden a un campo visible se muestran como toast.
+        const visible = [
+            'user_id',
+            'absence_type_id',
+            'start_datetime',
+            'end_datetime',
+            'reason',
+            'holiday_country',
+        ];
+        Object.entries(mapped)
+            .filter(([key]) => !visible.includes(key))
+            .forEach(([, msg]) => msg && notify.error(msg));
+        return;
+    }
+
+    notify.error(e?.response?.data?.message || fallback);
 };
 
 const save = async () => {
     if (!validateForm()) return;
 
-    loading.value = true;
+    busy.value = 'save';
 
     try {
         await axios.post('/absences', form.value);
-        toast.success('Ausencia creada');
+        notify.success('Ausencia registrada correctamente.');
         emit('saved');
         emit('close');
     } catch (e: any) {
-        if (e.response?.data?.errors) {
-            Object.values(e.response.data.errors)
-                .flat()
-                .forEach((msg: any) => toast.error(msg));
-        } else {
-            toast.error('Error al guardar');
-        }
+        handleError(e, 'No se pudo guardar la ausencia.');
     } finally {
-        loading.value = false;
+        busy.value = null;
     }
 };
 
 const update = async () => {
     if (!validateForm()) return;
 
-    loading.value = true;
+    busy.value = 'update';
 
     try {
         await axios.put(`/absences/${props.absence!.id}`, form.value);
-        toast.success('Actualizado correctamente');
+        notify.success('Ausencia actualizada.');
         emit('saved');
         emit('close');
     } catch (e: any) {
-        if (e.response?.data?.errors) {
-            Object.values(e.response.data.errors)
-                .flat()
-                .forEach((msg: any) => toast.error(msg));
-        } else {
-            toast.error('Error al actualizar');
-        }
+        handleError(e, 'No se pudo actualizar la ausencia.');
     } finally {
-        loading.value = false;
+        busy.value = null;
     }
+};
+
+const decisionNote = ref('');
+
+watch(
+    () => props.absence?.id,
+    () => {
+        decisionNote.value = '';
+    },
+);
+
+const statusMessages: Record<string, string> = {
+    pendiente: 'La ausencia volvió a estado pendiente.',
+    aprobado: 'Ausencia aprobada.',
+    rechazado: 'Ausencia rechazada.',
 };
 
 const changeStatus = async (status: 'aprobado' | 'rechazado' | 'pendiente') => {
     if (!props.absence) return;
 
-    const statusMap: Record<string, string> = {
-        'pendiente': 'pending',
-        'aprobado': 'approve',
-        'rechazado': 'reject'
-    };
-    const endpoint = statusMap[status];
+    if (status === 'rechazado') {
+        const ok = await confirm({
+            title: 'Rechazar ausencia',
+            description: `Se notificará a ${props.absence.user?.name ?? 'la persona'} que su solicitud fue rechazada.`,
+            confirmText: 'Rechazar',
+            variant: 'destructive',
+        });
+        if (!ok) return;
+    }
 
-    loading.value = true;
+    const statusMap: Record<string, string> = {
+        pendiente: 'pending',
+        aprobado: 'approve',
+        rechazado: 'reject',
+    };
+
+    busy.value = status;
 
     try {
-        await axios.post(`/absences/${props.absence.id}/${endpoint}`, {}, {
-            headers: {
-                'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content
-            }
-        });
-        toast.success(`Estado cambiado a ${status}`);
+        const note = decisionNote.value.trim();
+        const payload =
+            status === 'aprobado'
+                ? { notes: note || null }
+                : status === 'rechazado'
+                  ? { reason: note || null }
+                  : {};
+        await axios.post(
+            `/absences/${props.absence.id}/${statusMap[status]}`,
+            payload,
+        );
+        notify.success(statusMessages[status]);
         emit('saved');
         emit('close');
     } catch (e: any) {
-        if (e.response?.data?.errors) {
-            Object.values(e.response.data.errors)
-                .flat()
-                .forEach((msg: any) => toast.error(msg));
-        } else {
-            toast.error('Error al cambiar estado');
-        }
+        handleError(e, 'No se pudo cambiar el estado.');
+        // El estado pudo cambiar en el servidor (p. ej. ya no está pendiente):
+        // refrescamos la vista para no quedar en un estado inconsistente.
+        if ([403, 409, 422].includes(e?.response?.status)) emit('saved');
     } finally {
-        loading.value = false;
+        busy.value = null;
     }
 };
 
 const remove = async () => {
     if (!props.absence) return;
 
-    loading.value = true;
+    const ok = await confirm({
+        title: 'Eliminar ausencia',
+        description:
+            'La ausencia se eliminará de forma permanente y se recalculará el saldo de días. Esta acción no se puede deshacer.',
+        confirmText: 'Eliminar',
+        variant: 'destructive',
+    });
+    if (!ok) return;
+
+    busy.value = 'delete';
 
     try {
         await axios.delete(`/absences/${props.absence.id}`);
-        toast.success('Ausencia eliminada');
+        notify.success('Ausencia eliminada.');
         emit('saved');
         emit('close');
-    } catch {
-        toast.error('Error al eliminar');
+    } catch (e: any) {
+        notify.error(
+            e?.response?.data?.message || 'No se pudo eliminar la ausencia.',
+        );
     } finally {
-        loading.value = false;
+        busy.value = null;
     }
 };
+
+const onOpenChange = (open: boolean) => {
+    if (!open && !loading.value) emit('close');
+};
+
+const fieldClass = (key: string) =>
+    errors.value[key] ? 'input border-destructive' : 'input';
 </script>
 
 <template>
-    <div
-        v-if="show"
-        class="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
-    >
-        <div
-            class="w-full max-w-2xl space-y-4 rounded-xl bg-white p-6 shadow-xl dark:bg-gray-900"
-        >
-            <div class="flex items-start justify-between gap-4">
-                <div>
-                    <h2
-                        class="text-lg font-bold text-gray-900 dark:text-gray-100"
-                    >
-                        {{
-                            mode === 'create'
-                                ? 'Nueva Ausencia/Novedad'
-                                : 'Detalle de ausencia'
-                        }}
-                    </h2>
-                    <p
-                        v-if="mode === 'view'"
-                        class="text-sm text-gray-500 dark:text-gray-400"
-                    >
-                        Estado actual:
-                        <span class="font-medium capitalize">{{
-                            currentStatus
-                        }}</span>
-                    </p>
-                </div>
-            </div>
+    <Dialog :open="show" @update:open="onOpenChange">
+        <DialogContent class="sm:max-w-2xl">
+            <DialogHeader>
+                <DialogTitle>
+                    {{
+                        mode === 'create'
+                            ? 'Nueva ausencia o novedad'
+                            : 'Detalle de la ausencia'
+                    }}
+                </DialogTitle>
+                <DialogDescription v-if="mode === 'create'">
+                    Registra el tipo, las fechas y el motivo. Quedará pendiente
+                    de aprobación.
+                </DialogDescription>
+                <DialogDescription
+                    v-else
+                    class="flex items-center gap-2"
+                    as="div"
+                >
+                    Estado actual:
+                    <StatusBadge :status="currentStatus" />
+                </DialogDescription>
+            </DialogHeader>
 
-            <!-- Info del usuario y ausencia (solo en modo view) -->
-            <div
+            <!-- Resumen (solo en modo detalle) -->
+            <dl
                 v-if="mode === 'view' && absence?.user"
-                class="rounded-lg bg-gray-50 p-4 dark:bg-gray-800"
+                class="grid gap-x-6 gap-y-3 rounded-lg border bg-muted/40 p-4 text-sm sm:grid-cols-2"
             >
-                <div class="grid gap-3 md:grid-cols-2">
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Usuario
-                        </p>
-                        <p class="font-medium text-gray-900 dark:text-gray-100">
-                            {{ absence.user.name }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Correo
-                        </p>
-                        <p class="text-sm text-gray-900 dark:text-gray-100">
-                            {{ absence.user.email }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Tipo de Ausencia/Novedad
-                        </p>
-                        <p class="font-medium text-gray-900 dark:text-gray-100">
-                            {{ absence.type?.name }}
-                        </p>
-                    </div>
-                    <div>
-                        <p class="text-xs text-gray-500 dark:text-gray-400">
-                            Duración
-                        </p>
-                        <p class="font-medium text-gray-900 dark:text-gray-100">
-                            {{ absence.total_days }} días / {{ absence.total_hours }} horas
-                        </p>
-                    </div>
-                </div>
-                <div v-if="absence.approved_at" class="mt-3 border-t pt-3">
-                    <p class="text-xs text-gray-500 dark:text-gray-400">
-                        Aprobado por:
-                        <span class="font-medium text-gray-900 dark:text-gray-100">
-                            {{ absence.approver?.name ?? 'Sistema' }}
-                        </span>
-                        el
-                        <span class="font-medium text-gray-900 dark:text-gray-100">
-                            {{ new Date(absence.approved_at).toLocaleDateString('es-CO') }}
-                        </span>
-                    </p>
-                </div>
-            </div>
-
-            <div v-if="isAdmin && mode === 'create'" class="space-y-1">
-                <label class="text-sm text-gray-600 dark:text-gray-300"
-                    >Usuario</label
-                >
-                <select
-                    v-model="form.user_id"
-                    class="input"
-                    :disabled="!canEdit"
-                >
-                    <option value="">Seleccionar usuario</option>
-                    <option v-for="u in users ?? []" :key="u.id" :value="u.id">
-                        {{ u.name }}
-                    </option>
-                </select>
-            </div>
-
-            <div class="space-y-3">
                 <div>
-                    <label class="text-sm text-gray-600 dark:text-gray-300"
-                        >Tipo</label
-                    >
+                    <dt class="text-xs text-muted-foreground">Colaborador</dt>
+                    <dd class="font-medium">{{ absence.user.name }}</dd>
+                </div>
+                <div class="min-w-0">
+                    <dt class="text-xs text-muted-foreground">Correo</dt>
+                    <dd class="truncate">{{ absence.user.email }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-muted-foreground">Tipo</dt>
+                    <dd class="font-medium">{{ absence.type?.name ?? '—' }}</dd>
+                </div>
+                <div>
+                    <dt class="text-xs text-muted-foreground">Duración</dt>
+                    <dd class="font-medium tabular-nums">
+                        {{ formatDays(absence.total_days) }} ·
+                        {{ formatHours(absence.total_hours) }}
+                    </dd>
+                </div>
+                <div v-if="absence.approved_at" class="sm:col-span-2">
+                    <dt class="text-xs text-muted-foreground">Aprobada por</dt>
+                    <dd>
+                        <span class="font-medium">{{
+                            absence.approver?.name ?? 'Sistema'
+                        }}</span>
+                        el
+                        {{
+                            new Date(absence.approved_at).toLocaleDateString(
+                                'es-CO',
+                            )
+                        }}
+                    </dd>
+                </div>
+            </dl>
+
+            <form
+                id="absence-form"
+                class="grid gap-4"
+                novalidate
+                @submit.prevent="mode === 'create' ? save() : update()"
+            >
+                <FormField
+                    v-if="isAdmin && mode === 'create'"
+                    label="Colaborador"
+                    for="absence-user"
+                    :error="errors.user_id"
+                    required
+                >
                     <select
-                        v-model="form.absence_type_id"
-                        class="input"
+                        id="absence-user"
+                        v-model="form.user_id"
+                        :class="fieldClass('user_id')"
                         :disabled="!canEdit"
+                        :aria-invalid="!!errors.user_id"
                     >
-                        <option value="">Seleccione tipo</option>
+                        <option value="">Selecciona un colaborador</option>
+                        <option
+                            v-for="u in users ?? []"
+                            :key="u.id"
+                            :value="u.id"
+                        >
+                            {{ u.name }}
+                        </option>
+                    </select>
+                </FormField>
+
+                <FormField
+                    label="Tipo de ausencia"
+                    for="absence-type"
+                    :error="errors.absence_type_id"
+                    required
+                >
+                    <select
+                        id="absence-type"
+                        v-model="form.absence_type_id"
+                        :class="fieldClass('absence_type_id')"
+                        :disabled="!canEdit || loadingOptions"
+                        :aria-invalid="!!errors.absence_type_id"
+                    >
+                        <option value="">
+                            {{
+                                loadingOptions
+                                    ? 'Cargando tipos…'
+                                    : 'Selecciona un tipo'
+                            }}
+                        </option>
                         <option v-for="t in types" :key="t.id" :value="t.id">
                             {{ t.name }}
                         </option>
                     </select>
-                </div>
+                </FormField>
 
-                <div class="grid gap-3 md:grid-cols-2">
-                    <div>
-                        <label class="text-sm text-gray-600 dark:text-gray-300"
-                            >Inicio</label
-                        >
-                        <input
-                            type="datetime-local"
-                            v-model="form.start_datetime"
-                            class="input"
-                            :disabled="!canEdit"
-                        />
-                    </div>
-
-                    <div>
-                        <label class="text-sm text-gray-600 dark:text-gray-300"
-                            >Fin</label
-                        >
-                        <input
-                            type="datetime-local"
-                            v-model="form.end_datetime"
-                            class="input"
-                            :disabled="!canEdit"
-                        />
-                    </div>
-                </div>
-
-                <div
-                    v-if="showBusinessRules"
-                    class="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900/50 dark:bg-amber-950/20"
-                >
-                    <p
-                        class="mb-3 text-sm font-medium text-amber-900 dark:text-amber-200"
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <FormField
+                        label="Inicio"
+                        for="absence-start"
+                        :error="errors.start_datetime"
+                        required
                     >
+                        <input
+                            id="absence-start"
+                            v-model="form.start_datetime"
+                            type="datetime-local"
+                            :class="fieldClass('start_datetime')"
+                            :disabled="!canEdit"
+                            :aria-invalid="!!errors.start_datetime"
+                        />
+                    </FormField>
+
+                    <FormField
+                        label="Fin"
+                        for="absence-end"
+                        :error="errors.end_datetime"
+                        required
+                    >
+                        <input
+                            id="absence-end"
+                            v-model="form.end_datetime"
+                            type="datetime-local"
+                            :class="fieldClass('end_datetime')"
+                            :disabled="!canEdit"
+                            :aria-invalid="!!errors.end_datetime"
+                        />
+                    </FormField>
+                </div>
+
+                <fieldset
+                    v-if="showBusinessRules"
+                    class="rounded-lg border bg-muted/30 p-4"
+                >
+                    <legend class="px-1 text-[13px] font-medium">
                         Descontar del saldo de días
-                    </p>
-                    <div class="grid gap-3 md:grid-cols-3">
-                        <label
-                            class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
-                        >
+                    </legend>
+                    <div class="flex flex-wrap gap-x-6 gap-y-2">
+                        <label class="flex items-center gap-2 text-sm">
                             <input
                                 v-model="form.include_saturday"
                                 type="checkbox"
+                                class="size-4 accent-primary"
                                 :disabled="!canEdit"
                             />
                             Sábados
                         </label>
-                        <label
-                            class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
-                        >
+                        <label class="flex items-center gap-2 text-sm">
                             <input
                                 v-model="form.include_sunday"
                                 type="checkbox"
+                                class="size-4 accent-primary"
                                 :disabled="!canEdit"
                             />
                             Domingos
                         </label>
-                        <label
-                            class="flex items-center gap-2 text-sm text-gray-700 dark:text-gray-200"
-                        >
+                        <label class="flex items-center gap-2 text-sm">
                             <input
                                 v-model="form.include_holidays"
                                 type="checkbox"
+                                class="size-4 accent-primary"
                                 :disabled="!canEdit"
                             />
                             Festivos
                         </label>
                     </div>
-                    <!-- Country selector for holidays -->
-                    <div v-if="form.include_holidays" class="mt-3">
-                        <label class="text-xs text-gray-500 dark:text-gray-400">
-                            País para festividades:
-                        </label>
+                    <FormField
+                        v-if="form.include_holidays"
+                        label="País para festivos"
+                        for="absence-country"
+                        :error="errors.holiday_country"
+                        class="mt-3 sm:max-w-xs"
+                    >
                         <select
+                            id="absence-country"
                             v-model="form.holiday_country"
-                            class="input mt-1 text-sm"
+                            class="input"
                             :disabled="!canEdit"
                         >
                             <option
@@ -503,97 +601,128 @@ const remove = async () => {
                                 {{ country.name }}
                             </option>
                         </select>
-                    </div>
-                    <p class="mt-2 text-xs text-gray-500 dark:text-gray-400">
-                        Si están marcados, estos días se descontarán del saldo
-                        de días disponibles.
+                    </FormField>
+                    <p class="mt-2 text-xs text-muted-foreground">
+                        Los días marcados se descuentan del saldo de días
+                        disponibles.
                     </p>
-                </div>
+                </fieldset>
 
-                <div>
-                    <label class="text-sm text-gray-600 dark:text-gray-300"
-                        >Motivo</label
-                    >
+                <FormField
+                    label="Motivo"
+                    for="absence-reason"
+                    :error="errors.reason"
+                >
                     <textarea
+                        id="absence-reason"
                         v-model="form.reason"
                         class="input min-h-24"
+                        placeholder="Opcional: añade contexto para quien aprueba"
                         :disabled="!canEdit"
                     />
+                </FormField>
+            </form>
+
+            <FormField
+                v-if="mode === 'view' && isAdmin && absence"
+                label="Comentario de la decisión (opcional)"
+                for="absence-decision-note"
+                hint="Se envía como nota al aprobar o como motivo al rechazar. Recomendado al rechazar."
+            >
+                <textarea
+                    id="absence-decision-note"
+                    v-model="decisionNote"
+                    class="input min-h-16"
+                    maxlength="500"
+                    placeholder="Ej.: Coincide con el cierre de mes"
+                    :disabled="loading"
+                />
+            </FormField>
+
+            <DialogFooter
+                class="flex-col-reverse gap-2 sm:flex-row sm:justify-between"
+            >
+                <div class="flex flex-wrap gap-2">
+                    <Button
+                        v-if="mode === 'view' && isAdmin && absence"
+                        variant="ghost"
+                        class="text-destructive hover:bg-destructive-soft hover:text-destructive"
+                        :disabled="loading"
+                        @click="remove"
+                    >
+                        <Spinner v-if="busy === 'delete'" />
+                        <Trash2 v-else />
+                        Eliminar
+                    </Button>
                 </div>
-            </div>
-
-            <div class="flex flex-wrap justify-end gap-2 pt-2">
-                <button
-                    @click="$emit('close')"
-                    class="rounded bg-gray-300 px-4 py-2 text-gray-900 dark:bg-gray-700 dark:text-gray-100"
-                >
-                    Cerrar
-                </button>
-
-                <button
-                    v-if="mode === 'create'"
-                    @click="save"
-                    :disabled="loading"
-                    class="rounded bg-blue-600 px-4 py-2 text-white"
-                >
-                    Guardar
-                </button>
-
-                <button
-                    v-if="mode === 'view' && canEdit"
-                    @click="update"
-                    :disabled="loading"
-                    class="rounded bg-yellow-500 px-4 py-2 text-white"
-                >
-                    Actualizar
-                </button>
-
-                <template v-if="mode === 'view' && isAdmin && absence">
-                    <button
-                        @click="changeStatus('pendiente')"
+                <div class="flex flex-wrap justify-end gap-2">
+                    <Button
+                        variant="outline"
                         :disabled="loading"
-                        class="rounded bg-slate-600 px-4 py-2 text-white"
+                        @click="emit('close')"
                     >
-                        Poner pendiente
-                    </button>
+                        Cerrar
+                    </Button>
 
-                    <button
-                        @click="changeStatus('rechazado')"
+                    <template v-if="mode === 'view' && isAdmin && absence">
+                        <Button
+                            v-if="currentStatus !== 'pendiente'"
+                            variant="outline"
+                            :disabled="loading"
+                            @click="changeStatus('pendiente')"
+                        >
+                            <Spinner v-if="busy === 'pendiente'" />
+                            <RotateCcw v-else />
+                            Volver a pendiente
+                        </Button>
+                        <Button
+                            v-if="currentStatus !== 'rechazado'"
+                            variant="outline"
+                            class="border-destructive/30 text-destructive hover:bg-destructive-soft hover:text-destructive"
+                            :disabled="loading"
+                            @click="changeStatus('rechazado')"
+                        >
+                            <Spinner v-if="busy === 'rechazado'" />
+                            <X v-else />
+                            Rechazar
+                        </Button>
+                        <Button
+                            v-if="currentStatus !== 'aprobado'"
+                            class="bg-success text-success-foreground hover:bg-success/90"
+                            :disabled="loading"
+                            @click="changeStatus('aprobado')"
+                        >
+                            <Spinner v-if="busy === 'aprobado'" />
+                            <Check v-else />
+                            Aprobar
+                        </Button>
+                    </template>
+
+                    <Button
+                        v-if="mode === 'view' && canEdit"
+                        type="submit"
+                        form="absence-form"
                         :disabled="loading"
-                        class="rounded bg-red-600 px-4 py-2 text-white"
                     >
-                        Rechazar
-                    </button>
+                        <Spinner v-if="busy === 'update'" />
+                        Guardar cambios
+                    </Button>
 
-                    <button
-                        @click="changeStatus('aprobado')"
-                        :disabled="loading"
-                        class="rounded bg-green-600 px-4 py-2 text-white"
+                    <Button
+                        v-if="mode === 'create'"
+                        type="submit"
+                        form="absence-form"
+                        :disabled="loading || loadingOptions"
                     >
-                        Aprobar
-                    </button>
-
-                    <ConfirmDialog
-                        title="Eliminar ausencia"
-                        description="¿Está seguro de que desea eliminar esta ausencia? Esta acción no se puede deshacer."
-                        confirm-text="Eliminar"
-                        cancel-text="Cancelar"
-                        variant="destructive"
-                        @confirm="remove"
-                    >
-                        <template #trigger>
-                            <button
-                                :disabled="loading"
-                                class="rounded bg-black px-4 py-2 text-white dark:bg-white dark:text-black"
-                            >
-                                Eliminar
-                            </button>
-                        </template>
-                    </ConfirmDialog>
-                </template>
-            </div>
-        </div>
-    </div>
+                        <Spinner v-if="busy === 'save'" />
+                        {{
+                            busy === 'save'
+                                ? 'Guardando…'
+                                : 'Registrar ausencia'
+                        }}
+                    </Button>
+                </div>
+            </DialogFooter>
+        </DialogContent>
+    </Dialog>
 </template>
-
-

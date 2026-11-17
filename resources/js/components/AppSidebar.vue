@@ -1,7 +1,24 @@
 ﻿<script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3';
-import { Building2, LayoutDashboard, LayoutGrid, Users, FileBarChart, FileText, Settings, Cog, Clock, FileCheck } from 'lucide-vue-next';
-import NavFooter from '@/components/NavFooter.vue';
+import {
+    BarChart3,
+    Building2,
+    CalendarDays,
+    ClipboardCheck,
+    ClipboardList,
+    Clock,
+    Cog,
+    FileText,
+    History,
+    LayoutDashboard,
+    Layers,
+    Settings,
+    Tags,
+    Timer,
+    UserCog,
+    UsersRound,
+} from 'lucide-vue-next';
+import { computed } from 'vue';
 import NavMain from '@/components/NavMain.vue';
 import NavUser from '@/components/NavUser.vue';
 import {
@@ -13,183 +30,170 @@ import {
     SidebarMenuButton,
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
-
-import type { NavItem } from '@/types';
-import { computed } from 'vue';
+import type { NavGroup, NavItem } from '@/types';
 
 const page = usePage();
-const user = page.props.auth?.user;
-const isAdmin = user?.role === 'admin' || user?.role === 'superadmin';
-const isSuperAdmin = user?.role === 'superadmin';
-const superAdminContext = computed(() => (page.props as any).super_admin_context);
-const isGlobalContext = computed(() => isSuperAdmin && !superAdminContext.value?.impersonated_user_id);
-const enabledModules = computed(() => (page.props as any).enabled_modules ?? []);
+const user = computed(() => page.props.auth?.user as any);
+const isAdmin = computed(
+    () => user.value?.role === 'admin' || user.value?.role === 'superadmin',
+);
+const isSuperAdmin = computed(() => user.value?.role === 'superadmin');
+const superAdminContext = computed(
+    () => (page.props as any).super_admin_context,
+);
+const isGlobalContext = computed(
+    () =>
+        isSuperAdmin.value && !superAdminContext.value?.impersonated_user_id,
+);
+const enabledModules = computed<string[]>(
+    () => (page.props as any).enabled_modules ?? [],
+);
 
 const company = computed(() => (page.props as any).company ?? {});
 const companyName = computed(() => company.value?.name || 'Empresa');
 const companyLogoUrl = computed(() => company.value?.logo_url || '/logo.png');
 
-const canAccessModule = (moduleSlug: string): boolean => {
-    return enabledModules.value.includes(moduleSlug);
-};
+const can = (moduleSlug: string): boolean =>
+    enabledModules.value.includes(moduleSlug);
 
-const mainNavItems = computed<NavItem[]>(() => {
-    // Si es SuperAdmin en contexto global, mostrar opciones de SuperAdmin
+const homeHref = computed(() =>
+    isGlobalContext.value ? '/superadmin/dashboard' : '/dashboard',
+);
+
+const compact = (items: Array<NavItem | false>): NavItem[] =>
+    items.filter(Boolean) as NavItem[];
+
+const navGroups = computed<NavGroup[]>(() => {
+    // SuperAdmin en contexto global
     if (isGlobalContext.value) {
         return [
             {
-                title: 'Dashboard Global',
-                href: '/superadmin/dashboard',
-                icon: LayoutDashboard,
-            },
-            {
-                title: 'Gestionar Tenants',
-                href: '/superadmin/tenants',
-                icon: Building2,
-            },
-            {
-                title: 'Gestión de Planes',
-                href: '/admin/gestion-sistema/planes',
-                icon: FileCheck,
-            },
-            {
-                title: 'Auditoría',
-                href: '/superadmin/audit',
-                icon: FileBarChart,
-            },
-            {
-                title: 'Configuración Global',
-                href: '/gestion-sistema',
-                icon: Cog,
+                label: 'Plataforma',
+                items: [
+                    {
+                        title: 'Resumen global',
+                        href: '/superadmin/dashboard',
+                        icon: LayoutDashboard,
+                    },
+                    {
+                        title: 'Empresas (tenants)',
+                        href: '/superadmin/tenants',
+                        icon: Building2,
+                    },
+                    {
+                        title: 'Planes y módulos',
+                        href: '/admin/gestion-sistema/planes',
+                        icon: Layers,
+                    },
+                    {
+                        title: 'Auditoría',
+                        href: '/superadmin/audit',
+                        icon: History,
+                    },
+                    {
+                        title: 'Configuración global',
+                        href: '/gestion-sistema',
+                        icon: Cog,
+                    },
+                ],
             },
         ];
     }
 
-    // Opciones normales para Admin/Colaborador
-    return [
-        ...(canAccessModule('dashboard')
-            ? [
-                  {
-                      title: 'Dashboard',
-                      href: '/dashboard',
-                      icon: LayoutDashboard,
-                  },
-              ]
-            : []),
-        ...(canAccessModule('calendario')
-            ? [
-                  {
-                      title: 'Calendario',
-                      href: '/calendario',
-                      icon: LayoutGrid,
-                  },
-              ]
-            : []),
-        ...(canAccessModule('comunidad')
-            ? [
-                  {
-                      title: 'Comunidad',
-                      href: '/comunidad',
-                      icon: Users,
-                  },
-              ]
-            : []),
-        ...(isAdmin && canAccessModule('gestion-usuarios')
-            ? [
-                  {
-                      title: 'Gestión usuarios',
-                      href: '/gestion-usuarios',
-                      icon: Users,
-                  },
-              ]
-            : []),
-        ...(isAdmin && canAccessModule('areas')
-            ? [
-                  {
-                      title: 'Áreas',
-                      href: '/areas',
-                      icon: Building2,
-                  },
-              ]
-            : []),
-        ...(isAdmin && canAccessModule('reportes')
-            ? [
-                  {
-                      title: 'Reportes',
-                      href: '/reportes',
-                      icon: FileBarChart,
-                  },
-              ]
-            : []),
-        ...(canAccessModule('horas-extra')
-            ? [
-                  {
-                      title: 'Horas Extra',
-                      href: '/overtime-hours',
-                      icon: Clock,
-                  },
-              ]
-            : []),
-        ...(isAdmin && canAccessModule('horas-extra')
-            ? [
-                  {
-                      title: 'Admin Horas Extra',
-                      href: '/admin/overtime-hours',
-                      icon: Clock,
-                  },
-              ]
-            : []),
-        ...(isAdmin
-            ? [
-                  {
-                      title: 'Tipos de Ausencia',
-                      href: '/admin/absence-types',
-                      icon: FileCheck,
-                  },
-              ]
-            : []),
-        ...(isAdmin && canAccessModule('solicitudes')
-            ? [
-                  {
-                      title: 'Solicitudes de Empleados',
-                      href: '/solicitudes',
-                      icon: FileCheck,
-                  },
-              ]
-            : []),
-        ...(isAdmin && canAccessModule('documentos')
-            ? [
-                  {
-                      title: 'Documentos',
-                      href: '/documentos',
-                      icon: FileText,
-                  },
-              ]
-            : []),
-        ...(isAdmin && canAccessModule('configuracion-empresa')
-            ? [
-                  {
-                      title: 'Configuración de la Empresa',
-                      href: '/settings/company',
-                      icon: Settings,
-                  },
-              ]
-            : []),
-        ...(isSuperAdmin && !isGlobalContext.value
-            ? [
-                  {
-                      title: 'Gestión del Sistema',
-                      href: '/gestion-sistema',
-                      icon: Cog,
-                  },
-              ]
-            : []),
+    const groups: NavGroup[] = [
+        {
+            label: 'General',
+            items: compact([
+                can('dashboard') && {
+                    title: 'Inicio',
+                    href: '/dashboard',
+                    icon: LayoutDashboard,
+                },
+                can('calendario') && {
+                    title: 'Calendario',
+                    href: '/calendario',
+                    icon: CalendarDays,
+                },
+                can('comunidad') && {
+                    title: 'Comunidad',
+                    href: '/comunidad',
+                    icon: UsersRound,
+                },
+                can('horas-extra') && {
+                    title: 'Mis horas extra',
+                    href: '/overtime-hours',
+                    icon: Clock,
+                },
+                (isAdmin.value || Boolean(user.value?.is_area_manager)) && {
+                    title: 'Aprobaciones',
+                    href: '/aprobaciones',
+                    icon: ClipboardCheck,
+                },
+            ]),
+        },
     ];
-});
 
-const footerNavItems: NavItem[] = [
-    //
-];
+    if (isAdmin.value) {
+        groups.push({
+            label: 'Gestión',
+            items: compact([
+                can('gestion-usuarios') && {
+                    title: 'Usuarios y vacaciones',
+                    href: '/gestion-usuarios',
+                    icon: UserCog,
+                },
+                can('areas') && {
+                    title: 'Áreas',
+                    href: '/areas',
+                    icon: Building2,
+                },
+                can('solicitudes') && {
+                    title: 'Solicitudes',
+                    href: '/solicitudes',
+                    icon: ClipboardList,
+                },
+                can('horas-extra') && {
+                    title: 'Horas extra del equipo',
+                    href: '/admin/overtime-hours',
+                    icon: Timer,
+                },
+                can('documentos') && {
+                    title: 'Documentos',
+                    href: '/documentos',
+                    icon: FileText,
+                },
+                can('reportes') && {
+                    title: 'Reportes',
+                    href: '/reportes',
+                    icon: BarChart3,
+                },
+            ]),
+        });
+
+        groups.push({
+            label: 'Configuración',
+            items: compact([
+                {
+                    title: 'Tipos de ausencia',
+                    href: '/admin/absence-types',
+                    icon: Tags,
+                },
+                can('configuracion-empresa') && {
+                    title: 'Empresa',
+                    href: '/settings/company',
+                    icon: Settings,
+                },
+                isSuperAdmin.value && {
+                    title: 'Gestión del sistema',
+                    href: '/gestion-sistema',
+                    icon: Cog,
+                },
+            ]),
+        });
+    }
+
+    return groups.filter((g) => g.items.length > 0);
+});
 </script>
 
 <template>
@@ -198,21 +202,31 @@ const footerNavItems: NavItem[] = [
             <SidebarMenu>
                 <SidebarMenuItem>
                     <SidebarMenuButton size="lg" as-child>
-                        <Link href="/dashboard">
-                            <div class="flex items-center gap-2">
-                                <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-md border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
-                                    <img
-                                        :src="companyLogoUrl"
-                                        :alt="`Logo de ${companyName}`"
-                                        class="h-full w-full object-contain p-1"
-                                    />
-                                </div>
-                                <div class="grid flex-1 text-left text-sm leading-tight">
-                                    <span class="truncate font-semibold">{{ companyName }}</span>
-                                    <span class="truncate text-xs text-slate-500 dark:text-slate-400">
-                                       Menú de empresa
-                                    </span>
-                                </div>
+                        <Link :href="homeHref">
+                            <div
+                                class="flex size-8 shrink-0 items-center justify-center overflow-hidden rounded-md border bg-card"
+                            >
+                                <img
+                                    :src="companyLogoUrl"
+                                    :alt="`Logo de ${companyName}`"
+                                    class="size-full object-contain p-0.5"
+                                />
+                            </div>
+                            <div
+                                class="grid flex-1 text-left text-sm leading-tight"
+                            >
+                                <span class="truncate font-semibold">{{
+                                    companyName
+                                }}</span>
+                                <span
+                                    class="truncate text-xs text-muted-foreground"
+                                >
+                                    {{
+                                        isGlobalContext
+                                            ? 'Superadministración'
+                                            : 'Ausentra'
+                                    }}
+                                </span>
                             </div>
                         </Link>
                     </SidebarMenuButton>
@@ -221,14 +235,12 @@ const footerNavItems: NavItem[] = [
         </SidebarHeader>
 
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <NavMain :groups="navGroups" />
         </SidebarContent>
 
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
             <NavUser />
         </SidebarFooter>
     </Sidebar>
     <slot />
 </template>
-

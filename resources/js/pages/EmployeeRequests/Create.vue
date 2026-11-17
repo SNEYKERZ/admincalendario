@@ -1,145 +1,155 @@
-<template>
-    <AppLayout>
-        <template #header>
-            <div class="flex items-center gap-4">
-                <Link href="/solicitudes" class="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium">
-                    ← Volver
-                </Link>
-                <div>
-                    <h2 class="text-3xl font-bold text-gray-900 dark:text-white">Nueva Solicitud</h2>
-                    <p class="text-gray-500 dark:text-gray-400 mt-2">Completa el formulario para enviar tu solicitud</p>
-                </div>
-            </div>
-        </template>
-
-        <div class="max-w-2xl">
-            <form @submit.prevent="submit" class="space-y-6">
-                <!-- Tipo de Solicitud -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Tipo de Solicitud *
-                    </label>
-                    <select
-                        v-model="form.request_type"
-                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                    >
-                        <option value="">Selecciona un tipo...</option>
-                        <option v-for="(label, key) in requestTypes" :key="key" :value="key">
-                            {{ label }}
-                        </option>
-                    </select>
-                    <p v-if="errors.request_type" class="mt-1 text-sm text-red-600">{{ errors.request_type }}</p>
-                </div>
-
-                <!-- Asunto -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Asunto *
-                    </label>
-                    <input
-                        v-model="form.title"
-                        type="text"
-                        placeholder="Ej: Certificado laboral para banco"
-                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        required
-                        maxlength="255"
-                    />
-                    <p v-if="errors.title" class="mt-1 text-sm text-red-600">{{ errors.title }}</p>
-                </div>
-
-                <!-- Descripción -->
-                <div class="bg-white dark:bg-gray-800 rounded-lg shadow border border-gray-200 dark:border-gray-700 p-6">
-                    <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                        Descripción
-                    </label>
-                    <textarea
-                        v-model="form.description"
-                        placeholder="Proporciona Más detalles sobre tu solicitud (opcional)"
-                        rows="5"
-                        class="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg dark:bg-gray-700 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        maxlength="1000"
-                    />
-                    <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                        {{ form.description?.length || 0 }} / 1000 caracteres
-                    </p>
-                    <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
-                </div>
-
-                <!-- Botones -->
-                <div class="flex gap-4">
-                    <button
-                        type="submit"
-                        :disabled="loading"
-                        class="flex-1 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50"
-                    >
-                        {{ loading ? 'Enviando...' : 'Enviar Solicitud' }}
-                    </button>
-                    <Link
-                        href="/solicitudes"
-                        class="flex-1 px-6 py-3 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-white rounded-lg font-medium hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors text-center"
-                    >
-                        Cancelar
-                    </Link>
-                </div>
-            </form>
-
-            <!-- Información -->
-            <div class="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
-                <p class="text-sm text-blue-900 dark:text-blue-100">
-                    â„¹ï¸ Tu solicitud será revisada por el equipo de Recursos Humanos. Recibirás una notificación cuando sea procesada.
-                </p>
-            </div>
-        </div>
-    </AppLayout>
-</template>
-
 <script setup lang="ts">
-import { ref, reactive } from 'vue';
+import { Head, Link, useForm } from '@inertiajs/vue3';
+import { ArrowLeft, Info, Send } from 'lucide-vue-next';
+import { computed } from 'vue';
+import FormField from '@/components/app/FormField.vue';
+import PageContainer from '@/components/app/PageContainer.vue';
+import PageHeader from '@/components/app/PageHeader.vue';
+import SectionCard from '@/components/app/SectionCard.vue';
+import { REQUEST_TYPES } from '@/components/requests/utils';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
+import { useNotification } from '@/composables/useNotification';
 import AppLayout from '@/layouts/AppLayout.vue';
-import { Link, router } from '@inertiajs/vue3';
 
-interface FormData {
+const props = defineProps<{
+    requestTypes?: Record<string, string>;
+}>();
+
+const notify = useNotification();
+
+const types = computed<Record<string, string>>(() =>
+    props.requestTypes && Object.keys(props.requestTypes).length
+        ? props.requestTypes
+        : REQUEST_TYPES,
+);
+
+const form = useForm<{
     request_type: string;
     title: string;
     description: string | null;
-}
-
-interface Errors {
-    [key: string]: string;
-}
-
-const requestTypes = {
-    certificado: 'Certificado Laboral',
-    permiso_especial: 'Permiso Especial',
-    documento: 'Documento',
-    cambio_datos: 'Cambio de Datos',
-    otro: 'Otra Solicitud',
-};
-
-const form = reactive<FormData>({
+}>({
     request_type: '',
     title: '',
     description: null,
 });
 
-const errors = ref<Errors>({});
-const loading = ref(false);
+const descriptionLength = computed(() => form.description?.length || 0);
 
-const submit = async () => {
-    loading.value = true;
-    errors.value = {};
-
-    router.post('/solicitudes', form, {
-        onError: (err) => {
-            errors.value = err as Errors;
-            loading.value = false;
-        },
-        onSuccess: () => {
-            loading.value = false;
-        },
+const submit = () => {
+    form.post('/solicitudes', {
+        onSuccess: () => notify.success('Solicitud enviada a Recursos Humanos.'),
+        onError: () =>
+            notify.error('Revisa los campos marcados antes de enviar.'),
     });
 };
 </script>
 
+<template>
+    <Head title="Nueva solicitud" />
+    <AppLayout
+        :breadcrumbs="[
+            { title: 'Mis solicitudes', href: '/solicitudes' },
+            { title: 'Nueva solicitud', href: '/solicitudes/crear' },
+        ]"
+    >
+        <PageContainer narrow>
+            <div>
+                <Button as-child variant="ghost" size="sm" class="-ml-2">
+                    <Link href="/solicitudes">
+                        <ArrowLeft />
+                        Volver a mis solicitudes
+                    </Link>
+                </Button>
+            </div>
 
+            <PageHeader
+                title="Nueva solicitud"
+                description="Completa el formulario y Recursos Humanos revisará tu solicitud."
+            />
+
+            <SectionCard>
+                <form class="grid gap-5" @submit.prevent="submit">
+                    <FormField
+                        label="Tipo de solicitud"
+                        for="req-type"
+                        required
+                        :error="form.errors.request_type"
+                    >
+                        <select
+                            id="req-type"
+                            v-model="form.request_type"
+                            class="input"
+                            required
+                            :aria-invalid="!!form.errors.request_type"
+                        >
+                            <option value="" disabled>Selecciona un tipo…</option>
+                            <option
+                                v-for="(label, key) in types"
+                                :key="key"
+                                :value="key"
+                            >
+                                {{ label }}
+                            </option>
+                        </select>
+                    </FormField>
+
+                    <FormField
+                        label="Asunto"
+                        for="req-title"
+                        required
+                        :error="form.errors.title"
+                    >
+                        <Input
+                            id="req-title"
+                            v-model="form.title"
+                            placeholder="Ej.: Certificado laboral para el banco"
+                            maxlength="255"
+                            required
+                            :aria-invalid="!!form.errors.title"
+                        />
+                    </FormField>
+
+                    <FormField
+                        label="Descripción"
+                        for="req-description"
+                        :error="form.errors.description"
+                        :hint="`Opcional · ${descriptionLength} / 1000 caracteres`"
+                    >
+                        <Textarea
+                            id="req-description"
+                            v-model="form.description"
+                            rows="5"
+                            maxlength="1000"
+                            placeholder="Añade los detalles que ayuden a resolver tu solicitud"
+                            :aria-invalid="!!form.errors.description"
+                        />
+                    </FormField>
+
+                    <div
+                        class="flex items-start gap-2 rounded-lg border border-info/20 bg-info-soft px-3 py-2.5 text-sm text-info"
+                    >
+                        <Info class="mt-0.5 size-4 shrink-0" aria-hidden="true" />
+                        <p>
+                            Tu solicitud será revisada por Recursos Humanos. Podrás
+                            consultar su estado en «Mis solicitudes».
+                        </p>
+                    </div>
+
+                    <div class="flex flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                        <Button as-child variant="outline">
+                            <Link href="/solicitudes">Cancelar</Link>
+                        </Button>
+                        <Button type="submit" :disabled="form.processing">
+                            <Spinner v-if="form.processing" />
+                            <Send v-else />
+                            {{ form.processing ? 'Enviando…' : 'Enviar solicitud' }}
+                        </Button>
+                    </div>
+                </form>
+            </SectionCard>
+        </PageContainer>
+    </AppLayout>
+</template>

@@ -8,24 +8,29 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { useCurrentUrl } from '@/composables/useCurrentUrl';
-import type { NavItem } from '@/types';
+import type { NavGroup } from '@/types';
 
 defineProps<{
-    items: NavItem[];
+    groups: NavGroup[];
 }>();
 
 const { isCurrentUrl } = useCurrentUrl();
 </script>
 
 <template>
-    <SidebarGroup class="px-2 py-0">
-        <SidebarGroupLabel>Plataforma</SidebarGroupLabel>
+    <SidebarGroup
+        v-for="group in groups"
+        :key="group.label"
+        class="px-2 py-1"
+    >
+        <SidebarGroupLabel>{{ group.label }}</SidebarGroupLabel>
         <SidebarMenu>
-            <SidebarMenuItem v-for="item in items" :key="item.title">
+            <SidebarMenuItem v-for="item in group.items" :key="item.title">
                 <SidebarMenuButton
                     as-child
                     :is-active="isCurrentUrl(item.href)"
                     :tooltip="item.title"
+                    class="data-[active=true]:[&>svg]:text-sidebar-primary"
                 >
                     <Link :href="item.href">
                         <component :is="item.icon" />
@@ -36,4 +41,3 @@ const { isCurrentUrl } = useCurrentUrl();
         </SidebarMenu>
     </SidebarGroup>
 </template>
-

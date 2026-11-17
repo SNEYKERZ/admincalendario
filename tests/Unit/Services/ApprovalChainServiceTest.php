@@ -67,6 +67,6 @@ test('reject absence chain updates status', function () {
 
     expect($updated->status)->toBe('rechazado');
     expect($updated->notes)->toBe('Insuficiente saldo');
-    expect($absence->fresh()->status)->toBe('rechazado');
+    expect($absence->fresh()->status->value)->toBe('rechazado');
     expect($absence->fresh()->rejection_reason)->toBe('Insuficiente saldo');
 });
